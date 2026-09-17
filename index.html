@@ -571,7 +571,7 @@ function slashArc(pos, yaw, tilt, radius=1.9, sweep=2.4, pale=.25){
         a *= smoothstep(0.,.3,vUv.y)*smoothstep(1.,.55,vUv.y);
         a *= .45 + .75*streak;
         a *= (1.0-uT)*(1.0-uT);
-        vec3 col = mix(vec3(.12,.10,.07), vec3(.45,.42,.34), uPale);
+        vec3 col = mix(vec3(.12,.10,.07), vec3(.80,.77,.68), uPale);
         gl_FragColor = vec4(col, a*1.0);
       }`
   });
@@ -892,7 +892,7 @@ function updatePlayer(dt){
       const sp = p.pos.clone(); sp.y=1.3;
       sp.x += Math.sin(p.yaw)*1.2; sp.z += Math.cos(p.yaw)*1.2;
       sp.y = 1.5;
-      const pale = p.atkIdx===2 ? .22 : .28;
+      const pale = p.atkIdx===2 ? .85 : .8;
       const planeYaw = p.atkIdx===2 ? p.yaw + Math.PI/2
         : p.yaw - Math.PI/2 + (p.atkIdx===1?-.35:.35);
       const xRot = p.atkIdx===2 ? Math.PI/2 - 1.05 : Math.PI/2 - .45;
@@ -1009,7 +1009,7 @@ function updateBoss(dt){
     case 'windup_spin':
       b.yaw = angLerp(b.yaw, toP, .06);
       if(b.stateT>=.7){ bossSetState('spin');
-        slashArc(b.pos.clone().setY(1.4), b.yaw, 0, 3.9, 6.28, .45);
+        slashArc(b.pos.clone().setY(1.4), b.yaw, 0, 3.9, 6.28, .62);
         sfx.whooshBig();
         // hit check mid-spin handled next state
         b._spinHit=false;
