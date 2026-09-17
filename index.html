@@ -557,7 +557,7 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true){
     const a = (i/seg - .5)*sweep;
     const c=Math.cos(a), s=Math.sin(a);
     const o=i*6;
-    verts[o]=c*radius*.62; verts[o+1]=0; verts[o+2]=s*radius*.62;
+    verts[o]=c*radius*.40; verts[o+1]=0; verts[o+2]=s*radius*.40;
     verts[o+3]=c*radius; verts[o+4]=0; verts[o+5]=s*radius;
     uvs[i*4]=i/seg; uvs[i*4+1]=0; uvs[i*4+2]=i/seg; uvs[i*4+3]=1;
     if(i<seg){ const b=i*2; idx.push(b,b+1,b+2, b+1,b+3,b+2); }
@@ -575,12 +575,14 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true){
       ${noiseGLSL}
       void main(){
         float streak = fbm(vec2(vUv.x*2.5, vUv.y*16.0));
-        float a = smoothstep(0.,.16,vUv.x)*smoothstep(1.,.80,vUv.x);
-        a *= smoothstep(0.,.18,vUv.y)*smoothstep(1.,.72,vUv.y);
-        a *= .65 + 1.1*streak;
-        a *= (1.0-uT)*(1.0-uT);
-        vec3 col = mix(vec3(.12,.10,.07), vec3(.80,.77,.68), uPale);
-        gl_FragColor = vec4(col, min(a*2.2,1.0));
+        float streak2 = fbm(vec2(vUv.x*1.1, vUv.y*34.0));
+        float a = smoothstep(0.,.14,vUv.x)*smoothstep(1.,.78,vUv.x);
+        a *= smoothstep(0.,.16,vUv.y)*smoothstep(1.,.60,vUv.y);
+        a *= .55 + .75*streak + .45*streak2;
+        a *= 1.0 - smoothstep(.55,1.,vUv.y)*fbm(vec2(vUv.x*26.,vUv.y*3.))*.85;
+        float fade = 1.0-uT; a *= fade*fade*(.6+.4*fade);
+        vec3 col = mix(vec3(.12,.10,.07), vec3(.84,.81,.72), uPale);
+        gl_FragColor = vec4(col, min(a*2.0,1.0));
       }`
   });
   const m = new THREE.Mesh(g, mat);
@@ -595,13 +597,13 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true){
   }
   m.renderOrder = 5;
   scene.add(m);
-  arcs.push({m, t:0, life:.5});
+  arcs.push({m, t:0, life:.68});
 }
 function updateArcs(dt){
   for(let i=arcs.length-1;i>=0;i--){
     const a=arcs[i]; a.t+=dt/a.life;
     a.m.material.uniforms.uT.value = a.t;
-    a.m.scale.setScalar(1+a.t*.35);
+    a.m.scale.setScalar(1+a.t*.55);
     if(a.t>=1){ scene.remove(a.m); a.m.geometry.dispose(); a.m.material.dispose(); arcs.splice(i,1); }
   }
 }
@@ -613,6 +615,17 @@ function inkCloud(pos, n=18){
     spawnP(pos.x+Math.cos(a)*r, .3+Math.random()*2.2, pos.z+Math.sin(a)*r,
       Math.cos(a)*.6, .5+Math.random()*.8, Math.sin(a)*.6,
       1.1+Math.random()*.8, 1.6+Math.random()*1.8, 0, .35);
+  }
+}
+
+/* ---------------- ink splatter (attack droplets) ---------------- */
+function inkSplatter(pos, yaw){
+  for(let i=0;i<12;i++){
+    const a = yaw + (Math.random()-.5)*2.2;
+    const sp = 2.0+Math.random()*4.0;
+    spawnP(pos.x, pos.y+(Math.random()-.5)*.6, pos.z,
+      Math.sin(a)*sp, 1.0+Math.random()*2.2, Math.cos(a)*sp,
+      .35+Math.random()*.35, .5+Math.random()*.9, 0, -9);
   }
 }
 
@@ -915,9 +928,10 @@ function updatePlayer(dt){
       const sp = p.pos.clone(); sp.y=1.3;
       sp.x += Math.sin(p.yaw)*.9; sp.z += Math.cos(p.yaw)*.9;
       sp.y = 1.35;
-      const pale = p.atkIdx===2 ? .62 : .55;
+      const pale = p.atkIdx===2 ? .80 : .72;
       const roll = p.yaw - Math.PI/2 + (p.atkIdx===0 ? -.5 : p.atkIdx===1 ? Math.PI+.5 : 0);
-      slashArc(sp, roll, p.atkIdx===2?3.2:3.0, p.atkIdx===2?2.4:3.0, pale, false);
+      slashArc(sp, roll, p.atkIdx===2?4.5:4.1, p.atkIdx===2?2.8:3.3, pale, false);
+      inkSplatter(sp, p.yaw);
       sfx.whoosh();
     }
     if(p.stateT>=a.dur){
