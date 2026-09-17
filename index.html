@@ -107,9 +107,9 @@
 <div id="timebox"><div class="lbl">Time:</div><div class="val" id="timeval">00:00.00</div></div>
 
 <div id="bossbars">
-  <div class="bartext" id="boss-hp-t">109/109</div>
+  <div class="bartext" id="boss-hp-t">185/185</div>
   <div class="brushbar" id="boss-hp"><div class="fill" style="width:100%"></div></div>
-  <div class="bartext" id="boss-posture-t">0/105</div>
+  <div class="bartext" id="boss-posture-t">0/130</div>
   <div class="brushbar" id="boss-posture"><div class="fill" style="width:0%"></div></div>
 </div>
 
@@ -646,7 +646,7 @@ const player = {
 };
 const boss = {
   ...buildBoss(), pos:new THREE.Vector3(0,0,-7), yaw:0,
-  hp:109, maxhp:109, posture:105, maxposture:105,
+  hp:185, maxhp:185, posture:130, maxposture:130,
   state:'vanish', stateT:0, thinkT:1.2, nextAtk:'spin', leapFrom:new THREE.Vector3(), leapTo:new THREE.Vector3(),
   alive:true,
 };
@@ -805,9 +805,9 @@ function animBoss(dt){
 
 /* ================= combat ================= */
 const ATK = [
-  {dur:.42, hitAt:.18, dmg:7,  post:14, arc:2.0, range:2.9},
-  {dur:.42, hitAt:.18, dmg:8,  post:14, arc:2.0, range:2.9},
-  {dur:.55, hitAt:.34, dmg:12, post:22, arc:1.7, range:3.1},
+  {dur:.42, hitAt:.18, dmg:6,  post:12, arc:2.0, range:2.9},
+  {dur:.42, hitAt:.18, dmg:7,  post:12, arc:2.0, range:2.9},
+  {dur:.55, hitAt:.34, dmg:11, post:20, arc:1.7, range:3.1},
 ];
 function tryHitBoss(a){
   if(!boss.alive || !boss.root.visible) return;
@@ -1260,7 +1260,7 @@ el('endscreen').addEventListener('click', startOrRetry);
 function resetFight(){
   player.pos.set(0,0,3.5); player.yaw=Math.PI; player.hp=100; player.stam=100; player.pips=3;
   player.state='idle'; player.stateT=0; player.vel.set(0,0,0); player.iframe=0; player._lastAtkEnd=0; player.queuedAtk=false;
-  boss.pos.set(0,0,-7); boss.hp=109; boss.posture=105; boss.alive=true;
+  boss.pos.set(0,0,-7); boss.hp=185; boss.posture=130; boss.alive=true;
   boss.root.visible=false; boss.state='vanish'; boss.stateT=.2; boss.thinkT=1.2;
   inkCloud(boss.pos, 22);
   G.time=0; G.over=false; G.timeScale=1; G.hitstop=0;
