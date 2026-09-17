@@ -240,8 +240,8 @@ const M = {
   hair:  inkMat(0x8f8672, 0x120e08, 1.25, .42),
   dark:  inkMat(0x9a917c, 0x171208, 1.15, .30),
   wrap:  inkMat(0x7c7260, 0x14100a, 1.3, .5, 1),
-  robe:  inkMat(0xb0a68c, 0x14100a, 1.05, .18, 1),
-  kasa:  inkMat(0xcfc4a2, 0x1c160d, 1.0, .12, 1),
+  robe:  inkMat(0xb0a68c, 0x14100a, 1.38, .38, 1),
+  kasa:  inkMat(0xcfc4a2, 0x1c160d, 1.28, .30, 1),
   blade: inkMat(0xd8d0b8, 0x100c07, 1.15, .25),
   red:   new THREE.MeshBasicMaterial({color:RED}),
 };
@@ -260,7 +260,7 @@ void main(){
   vec3 ink  = vec3(.106,.082,.055);
   // large soft wash stains
   float stain = fbm(p*.055+3.1);
-  sand *= .90 + .16*stain;
+  sand *= .945 + .09*stain;
   // fine paper grain
   sand *= .94 + .06*fbm(p*1.7);
   // speckles - two scales of scattered ink dots
@@ -268,7 +268,7 @@ void main(){
   float s2 = vnoise(p*15.0+7.7);
   float dots = smoothstep(.78,.86,s1)*.35 + smoothstep(.82,.9,s2)*.22;
   // blotch field
-  float blotch = smoothstep(.62,.95,fbm(p*.35+9.3))*.30;
+  float blotch = smoothstep(.66,.97,fbm(p*.35+9.3))*.30;
   float edge = smoothstep(14.0, 30.0, length(p));
   float inkAmt = clamp(dots*(0.5+edge) + blotch*edge*.8 + edge*.12, 0., .85);
   // soft top light wash
@@ -402,7 +402,7 @@ function buildBoss(){
   chest.position.y = 2.0; chest.scale.set(1,.85,.8); body.add(chest); J.chest = chest;
   for(const s of [-1,1]){
     const tri = new THREE.Mesh(new THREE.ConeGeometry(.06,.14,3), M.red);
-    tri.position.set(.16*s, 2.1, .36); tri.rotation.x = Math.PI/2; body.add(tri);
+    tri.position.set(.17*s, 2.08, .42); tri.rotation.x = Math.PI/2; body.add(tri);
   }
   // head under kasa
   const head = new THREE.Mesh(new THREE.SphereGeometry(.19, 12, 10), M.dark);
@@ -457,8 +457,8 @@ const pMat = new THREE.ShaderMaterial({
     void main(){
       vec2 q = gl_PointCoord - .5;
       float d = length(q);
-      float a = smoothstep(.5, .12, d) * vA;
-      a *= .82 + .3*sin(q.x*31.0)*sin(q.y*27.0);
+      float a = smoothstep(.5, .06, d) * vA;
+      a *= .9 + .1*sin(q.x*9.0+q.y*7.0);
       vec3 ink = mix(vec3(.10,.08,.05), vec3(.55,.50,.40), vD);
       gl_FragColor = vec4(ink, a);
     }`
@@ -787,9 +787,9 @@ function animBoss(dt){
 
 /* ================= combat ================= */
 const ATK = [
-  {dur:.42, hitAt:.18, dmg:7,  post:14, arc:1.9, range:2.4},
-  {dur:.42, hitAt:.18, dmg:8,  post:14, arc:1.9, range:2.4},
-  {dur:.55, hitAt:.34, dmg:12, post:22, arc:1.6, range:2.6},
+  {dur:.42, hitAt:.18, dmg:7,  post:14, arc:2.0, range:2.9},
+  {dur:.42, hitAt:.18, dmg:8,  post:14, arc:2.0, range:2.9},
+  {dur:.55, hitAt:.34, dmg:12, post:22, arc:1.7, range:3.1},
 ];
 function tryHitBoss(a){
   if(!boss.alive || !boss.root.visible) return;
@@ -1264,7 +1264,8 @@ function updateCamera(dt){
 /* ================= main loop ================= */
 let last = performance.now();
 function loop(now){
-  requestAnimationFrame(loop);
+  window.QA = {player, boss, G};
+requestAnimationFrame(loop);
   let dt = Math.min(.05, (now-last)/1000);
   last = now;
   if(G.hitstop>0){ G.hitstop-=dt; dt*=.08; }
@@ -1284,6 +1285,7 @@ addEventListener('resize', ()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
+window.QA = {player, boss, G};
 requestAnimationFrame(loop);
 </script>
 </body>
