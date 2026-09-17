@@ -894,6 +894,14 @@ function updatePlayer(dt){
     }
     if(p.stateT>=a.dur){
       p.state='idle'; p.stateT=0;
+      if(p.queuedAtk){
+        p.queuedAtk=false;
+        if(p.stam>=10){
+          p.atkIdx=(p.atkIdx+1)%3;
+          p.state='atk'+(p.atkIdx+1); p.stateT=0; p.atkHitDone=false;
+          p.stam-=10; p._lastAtkEnd = performance.now() + ATK[p.atkIdx].dur*1000;
+        }
+      }
     }
   } else if(p.state==='hit' && p.stateT>.32){
     p.state='idle'; p.stateT=0;
@@ -916,6 +924,12 @@ function updatePlayer(dt){
 }
 function doAttack(){
   const p=player;
+  // input buffering: queue the next chain hit during the back half of a swing
+  if(p.state.startsWith('atk')){
+    const a = ATK[p.atkIdx];
+    if(p.stateT > a.dur*.45) p.queuedAtk = true;
+    return;
+  }
   if(!['idle','run'].includes(p.state) || p.stam<10) return;
   // chain: pick next in combo based on timing
   p.atkIdx = (p._lastAtkEnd && performance.now()-p._lastAtkEnd<900) ? (p.atkIdx+1)%3 : 0;
@@ -1221,7 +1235,7 @@ el('endscreen').addEventListener('click', startOrRetry);
 /* ================= flow ================= */
 function resetFight(){
   player.pos.set(0,0,3.5); player.yaw=Math.PI; player.hp=100; player.stam=100; player.pips=3;
-  player.state='idle'; player.stateT=0; player.vel.set(0,0,0); player.iframe=0; player._lastAtkEnd=0;
+  player.state='idle'; player.stateT=0; player.vel.set(0,0,0); player.iframe=0; player._lastAtkEnd=0; player.queuedAtk=false;
   boss.pos.set(0,0,-7); boss.hp=109; boss.posture=105; boss.alive=true;
   boss.root.visible=false; boss.state='vanish'; boss.stateT=.2; boss.thinkT=1.2;
   inkCloud(boss.pos, 22);
