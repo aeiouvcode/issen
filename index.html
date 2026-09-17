@@ -951,6 +951,11 @@ function doAttack(){
     return;
   }
   if(!['idle','run'].includes(p.state) || p.stam<10) return;
+  // soft auto-face: snap toward the boss when close (touch-friendly)
+  if(boss.alive && boss.root.visible){
+    const db = dist2D(p.pos, boss.pos);
+    if(db < 5.5) p.yaw = Math.atan2(boss.pos.x-p.pos.x, boss.pos.z-p.pos.z);
+  }
   // chain: pick next in combo based on timing
   p.atkIdx = (p._lastAtkEnd && performance.now()-p._lastAtkEnd<900) ? (p.atkIdx+1)%3 : 0;
   p.state = 'atk'+(p.atkIdx+1); p.stateT=0; p.atkHitDone=false;
