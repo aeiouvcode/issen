@@ -236,7 +236,7 @@ function inkMat(paper, ink, bias, floor=0, streakV=0, streakAmp=.5){
 // shared materials (keep program count tiny)
 const M = {
   skin:  inkMat(0xf3ecdc, 0x241f16, .62),
-  clothL:inkMat(0xf0e9d6, 0x2a2318, .72),
+  clothL:inkMat(0x6e6552, 0x131008, 1.25, .32),
   hair:  inkMat(0x8f8672, 0x120e08, 1.25, .42),
   dark:  inkMat(0x9a917c, 0x171208, 1.15, .30),
   wrap:  inkMat(0x7c7260, 0x14100a, 1.3, .5, 1),
@@ -256,7 +256,7 @@ varying vec3 vN; varying vec3 vW; varying vec2 vUv;
 ${noiseGLSL}
 void main(){
   vec2 p = vW.xz;
-  vec3 sand = vec3(.914,.871,.741);
+  vec3 sand = vec3(.928,.889,.772);
   vec3 ink  = vec3(.106,.082,.055);
   // large soft wash stains
   float stain = fbm(p*.055+3.1);
@@ -266,11 +266,11 @@ void main(){
   // speckles - two scales of scattered ink dots
   float s1 = vnoise(p*6.5);
   float s2 = vnoise(p*15.0+7.7);
-  float dots = smoothstep(.80,.88,s1)*.27 + smoothstep(.84,.91,s2)*.17;
+  float dots = smoothstep(.84,.90,s1)*.20 + smoothstep(.87,.93,s2)*.13;
   // blotch field
-  float blotch = smoothstep(.70,.98,fbm(p*.35+9.3))*.22;
+  float blotch = smoothstep(.74,.99,fbm(p*.35+9.3))*.13;
   float edge = smoothstep(14.0, 30.0, length(p));
-  float inkAmt = clamp(dots*(0.5+edge) + blotch*edge*.8 + edge*.12, 0., .85);
+  float inkAmt = clamp(dots*(0.45+edge) + blotch*edge*.55 + edge*.10, 0., .8);
   // soft top light wash
   float ndl = dot(normalize(vN), normalize(uLight))*.5+.5;
   sand *= .92+.08*ndl;
@@ -352,7 +352,7 @@ function buildPlayer(){
   // legs
   for(const s of [-1,1]){
     const leg = new THREE.Group(); leg.position.set(.10*s, .92, 0); body.add(leg);
-    const thigh = capsule(.075, .34, M.skin); thigh.position.y = -.22; leg.add(thigh);
+    const thigh = capsule(.075, .34, M.dark); thigh.position.y = -.22; leg.add(thigh);
     const shin = capsule(.062, .34, M.wrap); shin.position.y = -.58; leg.add(shin);
     J['leg'+(s<0?'L':'R')] = leg;
   }
@@ -610,7 +610,16 @@ function inkCloud(pos, n=18){
 
 /* ---------------- afterimages (dodge ghosts) ---------------- */
 const ghosts = [];
-const ghostMat = new THREE.MeshBasicMaterial({color:0x14100a, transparent:true, opacity:.5, depthWrite:false});
+const ghostMat = new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  vertexShader:`varying vec3 vN; varying vec3 vV;
+    void main(){ vN = normalMatrix*normal; vec4 mv = modelViewMatrix*vec4(position,1.0); vV = -mv.xyz;
+      gl_Position = projectionMatrix*mv; }`,
+  fragmentShader:`varying vec3 vN; varying vec3 vV;
+    void main(){ float f = abs(dot(normalize(vN), normalize(vV)));
+      float a = smoothstep(.62,.22,f);   // hollow center, ink rim
+      gl_FragColor = vec4(vec3(.09,.07,.045), a*.9); }`
+});
 function afterimage(srcRoot){
   const g = srcRoot.clone(true);
   g.traverse(o=>{ if(o.isMesh){ if(o.userData.shadow){ o.visible=false; return; } o.material = ghostMat; } });
@@ -628,7 +637,7 @@ function updateGhosts(dt){
 /* ================= game state ================= */
 const G = {
   running:false, over:false, time:0, timeScale:1, hitstop:0,
-  camYaw:Math.PI, camPitch:.32, camDrag:0,
+  camYaw:Math.PI, camPitch:.8, camDrag:0,
 };
 const player = {
   ...buildPlayer(), pos:new THREE.Vector3(0,0,3.5), yaw:Math.PI, moveYaw:Math.PI,
@@ -1250,7 +1259,7 @@ function resetFight(){
   boss.root.visible=false; boss.state='vanish'; boss.stateT=.2; boss.thinkT=1.2;
   inkCloud(boss.pos, 22);
   G.time=0; G.over=false; G.timeScale=1; G.hitstop=0;
-  G.camYaw=Math.PI; G.camPitch=.32;
+  G.camYaw=Math.PI; G.camPitch=.8;
 }
 function startOrRetry(){
   el('startscreen').classList.add('hidden');
@@ -1273,7 +1282,7 @@ function endGame(win){
 function updateCamera(dt){
   if(G.camDrag>0) G.camDrag-=dt;
   else if(player.state==='run') G.camYaw = angLerp(G.camYaw, player.moveYaw, .9*dt);
-  const dist = 5.4, h = 1.6 + Math.sin(G.camPitch)*3.2;
+  const dist = 9.8, h = 1.2 + Math.sin(G.camPitch)*8.0;
   const cx = player.pos.x - Math.sin(G.camYaw)*dist*Math.cos(G.camPitch);
   const cz = player.pos.z - Math.cos(G.camYaw)*dist*Math.cos(G.camPitch);
   let shakeX=0, shakeY=0;
@@ -1282,7 +1291,7 @@ function updateCamera(dt){
   camera.position.set(cx+shakeX, Math.max(.5,h)+shakeY, cz);
   const lx = player.pos.x + Math.sin(G.camYaw)*1.6;
   const lz = player.pos.z + Math.cos(G.camYaw)*1.6;
-  camera.lookAt(lx, 1.35, lz);
+  camera.lookAt(lx, 1.0, lz);
 }
 
 /* ================= main loop ================= */
