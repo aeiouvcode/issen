@@ -905,11 +905,11 @@ function updatePlayer(dt){
       p.atkHitDone = true;
       tryHitBoss(a);
       const sp = p.pos.clone(); sp.y=1.3;
-      sp.x += Math.sin(p.yaw)*1.2; sp.z += Math.cos(p.yaw)*1.2;
-      sp.y = 1.5;
-      const pale = p.atkIdx===2 ? .42 : .34;
+      sp.x += Math.sin(p.yaw)*.9; sp.z += Math.cos(p.yaw)*.9;
+      sp.y = 1.35;
+      const pale = p.atkIdx===2 ? .55 : .48;
       const roll = p.yaw - Math.PI/2 + (p.atkIdx===0 ? -.5 : p.atkIdx===1 ? Math.PI+.5 : 0);
-      slashArc(sp, roll, p.atkIdx===2?2.7:2.5, p.atkIdx===2?2.2:2.6, pale, false);
+      slashArc(sp, roll, p.atkIdx===2?3.2:3.0, p.atkIdx===2?2.4:3.0, pale, false);
       sfx.whoosh();
     }
     if(p.stateT>=a.dur){
