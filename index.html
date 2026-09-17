@@ -567,12 +567,12 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true){
       ${noiseGLSL}
       void main(){
         float streak = fbm(vec2(vUv.x*9.0, vUv.y*2.5));
-        float a = smoothstep(0.,.25,vUv.x)*smoothstep(1.,.7,vUv.x);
-        a *= smoothstep(0.,.3,vUv.y)*smoothstep(1.,.55,vUv.y);
-        a *= .55 + 1.15*streak;
+        float a = smoothstep(0.,.16,vUv.x)*smoothstep(1.,.80,vUv.x);
+        a *= smoothstep(0.,.18,vUv.y)*smoothstep(1.,.72,vUv.y);
+        a *= .65 + 1.1*streak;
         a *= (1.0-uT)*(1.0-uT);
         vec3 col = mix(vec3(.12,.10,.07), vec3(.80,.77,.68), uPale);
-        gl_FragColor = vec4(col, min(a*1.4,1.0));
+        gl_FragColor = vec4(col, min(a*2.2,1.0));
       }`
   });
   const m = new THREE.Mesh(g, mat);
