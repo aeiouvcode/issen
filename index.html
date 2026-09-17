@@ -1284,7 +1284,7 @@ function updateCamera(dt){
 /* ================= main loop ================= */
 let last = performance.now();
 function loop(now){
-  window.QA = {player, boss, G,
+  window.QA = {player, boss, G, arcs, ghosts, decals, parts, camera, scene,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
     updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt);
@@ -1311,7 +1311,7 @@ addEventListener('resize', ()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-window.QA = {player, boss, G,
+window.QA = {player, boss, G, arcs, ghosts, decals, parts, camera, scene,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
     updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt);
