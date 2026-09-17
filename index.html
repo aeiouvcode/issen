@@ -581,6 +581,7 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true){
     g.rotateX(Math.PI/2);            // ring now lies in a screen-facing plane
     m.lookAt(camera.position);
     m.rotateZ(roll);                 // slash direction roll
+    m.translateX(-radius*.72);       // recenter the crescent band onto the swing
   } else {
     m.rotation.y = roll;             // flat ground ring
   }
