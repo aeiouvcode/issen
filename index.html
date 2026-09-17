@@ -199,7 +199,7 @@ void main(){
 const inkFrag = `
 precision highp float;
 uniform vec3 uPaper; uniform vec3 uInk; uniform vec3 uLight;
-uniform float uBias; uniform float uFloor; uniform float uStreakV; uniform float uTime;
+uniform float uBias; uniform float uFloor; uniform float uStreakV; uniform float uStreakAmp; uniform float uTime;
 varying vec3 vN; varying vec3 vW; varying vec2 vUv;
 ${noiseGLSL}
 void main(){
@@ -211,7 +211,7 @@ void main(){
   float streak = mix(g1, g2, uStreakV);
   float ink = 1.0 - ndl;
   ink = pow(ink, 1.4) * 1.3;
-  ink += (streak - .5) * .5;
+  ink += (streak - .5) * uStreakAmp;
   float fr = pow(1.0 - abs(dot(N, V)), 2.0);
   ink += fr * .28;
   ink = ink * uBias + uFloor;
@@ -223,13 +223,13 @@ void main(){
 }`;
 
 const lightDir = new THREE.Vector3(.5, .9, .35).normalize();
-function inkMat(paper, ink, bias, floor=0, streakV=0){
+function inkMat(paper, ink, bias, floor=0, streakV=0, streakAmp=.5){
   return new THREE.ShaderMaterial({
     vertexShader: inkVert, fragmentShader: inkFrag,
     uniforms: {
       uPaper:{value:new THREE.Color(paper)}, uInk:{value:new THREE.Color(ink)},
       uLight:{value:lightDir}, uBias:{value:bias}, uFloor:{value:floor},
-      uStreakV:{value:streakV}, uTime:{value:0}
+      uStreakV:{value:streakV}, uStreakAmp:{value:streakAmp}, uTime:{value:0}
     }
   });
 }
@@ -240,8 +240,8 @@ const M = {
   hair:  inkMat(0x8f8672, 0x120e08, 1.25, .42),
   dark:  inkMat(0x9a917c, 0x171208, 1.15, .30),
   wrap:  inkMat(0x7c7260, 0x14100a, 1.3, .5, 1),
-  robe:  inkMat(0xb0a68c, 0x14100a, 1.38, .38, 1),
-  kasa:  inkMat(0xcfc4a2, 0x1c160d, 1.28, .30, 1),
+  robe:  inkMat(0xb0a68c, 0x14100a, 1.38, .38, 1, 1.15),
+  kasa:  inkMat(0xcfc4a2, 0x1c160d, 1.28, .30, 1, 1.0),
   blade: inkMat(0xd8d0b8, 0x100c07, 1.15, .25),
   red:   new THREE.MeshBasicMaterial({color:RED}),
 };
@@ -370,8 +370,8 @@ function buildPlayer(){
   const sword = new THREE.Group(); sword.position.set(0,-.58,.02); J.armR.add(sword); J.sword = sword;
   const grip = new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.16,6), M.dark);
   sword.add(grip);
-  const blade = new THREE.Mesh(new THREE.BoxGeometry(.035,.95,.008), M.blade);
-  blade.position.y = .55; sword.add(blade);
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(.032,1.15,.008), M.blade);
+  blade.position.y = .65; sword.add(blade);
   sword.rotation.x = Math.PI/2 * .92;
   // head + bob hair
   const headG = new THREE.Group(); headG.position.y = .52; torso.add(headG); J.head = headG;
@@ -384,6 +384,8 @@ function buildPlayer(){
   const bobR = bobL.clone(); bobR.position.x = .11; headG.add(bobR);
   const back = new THREE.Mesh(new THREE.SphereGeometry(.12,10,8), M.hair);
   back.position.set(0,-.09,-.10); back.scale.set(1.05,1.5,.75); headG.add(back);
+  const tail = new THREE.Mesh(new THREE.SphereGeometry(.085,10,8), M.hair);
+  tail.position.set(0,-.24,-.14); tail.scale.set(.85,1.9,.6); headG.add(tail);
   root.add(blobShadow(1.15));
   return {root, body, J};
 }
@@ -393,9 +395,9 @@ function buildBoss(){
   const body = new THREE.Group(); root.add(body);
   const J = {};
   // robe - big cone
-  const robe = new THREE.Mesh(new THREE.ConeGeometry(.78, 2.15, 12, 3), M.robe);
+  const robe = new THREE.Mesh(new THREE.ConeGeometry(.88, 2.15, 12, 3), M.robe);
   robe.position.y = 1.15; body.add(robe); J.robe = robe;
-  const skirt = new THREE.Mesh(new THREE.ConeGeometry(.9, .8, 12, 1, true), M.robe);
+  const skirt = new THREE.Mesh(new THREE.ConeGeometry(1.04, .85, 12, 1, true), M.robe);
   skirt.position.y = .45; body.add(skirt);
   // chest plate w/ red marks
   const chest = new THREE.Mesh(new THREE.SphereGeometry(.42, 12, 10), M.robe);
@@ -409,10 +411,10 @@ function buildBoss(){
   head.position.y = 2.42; body.add(head); J.head = head;
   // kasa hat
   const kasa = new THREE.Group(); kasa.position.y = 2.62; body.add(kasa); J.kasa = kasa;
-  const hat = new THREE.Mesh(new THREE.ConeGeometry(1.02, .42, 16, 2), M.kasa);
+  const hat = new THREE.Mesh(new THREE.ConeGeometry(1.18, .34, 16, 2), M.kasa);
   kasa.add(hat);
-  const brim = new THREE.Mesh(new THREE.CylinderGeometry(1.02, 1.06, .05, 16), M.kasa);
-  brim.position.y = -.2; kasa.add(brim);
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.22, .05, 16), M.kasa);
+  brim.position.y = -.16; kasa.add(brim);
   kasa.rotation.z = .06;
   // arms
   for(const s of [-1,1]){
@@ -423,10 +425,10 @@ function buildBoss(){
   }
   // naginata in right hand
   const glaive = new THREE.Group(); glaive.position.set(0,-.95,.05); J.armR.add(glaive); J.glaive = glaive;
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,3.1,8), M.dark);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,3.5,8), M.dark);
   glaive.add(pole);
   const blade = new THREE.Mesh(new THREE.BoxGeometry(.05,1.0,.02), M.blade);
-  blade.position.y = 1.95; blade.rotation.z = .12; glaive.add(blade);
+  blade.position.y = 2.15; blade.rotation.z = .12; glaive.add(blade);
   glaive.rotation.x = Math.PI/2;
   root.add(blobShadow(2.6));
   return {root, body, J};
@@ -965,7 +967,6 @@ function updateBoss(dt){
   const toP = Math.atan2(player.pos.x-b.pos.x, player.pos.z-b.pos.z);
   switch(b.state){
     case 'vanish':
-      if(b.stateT===dt) {} // first frame
       if(b.stateT>=.5){
         b.root.visible=false;
         // pick reappear spot near player
@@ -1278,7 +1279,13 @@ function updateCamera(dt){
 /* ================= main loop ================= */
 let last = performance.now();
 function loop(now){
-  window.QA = {player, boss, G};
+  window.QA = {player, boss, G,
+  step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
+    if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt);
+    updateCamera(dt); updateHUD(dt); }
+    renderer.render(scene, camera); },
+  attack:doAttack, dodge:doDodge, heal:doHeal};
 requestAnimationFrame(loop);
   let dt = Math.min(.05, (now-last)/1000);
   last = now;
@@ -1299,7 +1306,13 @@ addEventListener('resize', ()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-window.QA = {player, boss, G};
+window.QA = {player, boss, G,
+  step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
+    if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt);
+    updateCamera(dt); updateHUD(dt); }
+    renderer.render(scene, camera); },
+  attack:doAttack, dodge:doDodge, heal:doHeal};
 requestAnimationFrame(loop);
 </script>
 </body>
