@@ -908,8 +908,8 @@ function updatePlayer(dt){
       sp.x += Math.sin(p.yaw)*1.2; sp.z += Math.cos(p.yaw)*1.2;
       sp.y = 1.5;
       const pale = p.atkIdx===2 ? .42 : .34;
-      const roll = p.atkIdx===0 ? -.55 : p.atkIdx===1 ? .55+Math.PI : 0;
-      slashArc(sp, roll, p.atkIdx===2?2.7:2.5, p.atkIdx===2?2.2:2.6, pale, true);
+      const roll = p.yaw - Math.PI/2 + (p.atkIdx===0 ? -.5 : p.atkIdx===1 ? Math.PI+.5 : 0);
+      slashArc(sp, roll, p.atkIdx===2?2.7:2.5, p.atkIdx===2?2.2:2.6, pale, false);
       sfx.whoosh();
     }
     if(p.stateT>=a.dur){
