@@ -539,7 +539,7 @@ function updateDecals(dt){
 
 /* ---------------- slash arc ribbons ---------------- */
 const arcs = [];
-function slashArc(pos, yaw, tilt, radius=1.9, sweep=2.4, pale=.25){
+function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true){
   const seg = 26;
   const g = new THREE.BufferGeometry();
   const verts = new Float32Array((seg+1)*2*3);
@@ -577,8 +577,13 @@ function slashArc(pos, yaw, tilt, radius=1.9, sweep=2.4, pale=.25){
   });
   const m = new THREE.Mesh(g, mat);
   m.position.copy(pos);
-  m.rotation.order = 'YXZ';
-  m.rotation.set(tilt, yaw, 0);
+  if(faceCam){
+    g.rotateX(Math.PI/2);            // ring now lies in a screen-facing plane
+    m.lookAt(camera.position);
+    m.rotateZ(roll);                 // slash direction roll
+  } else {
+    m.rotation.y = roll;             // flat ground ring
+  }
   m.renderOrder = 5;
   scene.add(m);
   arcs.push({m, t:0, life:.5});
@@ -893,10 +898,8 @@ function updatePlayer(dt){
       sp.x += Math.sin(p.yaw)*1.2; sp.z += Math.cos(p.yaw)*1.2;
       sp.y = 1.5;
       const pale = p.atkIdx===2 ? .85 : .8;
-      const planeYaw = p.atkIdx===2 ? p.yaw + Math.PI/2
-        : p.yaw - Math.PI/2 + (p.atkIdx===1?-.35:.35);
-      const xRot = p.atkIdx===2 ? Math.PI/2 - 1.05 : Math.PI/2 - .45;
-      slashArc(sp, planeYaw, xRot, p.atkIdx===2?2.6:2.4, p.atkIdx===2?2.2:2.6, pale);
+      const roll = p.atkIdx===0 ? -.55 : p.atkIdx===1 ? .55+Math.PI : 0;
+      slashArc(sp, roll, p.atkIdx===2?2.7:2.5, p.atkIdx===2?2.2:2.6, pale, true);
       sfx.whoosh();
     }
     if(p.stateT>=a.dur){
@@ -1009,7 +1012,7 @@ function updateBoss(dt){
     case 'windup_spin':
       b.yaw = angLerp(b.yaw, toP, .06);
       if(b.stateT>=.7){ bossSetState('spin');
-        slashArc(b.pos.clone().setY(1.4), b.yaw, 0, 3.9, 6.28, .62);
+        slashArc(b.pos.clone().setY(1.4), b.yaw, 3.9, 6.28, .62, false);
         sfx.whooshBig();
         // hit check mid-spin handled next state
         b._spinHit=false;
@@ -1038,7 +1041,7 @@ function updateBoss(dt){
         groundSplat(b.pos.x, b.pos.z, 2.6);
         inkBurst(b.pos.clone().setY(.4), 40, 7, 0, .8);
         // shockwave ring
-        slashArc(b.pos.clone().setY(.35), 0, Math.PI/2*0, 3.0, 6.28, .5);
+        slashArc(b.pos.clone().setY(.35), 0, 3.0, 6.28, .5, false);
         sfx.slam();
         G.camShake = .35;
         if(dist2D(b.pos, player.pos) < 2.9) hurtPlayer(30, b.pos);
