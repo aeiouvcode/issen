@@ -77,15 +77,20 @@
   /* ---- touch controls ---- */
   #touchui{position:fixed;inset:0;z-index:10;pointer-events:none;display:none;}
   body.coarse #touchui{display:block;}
+  .thint{display:none;}
+  body.coarse .thint{display:block;}
+  body.coarse .kbhint{display:none;}
   .tbtn{position:absolute;width:64px;height:64px;border-radius:50%;pointer-events:auto;
     border:2px solid rgba(58,50,38,.75);background:rgba(236,225,194,.30);
     color:var(--ink);font-size:26px;display:flex;align-items:center;justify-content:center;
     font-family:'Hiragino Mincho ProN','Yu Mincho',serif;backdrop-filter:blur(2px);
     box-shadow:0 2px 6px rgba(40,30,12,.25);}
   .tbtn:active{background:rgba(169,46,34,.35);}
-  #btn-atk{right:26px;bottom:96px;width:76px;height:76px;font-size:32px;}
-  #btn-dodge{right:112px;bottom:44px;}
-  #btn-heal{right:36px;bottom:190px;}
+  #btn-atk{right:20px;bottom:128px;width:76px;height:76px;font-size:32px;}
+  #btn-dodge{right:26px;bottom:222px;}
+  #btn-heal{right:26px;bottom:306px;}
+  body.coarse #playerhud{width:160px;bottom:12px;}
+  body.coarse #timebox{top:12%;}
   #joy{position:absolute;width:110px;height:110px;border-radius:50%;border:2px solid rgba(58,50,38,.5);
     background:rgba(236,225,194,.18);display:none;pointer-events:none;}
   #joyknob{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;
@@ -137,9 +142,11 @@
   <div class="title-en">ISSEN</div>
   <div class="subtitle">A SUMI-E DUEL</div>
   <div class="controls">
-    <div><b>WASD</b> move &nbsp; <b>drag</b> camera</div>
-    <div><b>click / J</b> strike &nbsp; <b>space / shift</b> dodge</div>
-    <div><b>F</b> heal (3 charges)</div>
+    <div class="kbhint"><b>WASD</b> move &nbsp; <b>drag</b> camera</div>
+    <div class="thint"><b>left thumb</b> move &nbsp; <b>right side</b> camera</div>
+    <div class="kbhint"><b>click / J</b> strike &nbsp; <b>space / shift</b> dodge</div>
+    <div class="kbhint"><b>F</b> heal (3 charges)</div>
+    <div class="thint"><b>斬</b> strike &nbsp; <b>避</b> dodge &nbsp; <b>癒</b> heal</div>
   </div>
   <div class="prompt" id="startprompt">- click to begin -</div>
 </div>
@@ -1288,7 +1295,7 @@ function endGame(win){
 function updateCamera(dt){
   if(G.camDrag>0) G.camDrag-=dt;
   else if(player.state==='run') G.camYaw = angLerp(G.camYaw, player.moveYaw, .9*dt);
-  const dist = 9.8, h = 1.2 + Math.sin(G.camPitch)*8.0;
+  const dist = (document.body.classList.contains('coarse')?11.4:9.8), h = 1.2 + Math.sin(G.camPitch)*8.0;
   const cx = player.pos.x - Math.sin(G.camYaw)*dist*Math.cos(G.camPitch);
   const cz = player.pos.z - Math.cos(G.camYaw)*dist*Math.cos(G.camPitch);
   let shakeX=0, shakeY=0;
