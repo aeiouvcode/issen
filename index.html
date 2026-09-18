@@ -1369,7 +1369,15 @@ function endGame(win){
 /* ================= camera ================= */
 function updateCamera(dt){
   if(G.camDrag>0) G.camDrag-=dt;
-  else if(player.state==='run') G.camYaw = angLerp(G.camYaw, player.moveYaw, .9*dt);
+  else {
+    if(player.state==='run') G.camYaw = angLerp(G.camYaw, player.moveYaw, .9*dt);
+    // cinematic pitch: low and close during the duel, high when separated
+    if(G.running && boss.root.visible){
+      const d = dist2D(player.pos, boss.pos);
+      const target = clamp(.40 + (d-3.5)*.085, .40, .92);
+      G.camPitch += (target - G.camPitch) * Math.min(1, 1.6*dt);
+    }
+  }
   const dist = (document.body.classList.contains('coarse')?11.4:9.8), h = 1.2 + Math.sin(G.camPitch)*8.0;
   const cx = player.pos.x - Math.sin(G.camYaw)*dist*Math.cos(G.camPitch);
   const cz = player.pos.z - Math.cos(G.camYaw)*dist*Math.cos(G.camPitch);
