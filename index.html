@@ -1443,8 +1443,9 @@ function loop(now){
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
     updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
     updateCamera(dt); updateHUD(dt); }
-    renderer.render(scene, camera); },
+    if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
+window.QA_norender=false;
 requestAnimationFrame(loop);
   let dt = Math.min(.05, (now-last)/1000);
   last = now;
@@ -1470,8 +1471,9 @@ window.QA = {player, boss, G, arcs, ghosts, decals, parts, puffs, camera, scene,
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
     updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
     updateCamera(dt); updateHUD(dt); }
-    renderer.render(scene, camera); },
+    if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
+window.QA_norender=false;
 requestAnimationFrame(loop);
 </script>
 </body>
