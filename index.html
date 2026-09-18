@@ -614,8 +614,63 @@ function updateArcs(dt){
   }
 }
 
+/* ---------------- ink puff cloud (vanish, f014) ---------------- */
+function puffTexture(){
+  const blobs = [[128,150,66],[205,118,78],[290,140,72],[360,160,58],[170,180,60],[255,190,62],[330,95,50],[95,115,45]];
+  // dark expanded silhouette (the brush outline)
+  const back = document.createElement('canvas'); back.width=512; back.height=256;
+  const bx = back.getContext('2d');
+  for(const [cx,cy,r] of blobs){
+    bx.fillStyle='rgba(28,22,14,.92)';
+    bx.beginPath(); bx.arc(cx,cy,r+9,0,7); bx.fill();
+  }
+  const c = document.createElement('canvas'); c.width=512; c.height=256;
+  const x = c.getContext('2d');
+  x.drawImage(back,0,0);
+  // pale wash fill with slight per-blob tone variation
+  for(const [cx,cy,r] of blobs){
+    const g = x.createRadialGradient(cx,cy,r*.1,cx,cy,r);
+    const tone = .78+Math.random()*.1;
+    g.addColorStop(0,`rgba(${Math.floor(228*tone)},${Math.floor(220*tone)},${Math.floor(196*tone)},.96)`);
+    g.addColorStop(.75,`rgba(${Math.floor(214*tone)},${Math.floor(205*tone)},${Math.floor(180*tone)},.9)`);
+    g.addColorStop(1,'rgba(200,190,165,.55)');
+    x.fillStyle=g;
+    x.beginPath(); x.arc(cx,cy,r,0,7); x.fill();
+  }
+  // rough inner brush strokes
+  x.strokeStyle='rgba(60,50,36,.28)'; x.lineWidth=3; x.lineCap='round';
+  for(let i=0;i<9;i++){
+    const cx=110+Math.random()*300, cy=100+Math.random()*80, r=20+Math.random()*45;
+    x.beginPath(); x.arc(cx,cy,r,Math.random()*3,Math.random()*2+1); x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  return t;
+}
+const puffTex = puffTexture();
+const puffs = [];
+function inkPuff(pos, scale=1){
+  const mat = new THREE.SpriteMaterial({map:puffTex, transparent:true, depthWrite:false, opacity:.95});
+  const sp = new THREE.Sprite(mat);
+  sp.position.set(pos.x, 1.1*scale, pos.z);
+  sp.scale.set(2.6*scale, 1.5*scale, 1);
+  sp.material.rotation = (Math.random()-.5)*.3;
+  scene.add(sp);
+  puffs.push({sp, t:0, life:.85, s0:2.6*scale});
+}
+function updatePuffs(dt){
+  for(let i=puffs.length-1;i>=0;i--){
+    const p=puffs[i]; p.t+=dt/p.life;
+    p.sp.scale.set(p.s0*(1+p.t*.8), p.s0*.58*(1+p.t*.8), 1);
+    p.sp.position.y += dt*.6;
+    p.sp.material.opacity = .95*(1-p.t)*(1-p.t*.4);
+    if(p.t>=1){ scene.remove(p.sp); p.sp.material.dispose(); puffs.splice(i,1); }
+  }
+}
+
 /* ---------------- ink cloud (teleport / vanish) ---------------- */
 function inkCloud(pos, n=18){
+  inkPuff(pos, .9+Math.random()*.3);
+  if(Math.random()<.6) inkPuff(new THREE.Vector3(pos.x+(Math.random()-.5)*1.6, 0, pos.z+(Math.random()-.5)*1.6), .6);
   for(let i=0;i<n;i++){
     const a=Math.random()*Math.PI*2, r=Math.random()*1.2;
     spawnP(pos.x+Math.cos(a)*r, .3+Math.random()*2.2, pos.z+Math.sin(a)*r,
@@ -631,7 +686,7 @@ function inkSplatter(pos, yaw){
     const sp = 2.0+Math.random()*4.0;
     spawnP(pos.x, pos.y+(Math.random()-.5)*.6, pos.z,
       Math.sin(a)*sp, 1.0+Math.random()*2.2, Math.cos(a)*sp,
-      .35+Math.random()*.35, .5+Math.random()*.9, 0, -9);
+      .4+Math.random()*.4, .8+Math.random()*1.3, 0, -9);
   }
 }
 
@@ -1330,10 +1385,10 @@ function updateCamera(dt){
 /* ================= main loop ================= */
 let last = performance.now();
 function loop(now){
-  window.QA = {player, boss, G, arcs, ghosts, decals, parts, camera, scene,
+  window.QA = {player, boss, G, arcs, ghosts, decals, parts, puffs, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
-    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt);
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
     updateCamera(dt); updateHUD(dt); }
     renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
@@ -1347,7 +1402,7 @@ requestAnimationFrame(loop);
     updatePlayer(dt);
     updateBoss(dt);
   }
-  updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt);
+  updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
   updateCamera(dt);
   updateHUD(dt);
   renderer.render(scene, camera);
@@ -1357,10 +1412,10 @@ addEventListener('resize', ()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-window.QA = {player, boss, G, arcs, ghosts, decals, parts, camera, scene,
+window.QA = {player, boss, G, arcs, ghosts, decals, parts, puffs, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
-    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt);
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
     updateCamera(dt); updateHUD(dt); }
     renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
