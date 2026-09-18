@@ -334,6 +334,41 @@ function grassTexture(){
   mk(ARENA_R+15, 4, .55);
 }
 
+/* ---- mid-field grass tufts (f019) ---- */
+function tuftTexture(){
+  const c=document.createElement('canvas'); c.width=128; c.height=128;
+  const x=c.getContext('2d');
+  for(let i=0;i<16;i++){
+    const bx=24+Math.random()*80, h=40+Math.random()*60, lean=(Math.random()-.5)*30;
+    x.strokeStyle=`rgba(90,84,66,${.3+Math.random()*.35})`;
+    x.lineWidth=2+Math.random()*2.5; x.lineCap='round';
+    x.beginPath(); x.moveTo(bx,128);
+    x.quadraticCurveTo(bx+lean*.4, 128-h*.6, bx+lean, 128-h);
+    x.stroke();
+  }
+  return new THREE.CanvasTexture(c);
+}
+{
+  const tt = tuftTexture();
+  const tm = new THREE.MeshBasicMaterial({map:tt, transparent:true, opacity:.8,
+    side:THREE.DoubleSide, depthWrite:false, fog:true});
+  const tuftSpots = [];
+  for(let i=0;i<14;i++){
+    const a=Math.random()*Math.PI*2, r=3.5+Math.random()*17;
+    const px=Math.cos(a)*r, pz=Math.sin(a)*r;
+    if(Math.hypot(px, pz-3.5)<2.5 || Math.hypot(px, pz+7)<3.5) continue; // keep spawn areas clear
+    tuftSpots.push([px,pz]);
+  }
+  for(const [px,pz] of tuftSpots){
+    const sc=.7+Math.random()*.9;
+    for(const rot of [0, Math.PI/2]){
+      const m=new THREE.Mesh(new THREE.PlaneGeometry(sc, sc*.75), tm);
+      m.position.set(px, sc*.36, pz); m.rotation.y=rot+Math.random()*.6;
+      scene.add(m);
+    }
+  }
+}
+
 /* ---------------- character builders ---------------- */
 function capsule(r, len, mat){
   const g = new THREE.CapsuleGeometry(r, len, 4, 10);
@@ -420,6 +455,9 @@ function buildBoss(){
     const tri = new THREE.Mesh(new THREE.ConeGeometry(.06,.14,3), M.red);
     tri.position.set(.17*s, 2.08, .42); tri.rotation.x = Math.PI/2; body.add(tri);
   }
+  // large brush wound on the chest (f004)
+  const wound = new THREE.Mesh(new THREE.CircleGeometry(.16, 10), M.red);
+  wound.position.set(0, 1.98, .44); wound.rotation.x = -.12; body.add(wound);
   // head under kasa
   const head = new THREE.Mesh(new THREE.SphereGeometry(.19, 12, 10), M.dark);
   head.position.y = 2.42; body.add(head); J.head = head;
