@@ -622,11 +622,13 @@ function buildBoss(){
   const head = new THREE.Mesh(new THREE.SphereGeometry(.19, 12, 10), M.dark);
   head.position.y = 2.42; body.add(head); J.head = head;
   // phase-2 eyes under the kasa: hidden until the awakening
-  const eyes = new THREE.Group(); eyes.position.set(0, 2.44, .17); body.add(eyes); J.eyes = eyes;
+  const eyes = new THREE.Group(); eyes.position.set(0, 2.44, .21); body.add(eyes); J.eyes = eyes;
   for(const s of [-1,1]){
-    const eye = new THREE.Mesh(new THREE.CircleGeometry(.034, 8), M.redGlow);
-    eye.position.set(.07*s, 0, 0); eyes.add(eye);
+    const eye = new THREE.Mesh(new THREE.CircleGeometry(.055, 8), M.redGlow);
+    eye.position.set(.075*s, 0, 0); eyes.add(eye);
   }
+  const halo = new THREE.Mesh(new THREE.CircleGeometry(.16, 12), new THREE.MeshBasicMaterial({color:0xff3120, transparent:true, opacity:.18}));
+  halo.position.z = -.02; eyes.add(halo);
   eyes.visible = false;
   // kasa hat
   const kasa = new THREE.Group(); kasa.position.y = 2.62; body.add(kasa); J.kasa = kasa;
