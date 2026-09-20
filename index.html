@@ -307,7 +307,7 @@ function bambooTexture(){
     const bx = Math.random()*1024;
     const w = 6+Math.random()*14;
     const lean = (Math.random()-.5)*30;
-    const a = .30+Math.random()*.45;
+    const a = .45+Math.random()*.5;
     x.strokeStyle = `rgba(20,16,11,${a})`;
     x.lineWidth = w; x.lineCap='round';
     x.beginPath();
@@ -345,8 +345,8 @@ function bambooTexture(){
     m.position.y = y;
     scene.add(m);
   };
-  mk(ARENA_R+11, 4, .8, 9, 3.6);
-  mk(ARENA_R+20, 6, .45, 12, 4.6);
+  mk(ARENA_R+11, 4, .95, 9, 3.6);
+  mk(ARENA_R+20, 6, .6, 12, 4.6);
 }
 
 /* ---- distant ink-grass ring (billboard strokes) ---- */
