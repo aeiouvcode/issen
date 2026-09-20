@@ -362,6 +362,44 @@ function bambooTexture(){
   mk(ARENA_R+20, 6, .6, 12, 4.6);
 }
 
+/* ---- foreground bamboo framing (near stalks at the rim) ---- */
+function stalkTexture(){
+  const c=document.createElement('canvas'); c.width=128; c.height=512;
+  const x=c.getContext('2d');
+  const lean=(Math.random()-.5)*24;
+  x.strokeStyle='rgba(22,18,12,.92)'; x.lineCap='round';
+  x.lineWidth=20+Math.random()*8;
+  x.beginPath(); x.moveTo(64,520); x.quadraticCurveTo(64+lean*.4,260,64+lean,-20); x.stroke();
+  x.lineWidth=7;
+  for(let s=0;s<4;s++){
+    const ny=90+s*105+Math.random()*24, nx=64+lean*(1-ny/512);
+    x.beginPath(); x.moveTo(nx-16,ny); x.lineTo(nx+16,ny-5); x.stroke();
+  }
+  // leaf tufts near the top
+  x.lineWidth=3.5;
+  for(let l=0;l<5;l++){
+    const ly=30+Math.random()*150, lx=64+lean*(1-ly/512)+(Math.random()-.5)*36;
+    const dir=Math.random()<.5?-1:1;
+    x.beginPath(); x.moveTo(lx,ly);
+    x.quadraticCurveTo(lx+dir*22,ly-10,lx+dir*(40+Math.random()*22),ly+2); x.stroke();
+  }
+  return new THREE.CanvasTexture(c);
+}
+const fgStalks = [];
+for(let i=0;i<7;i++){
+  const a = i/7*Math.PI*2 + Math.random()*.6;
+  const r = 13+Math.random()*6.5; // mid-ground ring: frames the duel as the camera orbits
+  const h = 8+Math.random()*3.5, w = .55+Math.random()*.3;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+    new THREE.MeshBasicMaterial({map:stalkTexture(), transparent:true, depthWrite:false, side:THREE.DoubleSide, fog:true, opacity:.85}));
+  m.position.set(Math.cos(a)*r, h/2-.3, Math.sin(a)*r);
+  m.rotation.y = -a+Math.PI/2+(Math.random()-.5)*.6;
+  m.rotation.z = (Math.random()-.5)*.07;
+  m.renderOrder = 1;
+  scene.add(m);
+  fgStalks.push(m);
+}
+
 /* ---- drifting mist banks + far ink ridge (Ronin depth) ---- */
 const mists = [];
 function mistTexture(){
@@ -1846,7 +1884,7 @@ function updateCamera(dt){
 /* ================= main loop ================= */
 let last = performance.now();
 function loop(now){
-  window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, camera, scene, inkCloud, inkPuff,
+  window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, fgStalks, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     const rawDt=dt;
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
@@ -1880,7 +1918,7 @@ addEventListener('resize', ()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, camera, scene, inkCloud, inkPuff,
+window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, fgStalks, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     const rawDt=dt;
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
