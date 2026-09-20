@@ -17,7 +17,7 @@
   /* ---- aged paper vignette ---- */
   #vignette{position:fixed;inset:0;pointer-events:none;z-index:5;
     background:
-      radial-gradient(ellipse 120% 90% at 50% 42%, rgba(0,0,0,0) 46%, rgba(74,58,32,.38) 82%, rgba(48,36,18,.66) 100%),
+      radial-gradient(ellipse 120% 90% at 50% 42%, rgba(0,0,0,0) 40%, rgba(58,45,26,.46) 80%, rgba(30,22,11,.80) 100%),
       radial-gradient(ellipse 140% 120% at 50% 110%, rgba(0,0,0,0) 60%, rgba(60,44,20,.30) 100%);
     mix-blend-mode:multiply;}
   #vignette::after{content:"";position:absolute;inset:0;opacity:.05;
@@ -280,8 +280,9 @@ void main(){
   float dots = smoothstep(.82,.89,s1)*.20 + smoothstep(.86,.93,s2)*.13 + smoothstep(.80,.88,s3)*.15;
   // blotch field
   float blotch = smoothstep(.74,.99,fbm(p*.35+9.3))*.13;
-  float edge = smoothstep(14.0, 30.0, length(p));
-  float inkAmt = clamp(dots*(0.45+edge) + blotch*edge*.55 + edge*.10, 0., .8);
+  float edge = smoothstep(11.0, 27.0, length(p));
+  float inkAmt = clamp(dots*(0.45+edge) + blotch*edge*.55 + edge*.16, 0., .8);
+  sand *= 1.0 - edge*.28;
   // soft top light wash
   float ndl = dot(normalize(vN), normalize(uLight))*.5+.5;
   sand *= .92+.08*ndl;
@@ -295,6 +296,57 @@ void main(){
   g.rotateX(-Math.PI/2);
   const ground = new THREE.Mesh(g, groundMat);
   scene.add(ground);
+}
+
+/* ---- distant bamboo silhouettes (Ronin mood) ---- */
+function bambooTexture(){
+  const c = document.createElement('canvas'); c.width=1024; c.height=512;
+  const x = c.getContext('2d');
+  x.clearRect(0,0,1024,512);
+  for(let i=0;i<26;i++){
+    const bx = Math.random()*1024;
+    const w = 6+Math.random()*14;
+    const lean = (Math.random()-.5)*30;
+    const a = .30+Math.random()*.45;
+    x.strokeStyle = `rgba(20,16,11,${a})`;
+    x.lineWidth = w; x.lineCap='round';
+    x.beginPath();
+    x.moveTo(bx, 512);
+    x.quadraticCurveTo(bx+lean*.5, 250, bx+lean, -20);
+    x.stroke();
+    // segment nodes
+    x.lineWidth = w*.4;
+    for(let s2=0;s2<4;s2++){
+      const ny = 80+s2*110+Math.random()*30;
+      const nx = bx+lean*(1-ny/512);
+      x.beginPath(); x.moveTo(nx-w*.8, ny); x.lineTo(nx+w*.8, ny-4); x.stroke();
+    }
+    // sparse leaves
+    for(let l=0;l<3;l++){
+      const ly = 40+Math.random()*200, lx = bx+lean*(1-ly/512)+(Math.random()-.5)*60;
+      x.lineWidth = 2+Math.random()*2;
+      x.beginPath(); x.moveTo(lx, ly);
+      x.quadraticCurveTo(lx+25, ly-12, lx+45+Math.random()*20, ly-4);
+      x.stroke();
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = THREE.RepeatWrapping;
+  return t;
+}
+{
+  const tex = bambooTexture();
+  const mk = (r, rep, op, h, y)=>{
+    const t = tex.clone(); t.needsUpdate=true; t.repeat.x=rep;
+    const geo = new THREE.CylinderGeometry(r, r, h, 64, 1, true);
+    const mat = new THREE.MeshBasicMaterial({map:t, transparent:true, opacity:op,
+      side:THREE.BackSide, depthWrite:false, fog:true});
+    const m = new THREE.Mesh(geo, mat);
+    m.position.y = y;
+    scene.add(m);
+  };
+  mk(ARENA_R+11, 4, .8, 9, 3.6);
+  mk(ARENA_R+20, 6, .45, 12, 4.6);
 }
 
 /* ---- distant ink-grass ring (billboard strokes) ---- */
@@ -513,7 +565,7 @@ const pMat = new THREE.ShaderMaterial({
       float d = length(q);
       float a = smoothstep(.5, .06, d) * vA;
       a *= .9 + .1*sin(q.x*9.0+q.y*7.0);
-      vec3 ink = mix(vec3(.10,.08,.05), vec3(.55,.50,.40), vD);
+      vec3 ink = vD > 1.5 ? vec3(.48,.085,.06) : mix(vec3(.10,.08,.05), vec3(.55,.50,.40), vD);
       gl_FragColor = vec4(ink, a);
     }`
 });
@@ -524,6 +576,7 @@ const parts = []; // {i, vx,vy,vz, life, maxLife, size, dark, grav}
 let pNext = 0;
 function spawnP(x,y,z, vx,vy,vz, life, size, dark=0, grav=-4){
   const i = pNext; pNext = (pNext+1)%PMAX;
+  pDark[i]=dark; pGeo.attributes.aDark.needsUpdate = true;
   parts.push({i, x,y,z, vx,vy,vz, life, maxLife:life, size, dark, grav});
 }
 function updateParts(dt){
@@ -573,8 +626,9 @@ function splatTexture(){
 const splatTex = splatTexture();
 const decals = [];
 const decalMat = new THREE.MeshBasicMaterial({map:splatTex, transparent:true, depthWrite:false, opacity:.8});
-function groundSplat(x, z, scale=1, life=7){
+function groundSplat(x, z, scale=1, life=7, blood=false){
   const m = new THREE.Mesh(new THREE.PlaneGeometry(scale*2.2, scale*2.2), decalMat.clone());
+  if(blood) m.material.color.setHex(0xa02818);
   m.rotation.x = -Math.PI/2; m.rotation.z = Math.random()*7;
   m.position.set(x, .03+Math.random()*.02, z);
   scene.add(m);
@@ -591,7 +645,7 @@ function updateDecals(dt){
 
 /* ---------------- slash arc ribbons ---------------- */
 const arcs = [];
-function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true){
+function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true, red=0){
   const seg = 26;
   const g = new THREE.BufferGeometry();
   const verts = new Float32Array((seg+1)*2*3);
@@ -611,7 +665,7 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true){
   g.setIndex(idx);
   const mat = new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, side:THREE.DoubleSide,
-    uniforms:{uT:{value:0}, uPale:{value:pale}},
+    uniforms:{uT:{value:0}, uPale:{value:pale}, uRed:{value:0}},
     vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
       gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
     fragmentShader:`
@@ -626,9 +680,11 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true){
         a *= 1.0 - smoothstep(.55,1.,vUv.y)*fbm(vec2(vUv.x*26.,vUv.y*3.))*.85;
         float fade = 1.0-uT; a *= fade*fade*(.6+.4*fade);
         vec3 col = mix(vec3(.12,.10,.07), vec3(.84,.81,.72), uPale);
+        col = mix(col, vec3(.55,.11,.07), uRed);
         gl_FragColor = vec4(col, min(a*2.0,1.0));
       }`
   });
+  mat.uniforms.uRed.value = red;
   const m = new THREE.Mesh(g, mat);
   m.position.copy(pos);
   if(faceCam){
@@ -942,27 +998,30 @@ function tryHitBoss(a){
   boss.hp = Math.max(0, boss.hp - dmg);
   boss.posture = Math.max(0, boss.posture - a.post);
   const hitPos = boss.pos.clone(); hitPos.y = 1.6;
-  inkBurst(hitPos, 46, 6.5, 0, .7);
+  inkBurst(hitPos, 40, 6.5, 2, .7); inkBurst(hitPos, 10, 4, 0, .5);
+    if(Math.random()<.5) groundSplat(boss.pos.x+(Math.random()-.5), boss.pos.z+(Math.random()-.5), .9, 9, true);
   groundSplat(boss.pos.x+(Math.random()-.5), boss.pos.z+(Math.random()-.5), 1.2);
   G.hitstop = .075;
   G.camShake = .12;
   sfx.hit();
   if(boss.hp<=0 && boss.alive){
     boss.alive=false; boss.state='dead'; boss.stateT=0;
-    inkBurst(boss.pos.clone().setY(1.5), 90, 8, 0, 1.0);
+    slashArc(boss.pos.clone().setY(1.2), Math.random()*6.28, 5.0, 6.28, .1, false, .9);
+    inkBurst(boss.pos.clone().setY(1.5), 70, 8, 2, 1.0); inkBurst(boss.pos.clone().setY(1.5), 20, 6, 0, .8);
     groundSplat(boss.pos.x, boss.pos.z, 4, 30);
     inkCloud(boss.pos, 26);
     sfx.big();
     setTimeout(()=>endGame(true), 1400);
   } else if(boss.posture<=0 && boss.state!=='stagger'){
     boss.state='stagger'; boss.stateT=0; boss.posture=boss.maxposture;
+    slashArc(boss.pos.clone().setY(1.3), Math.random()*6.28, 4.6, 5.2, .15, false, .8);
     // recoil away from the player + heavy ink spray
     const kx=boss.pos.x-player.pos.x, kz=boss.pos.z-player.pos.z;
     const kl=Math.hypot(kx,kz)||1;
     boss.pos.x += kx/kl*1.3; boss.pos.z += kz/kl*1.3;
     inkBurst(boss.pos.clone().setY(1.6), 60, 7, 0, .8);
     inkCloud(boss.pos, 12);
-    groundSplat(boss.pos.x, boss.pos.z, 2.2, 12);
+    groundSplat(boss.pos.x, boss.pos.z, 2.2, 12, true);
     G.hitstop = Math.max(G.hitstop, .12); G.camShake = Math.max(G.camShake||0, .5);
     sfx.big();
   }
