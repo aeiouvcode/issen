@@ -97,9 +97,8 @@
     background:rgba(58,50,38,.55);}
   #hitflash{position:fixed;inset:0;z-index:8;pointer-events:none;background:radial-gradient(ellipse at center, rgba(169,46,34,0) 40%, rgba(169,46,34,.38) 100%);opacity:0;}
   #kanji{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:9;pointer-events:none;
-    font-family:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;font-weight:700;
-    font-size:min(36vw,280px);line-height:1;color:#a92e22;opacity:0;display:none;
-    text-shadow:0 0 22px rgba(120,20,10,.35);filter:url(#rough);}
+    width:min(52vw,420px);height:min(52vw,420px);opacity:0;display:none;
+    background-size:contain;background-repeat:no-repeat;background-position:center;}
 </style>
 </head>
 <body>
@@ -1082,7 +1081,7 @@ function tryHitBoss(a){
     groundSplat(boss.pos.x, boss.pos.z, 2.2, 12, true);
     G.hitstop = Math.max(G.hitstop, .12); G.camShake = Math.max(G.camShake||0, .5);
     sfx.big();
-    kanjiFlash('\u7834');
+    kanjiFlash('\u7834', .55);
   }
 }
 function hurtPlayer(dmg, fromPos){
@@ -1394,7 +1393,52 @@ const hud = {
 let flashA = 0;
 function flashHit(){ flashA = 1; }
 let kanjiT = 0;
-function kanjiFlash(ch){ hud.kanji.textContent = ch; hud.kanji.style.display='block'; kanjiT = 1; }
+const kanjiCache = {};
+function brushKanji(ch){
+  if(kanjiCache[ch]) return kanjiCache[ch];
+  const S=512;
+  const c0=document.createElement('canvas'); c0.width=c0.height=S;
+  const x0=c0.getContext('2d');
+  x0.fillStyle='#a92e22';
+  x0.font='700 '+(S*.82)+'px "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
+  x0.textAlign='center'; x0.textBaseline='middle';
+  x0.fillText(ch, S/2, S/2+S*.04);
+  // brushed wobble: redraw in horizontal strips with jitter
+  const c1=document.createElement('canvas'); c1.width=c1.height=S;
+  const x1=c1.getContext('2d');
+  let yy=0;
+  while(yy<S){
+    const h=3+Math.random()*9;
+    const dx=(Math.random()-.5)*7;
+    x1.drawImage(c0, 0,yy,S,h, dx,yy,S,h);
+    yy+=h;
+  }
+  // dry-brush erosion
+  x1.globalCompositeOperation='destination-out';
+  for(let i=0;i<260;i++){
+    const bx=Math.random()*S, by=Math.random()*S;
+    const edge=Math.min(bx,S-bx,by,S-by);
+    const near=edge<S*.18?1.6:.5;
+    const r=(1+Math.random()*5)*near;
+    if(Math.random()<.5) x1.globalAlpha=.12+Math.random()*.3; else x1.globalAlpha=.05+Math.random()*.12;
+    x1.beginPath(); x1.arc(bx,by,r,0,6.283); x1.fill();
+  }
+  // a few horizontal dry streaks across the glyph
+  x1.globalAlpha=.10+Math.random()*.08;
+  for(let i=0;i<7;i++){
+    const sy=S*.15+Math.random()*S*.7, sw=S*(.2+Math.random()*.5), sx=Math.random()*S*.4;
+    x1.fillRect(sx, sy, sw, 1+Math.random()*2.5);
+  }
+  x1.globalAlpha=1; x1.globalCompositeOperation='source-over';
+  const url=c1.toDataURL();
+  kanjiCache[ch]=url;
+  return url;
+}
+function kanjiFlash(ch, scale=1){
+  hud.kanji.style.backgroundImage='url('+brushKanji(ch)+')';
+  hud.kanji.dataset.scale=scale;
+  hud.kanji.style.display='block'; kanjiT = 1;
+}
 const projV = new THREE.Vector3();
 function updateHUD(dt){
   const t = Math.max(0, G.time);
@@ -1426,7 +1470,8 @@ function updateHUD(dt){
   hud.flash.style.opacity = Math.max(flashA, pulse);
   if(kanjiT>0){ kanjiT=Math.max(0,kanjiT-dt*1.1);
     hud.kanji.style.opacity = Math.min(1, kanjiT*2.2);
-    hud.kanji.style.transform = 'translate(-50%,-50%) scale('+(1+.55*kanjiT)+')';
+    const ks = parseFloat(hud.kanji.dataset.scale||'1');
+    hud.kanji.style.transform = 'translate(-50%,-50%) scale('+(ks*(1+.55*kanjiT))+')';
     if(kanjiT<=0) hud.kanji.style.display='none';
   }
 }
