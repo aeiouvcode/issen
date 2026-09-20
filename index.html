@@ -143,7 +143,7 @@
 </div>
 
 <div class="screen" id="startscreen">
-  <div class="kanji-big">一閃</div>
+  <div class="kanji-big" id="startkanji">一閃</div>
   <div class="title-en">ISSEN</div>
   <div class="subtitle">A SUMI-E DUEL</div>
   <div class="controls">
@@ -1481,6 +1481,23 @@ const sfx = (()=>{
     poof:()=>noise(.35, 400, 90, .2, 'lowpass'),
     charge:()=>tone(120, 240, .3, .07, 'sawtooth'),
     big:()=>{ noise(.6, 800, 80, .3, 'lowpass'); tone(70, 30, .6, .3, 'sine'); },
+    wind:()=>{
+      try{
+        const a=ctx();
+        const n=a.sampleRate*4, buf=a.createBuffer(1,n,a.sampleRate);
+        const ch=buf.getChannelData(0);
+        let v=0;
+        for(let i=0;i<n;i++){ v=v*.96+(Math.random()*2-1)*.04; ch[i]=v*8; }
+        const src=a.createBufferSource(); src.buffer=buf; src.loop=true;
+        const f=a.createBiquadFilter(); f.type='lowpass'; f.frequency.value=260;
+        const g=a.createGain(); g.gain.value=.05;
+        const lfo=a.createOscillator(); lfo.frequency.value=.09;
+        const lg=a.createGain(); lg.gain.value=.025;
+        lfo.connect(lg); lg.connect(g.gain);
+        src.connect(f); f.connect(g); g.connect(a.destination);
+        src.start(); lfo.start();
+      }catch(e){}
+    },
   };
 })();
 
@@ -1500,13 +1517,17 @@ let flashA = 0;
 function flashHit(){ flashA = 1; }
 let kanjiT = 0;
 const kanjiCache = {};
-function brushKanji(ch){
-  if(kanjiCache[ch]) return kanjiCache[ch];
+function brushKanji(ch, color='#a92e22'){
+  const key=ch+'|'+color;
+  if(kanjiCache[key]) return kanjiCache[key];
   const S=512;
   const c0=document.createElement('canvas'); c0.width=c0.height=S;
   const x0=c0.getContext('2d');
-  x0.fillStyle='#a92e22';
-  x0.font='700 '+(S*.82)+'px "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
+  x0.fillStyle=color;
+  let fs = S*.82;
+  x0.font='700 '+fs+'px "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
+  const w0 = x0.measureText(ch).width;
+  if(w0 > S*.86) { fs = fs*S*.86/w0; x0.font='700 '+fs+'px "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif'; }
   x0.textAlign='center'; x0.textBaseline='middle';
   x0.fillText(ch, S/2, S/2+S*.04);
   // brushed wobble: redraw in horizontal strips with jitter
@@ -1542,7 +1563,7 @@ function brushKanji(ch){
   }
   x1.globalAlpha=1; x1.globalCompositeOperation='source-over';
   const url=c1.toDataURL();
-  kanjiCache[ch]=url;
+  kanjiCache[key]=url;
   return url;
 }
 function kanjiFlash(ch, scale=1){
@@ -1687,11 +1708,24 @@ function startOrRetry(){
   resetFight();
   G.running=true;
   sfx.heal(); // unlock audio on gesture
+  if(!window._windOn){ window._windOn=true; sfx.wind(); }
+}
+// brush-render the title kanji once at load
+{
+  const sk = el('startkanji');
+  sk.textContent='';
+  sk.style.width='min(34vmin,180px)'; sk.style.height='min(34vmin,180px)';
+  sk.style.backgroundSize='contain'; sk.style.backgroundRepeat='no-repeat'; sk.style.backgroundPosition='center';
+  sk.style.backgroundImage='url('+brushKanji('\u4e00\u9583','#241d12')+')';
 }
 function endGame(win){
   if(G.over) return;
   G.over=true; G.running=false;
-  el('endkanji').textContent = win ? '勝' : '死';
+  const ek = el('endkanji');
+  ek.textContent = '';
+  ek.style.width = 'min(34vmin,180px)'; ek.style.height = 'min(34vmin,180px)';
+  ek.style.backgroundSize = 'contain'; ek.style.backgroundRepeat = 'no-repeat'; ek.style.backgroundPosition = 'center';
+  ek.style.backgroundImage = 'url('+brushKanji(win ? '\u52dd' : '\u6b7b', win ? '#241d12' : '#a92e22')+')';
   el('endtitle').textContent = win ? 'VICTORY' : 'FALLEN';
   const t=G.time, mm=String(Math.floor(t/60)).padStart(2,'0'), ss=(t%60).toFixed(2).padStart(5,'0');
   el('endtime').textContent = win ? `Time ${mm}:${ss}` : '';
