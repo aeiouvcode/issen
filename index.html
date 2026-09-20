@@ -880,10 +880,10 @@ function leafTexture(){
 const leafTex = leafTexture();
 const leaves = [];
 let leafT = 0;
-for(let i=0;i<14;i++){
-  const m = new THREE.SpriteMaterial({map:leafTex, transparent:true, depthWrite:false, opacity:.28+Math.random()*.3});
+for(let i=0;i<18;i++){
+  const m = new THREE.SpriteMaterial({map:leafTex, transparent:true, depthWrite:false, opacity:.4+Math.random()*.35});
   const sp = new THREE.Sprite(m);
-  const s=.10+Math.random()*.14;
+  const s=.17+Math.random()*.16;
   sp.scale.set(s*2.2, s, 1);
   sp.position.set((Math.random()-.5)*26, .5+Math.random()*7, (Math.random()-.5)*26);
   m.rotation = Math.random()*7;
