@@ -153,6 +153,7 @@
     <div class="thint"><b>left thumb</b> move &nbsp; <b>right side</b> camera</div>
     <div class="kbhint"><b>click / J</b> strike &nbsp; <b>space / shift</b> dodge</div>
     <div class="kbhint"><b>F</b> heal (4 charges)</div>
+    <div class="kbhint" style="opacity:.75">a last-breath dodge <b>reads</b> a strike - no ring on the ground means the strike is a lie</div>
     <div class="thint"><b>斬</b> strike &nbsp; <b>避</b> dodge &nbsp; <b>癒</b> heal</div>
   </div>
   <div class="prompt" id="startprompt">- click to begin -</div>
@@ -903,6 +904,14 @@ function updatePuffs(dt){
   }
 }
 
+/* ---------------- windup timing ring (teaches dodge timing) ---------------- */
+const timeRing = new THREE.Mesh(
+  new THREE.RingGeometry(.8, 1, 40),
+  new THREE.MeshBasicMaterial({color:0x2a2118, transparent:true, opacity:.55, side:THREE.DoubleSide, depthWrite:false, fog:true}));
+timeRing.rotation.x = -Math.PI/2;
+timeRing.visible = false;
+scene.add(timeRing);
+
 /* ---------------- falling ink leaves (ambient drift) ---------------- */
 function leafTexture(){
   const c=document.createElement('canvas'); c.width=64; c.height=64;
@@ -1445,6 +1454,17 @@ function updateBoss(dt){
   const b = boss;
   b.stateT += dt;
   if(b._parryCD>0) b._parryCD -= dt;
+  // timing ring: contracts over the final beat of a windup; a feint makes it vanish
+  const WINDUPS = {windup_spin:.7, windup_slam:.55, windup_iai:.75};
+  const T = WINDUPS[b.state];
+  if(T && b.alive && !b._feint && b.stateT > T-.38){
+    const k = (b.stateT-(T-.38))/.38;
+    timeRing.visible = true;
+    timeRing.position.set(b.pos.x, .06, b.pos.z);
+    const s = 2.4 - k*1.5;
+    timeRing.scale.set(s, s, 1);
+    timeRing.material.opacity = .35 + .3*k;
+  } else timeRing.visible = false;
   if(!b.alive){ animBoss(dt); b.root.position.copy(b.pos); return; }
   const d = dist2D(b.pos, player.pos);
   const toP = Math.atan2(player.pos.x-b.pos.x, player.pos.z-b.pos.z);
@@ -1980,7 +2000,7 @@ function updateCamera(dt){
 /* ================= main loop ================= */
 let last = performance.now();
 function loop(now){
-  window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, fgStalks, camera, scene, inkCloud, inkPuff,
+  window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, fgStalks, timeRing, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     const rawDt=dt;
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
@@ -2014,7 +2034,7 @@ addEventListener('resize', ()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, fgStalks, camera, scene, inkCloud, inkPuff,
+window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, fgStalks, timeRing, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     const rawDt=dt;
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
