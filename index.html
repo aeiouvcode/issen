@@ -1294,7 +1294,7 @@ function tryHitBoss(a){
     G.slowmo=Math.max(G.slowmo,.4); G.camShake=Math.max(G.camShake||0,.6);
     inkBurst(boss.pos.clone().setY(1.6), 40, 7, 2, .8);
     slashArc(boss.pos.clone().setY(.5), 0, 3.6, 6.28, .25, true, .7);
-    sfx.big();
+    sfx.big(); sfx.drum();
   }
 }
 function hurtPlayer(dmg, fromPos){
@@ -1486,12 +1486,14 @@ function updateBoss(dt){
   const T = WINDUPS[b.state];
   if(T && b.alive && !b._feint && b.stateT > T-.38){
     const k = (b.stateT-(T-.38))/.38;
+    if(b._ringK===undefined){ sfx.tick(0); b._ringK=0; }
+    if(k>.55 && b._ringK<.55){ sfx.tick(1); b._ringK=1; }
     timeRing.visible = true;
     timeRing.position.set(b.pos.x, .06, b.pos.z);
     const s = 2.4 - k*1.5;
     timeRing.scale.set(s, s, 1);
     timeRing.material.opacity = .35 + .3*k;
-  } else timeRing.visible = false;
+  } else { timeRing.visible = false; b._ringK=undefined; }
   if(!b.alive){ animBoss(dt); b.root.position.copy(b.pos); return; }
   const d = dist2D(b.pos, player.pos);
   const toP = Math.atan2(player.pos.x-b.pos.x, player.pos.z-b.pos.z);
@@ -1690,6 +1692,7 @@ const sfx = (()=>{
     }catch(e){}
   }
   function tone(f0, f1, dur, vol=.15, type='sine'){
+    window._qaTones=(window._qaTones||0)+1;
     try{
       const a=ctx(), o=a.createOscillator(), g=a.createGain();
       o.type=type;
@@ -1710,6 +1713,8 @@ const sfx = (()=>{
     heal:()=>tone(600, 1200, .4, .08),
     poof:()=>noise(.35, 400, 90, .2, 'lowpass'),
     charge:()=>tone(120, 240, .3, .07, 'sawtooth'),
+    tick:(p=0)=>tone(300+p*170, 250+p*170, .07, .055, 'square'),
+    drum:()=>{ tone(82, 36, .7, .3, 'sine'); noise(.18, 240, 70, .18, 'lowpass'); },
     big:()=>{ noise(.6, 800, 80, .3, 'lowpass'); tone(70, 30, .6, .3, 'sine'); },
     wind:()=>{
       try{
