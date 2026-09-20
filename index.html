@@ -1520,45 +1520,45 @@ const kanjiCache = {};
 function brushKanji(ch, color='#a92e22'){
   const key=ch+'|'+color;
   if(kanjiCache[key]) return kanjiCache[key];
-  const S=512;
-  const c0=document.createElement('canvas'); c0.width=c0.height=S;
+  const S=512, W=S*ch.length;
+  const c0=document.createElement('canvas'); c0.width=W; c0.height=S;
   const x0=c0.getContext('2d');
   x0.fillStyle=color;
   let fs = S*.82;
   x0.font='700 '+fs+'px "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
   const w0 = x0.measureText(ch).width;
-  if(w0 > S*.86) { fs = fs*S*.86/w0; x0.font='700 '+fs+'px "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif'; }
+  if(w0 > W*.86) { fs = fs*W*.86/w0; x0.font='700 '+fs+'px "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif'; }
   x0.textAlign='center'; x0.textBaseline='middle';
-  x0.fillText(ch, S/2, S/2+S*.04);
+  x0.fillText(ch, W/2, S/2+S*.04);
   // brushed wobble: redraw in horizontal strips with jitter
-  const c1=document.createElement('canvas'); c1.width=c1.height=S;
+  const c1=document.createElement('canvas'); c1.width=W; c1.height=S;
   const x1=c1.getContext('2d');
   let yy=0;
   while(yy<S){
     const h=3+Math.random()*9;
     const dx=(Math.random()-.5)*7;
-    x1.drawImage(c0, 0,yy,S,h, dx,yy,S,h);
+    x1.drawImage(c0, 0,yy,W,h, dx,yy,W,h);
     yy+=h;
   }
   // dry-brush erosion
   x1.globalCompositeOperation='destination-out';
-  for(let i=0;i<260;i++){
-    const bx=Math.random()*S, by=Math.random()*S;
-    const edge=Math.min(bx,S-bx,by,S-by);
+  for(let i=0;i<260*ch.length;i++){
+    const bx=Math.random()*W, by=Math.random()*S;
+    const edge=Math.min(bx,W-bx,by,S-by);
     const near=edge<S*.18?1.6:.5;
     const r=(1+Math.random()*5)*near;
     if(Math.random()<.5) x1.globalAlpha=.12+Math.random()*.3; else x1.globalAlpha=.05+Math.random()*.12;
     x1.beginPath(); x1.arc(bx,by,r,0,6.283); x1.fill();
   }
-  // a few horizontal dry streaks across the glyph
-  for(let i=0;i<14;i++){
+  // dry-bristle streaks across the glyphs
+  for(let i=0;i<14*ch.length;i++){
     x1.globalAlpha=.16+Math.random()*.2;
-    const sy=S*.12+Math.random()*S*.76, sw=S*(.25+Math.random()*.6), sx=Math.random()*S*.35;
+    const sy=S*.12+Math.random()*S*.76, sw=S*(.25+Math.random()*.6), sx=Math.random()*(W-S*.6);
     x1.fillRect(sx, sy, sw, 1.5+Math.random()*3.5);
   }
-  for(let i=0;i<8;i++){
+  for(let i=0;i<8*ch.length;i++){
     x1.globalAlpha=.12+Math.random()*.16;
-    const sx=S*.12+Math.random()*S*.76, sh=S*(.2+Math.random()*.5), sy=Math.random()*S*.35;
+    const sx=Math.random()*W, sh=S*(.2+Math.random()*.5), sy=Math.random()*S*.35;
     x1.fillRect(sx, sy, 1+Math.random()*2.5, sh);
   }
   x1.globalAlpha=1; x1.globalCompositeOperation='source-over';
