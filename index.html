@@ -1133,6 +1133,11 @@ function animBoss(dt){
     boss.body.position.y = -k*.22;
     J.armR.rotation.x = -k*2.4;
     boss.body.scale.y = 1-k*.08;
+  } else if(s==='feint_hold'){
+    const wob=Math.sin(performance.now()*.004);
+    if(boss._feintFrom==='spin'){ boss.body.rotation.y = 1.1; J.armR.rotation.y = -1.6; J.armR.rotation.z = -.5; J.glaive.rotation.x = Math.PI/2; }
+    else { boss.body.position.y = -.22; J.armR.rotation.x = -2.4; boss.body.scale.y = .92; }
+    J.kasa.rotation.z = .06+wob*.08; // the tell: an uneasy hat
   } else if(s==='leap'){
     const k=clamp(t/.55,0,1);
     boss.body.position.y = Math.sin(k*Math.PI)*2.2;
@@ -1477,9 +1482,9 @@ function updateBoss(dt){
       if(b.thinkT<=0){
         // choose attack
         if(d < 2.4 && Math.random()<.45){ bossSetState('burst'); sfx.charge(); }
-        else if(d < 4.2){ bossSetState('windup_spin'); sfx.charge(); }
+        else if(d < 4.2){ bossSetState('windup_spin'); b._feint = Math.random()<.3; sfx.charge(); }
         else if(d < 9.5 && Math.random()<.5){ bossSetState('windup_iai'); sfx.charge(); }
-        else if(d < 12 && Math.random()<.6){ bossSetState('windup_slam'); sfx.charge(); }
+        else if(d < 12 && Math.random()<.6){ bossSetState('windup_slam'); b._feint = Math.random()<.3; sfx.charge(); }
         else { bossSetState('vanish'); inkCloud(b.pos, 16); sfx.poof(); }
         b.thinkT = 1.4+Math.random()*1.3;
       }
@@ -1500,6 +1505,7 @@ function updateBoss(dt){
       break;
     case 'windup_spin':
       b.yaw = angLerp(b.yaw, toP, .06);
+      if(b._feint && b.stateT>=.42){ b._feintFrom='spin'; bossSetState('feint_hold'); sfx.dodge(); break; }
       if(b.stateT>=.7){ bossSetState('spin');
         slashArc(b.pos.clone().setY(1.4), b.yaw, 3.9, 6.28, .45, false);
         sfx.whooshBig();
@@ -1513,6 +1519,7 @@ function updateBoss(dt){
       break;
     case 'windup_slam':
       b.yaw = angLerp(b.yaw, toP, .08);
+      if(b._feint && b.stateT>=.4){ b._feintFrom='slam'; bossSetState('feint_hold'); sfx.dodge(); break; }
       if(b.stateT>=.55){
         b.leapFrom.copy(b.pos);
         const overshoot = 1.2;
@@ -1539,6 +1546,15 @@ function updateBoss(dt){
     }
     case 'slam':
       if(b.stateT>=.55) bossSetState('idle');
+      break;
+    case 'feint_hold':
+      // baited pause: panic dodges burn their iframes here, then the real strike comes
+      b.yaw = angLerp(b.yaw, toP, .04);
+      if(b.stateT>=.38){
+        b._feint=false;
+        if(b._feintFrom==='spin'){ b.state='windup_spin'; b.stateT=.42; }
+        else { b.state='windup_slam'; b.stateT=.28; }
+      }
       break;
     case 'burst':
       if(!b._burstHit && b.stateT>=.28){
