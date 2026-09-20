@@ -1085,6 +1085,12 @@ function animPlayer(dt){
     J.torso.rotation.x = -.35*Math.sin(k*Math.PI);
     J.armL.rotation.x = .7*Math.sin(k*Math.PI);
     J.armR.rotation.x = .7*Math.sin(k*Math.PI);
+  } else if(s==='stunned'){
+    const k=easeOut(clamp(t/.25,0,1));
+    J.torso.rotation.x = -.3*k;
+    J.armL.rotation.x = .9*k; J.armR.rotation.x = .9*k;
+    J.armL.rotation.z = .5*k; J.armR.rotation.z = -.5*k;
+    player.body.position.y = -.08*k;
   } else if(s==='dead'){
     const k=easeOut(clamp(t/.8,0,1));
     player.body.rotation.x = -k*1.35;
@@ -1137,6 +1143,15 @@ function animBoss(dt){
     const k=clamp(t/.5,0,1);
     const swell = k<.5 ? 1+k*.25 : 1.25-(k-.5)*.5;
     boss.body.scale.set(swell, 2-swell, swell);
+  } else if(s==='parry'){
+    const k=easeOut(clamp(t/.15,0,1));
+    J.armR.rotation.x = -1.1*k; J.armL.rotation.x = -1.1*k;
+    J.chest.rotation.y = .3*k;
+    boss.body.position.y = -.06*k;
+  } else if(s==='counter'){
+    const k=easeOut(clamp(t/.3,0,1));
+    J.armR.rotation.x = (-1.6+k*2.6);
+    J.chest.rotation.y = .5-k*.9;
   } else if(s==='vanish'){
     const k=clamp(t/.5,0,1);
     boss.body.scale.y = 1-k; boss.body.scale.x = 1+k*.4; boss.body.scale.z = 1+k*.4;
@@ -1189,10 +1204,21 @@ function tryHitBoss(a){
   if(!boss.alive || !boss.root.visible) return;
   const d = dist2D(player.pos, boss.pos);
   if(d > a.range + .8) return;
+  if(boss.state==='parry'){
+    // deflect: no damage, player is stunned, boss counters - spam gets punished
+    kanjiFlash('\u5f3e', .5);
+    inkBurst(boss.pos.clone().setY(1.5), 25, 5, 0, .5);
+    G.hitstop = Math.max(G.hitstop, .1); G.camShake = Math.max(G.camShake||0, .35);
+    player.state='stunned'; player.stateT=0; player.queuedAtk=false;
+    bossSetState('counter'); boss._counterHit=false;
+    sfx.hit();
+    return;
+  }
   const toB = Math.atan2(boss.pos.x-player.pos.x, boss.pos.z-player.pos.z);
   let dy = Math.abs(((toB-player.yaw)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI);
   if(dy > a.arc) return;
   // land
+  player._landed = true;
   const staggered = boss.state==='stagger';
   const dmg = staggered ? Math.round(a.dmg*1.5) : a.dmg;
   boss.hp = Math.max(0, boss.hp - dmg);
@@ -1252,9 +1278,10 @@ function updatePlayer(dt){
   const p = player;
   p.stateT += dt;
   if(p.iframe>0) p.iframe -= dt;
-  // stamina regen
-  if(!['atk1','atk2','atk3','dodge'].includes(p.state))
-    p.stam = Math.min(100, p.stam + 20*dt);
+  // stamina regen (paused briefly after each swing - no free pressure)
+  if(p.regenDelay>0) p.regenDelay -= dt;
+  else if(!['atk1','atk2','atk3','dodge'].includes(p.state))
+    p.stam = Math.min(100, p.stam + 14*dt);
   // healing channel
   if(p.state==='heal'){
     p.healT += dt;
@@ -1281,6 +1308,9 @@ function updatePlayer(dt){
       p.vel.x *= Math.pow(.0001,dt); p.vel.z *= Math.pow(.0001,dt);
       if(canAct && p.state!=='idle'){ p.state='idle'; p.stateT=0; }
     }
+  } else if(p.state==='stunned'){
+    p.vel.x *= Math.pow(.001,dt); p.vel.z *= Math.pow(.001,dt);
+    if(p.stateT>=.75){ p.state='idle'; p.stateT=0; }
   } else if(p.state==='dodge'){
     const k = 1 - p.stateT/.38;
     p.vel.x = Math.sin(p.moveYaw)*11*Math.max(0,k);
@@ -1304,10 +1334,16 @@ function updatePlayer(dt){
       sfx.whoosh();
     }
     if(p.stateT>=a.dur){
+      // whiff punish: a missed swing near the boss hands him the initiative
+      if(!p._landed && boss.alive && boss.root.visible && dist2D(p.pos,boss.pos)<4.2
+         && ['idle','walk'].includes(boss.state)){
+        boss.thinkT = Math.min(boss.thinkT, .12);
+        p.regenDelay = Math.max(p.regenDelay, .7);
+      }
       p.state='idle'; p.stateT=0;
       if(p.queuedAtk){
         p.queuedAtk=false;
-        if(p.stam>=10){
+        if(p.stam>=16){
           p.atkIdx=(p.atkIdx+1)%3;
           p.state='atk'+(p.atkIdx+1); p.stateT=0; p.atkHitDone=false;
           p.stam-=10; p._lastAtkEnd = performance.now() + ATK[p.atkIdx].dur*1000;
@@ -1342,7 +1378,7 @@ function doAttack(){
     if(p.stateT > a.dur*.45) p.queuedAtk = true;
     return;
   }
-  if(!['idle','run'].includes(p.state) || p.stam<10) return;
+  if(!['idle','run'].includes(p.state) || p.stam<16) return;
   // soft auto-face: snap toward the boss when close (touch-friendly)
   if(boss.alive && boss.root.visible){
     const db = dist2D(p.pos, boss.pos);
@@ -1350,8 +1386,9 @@ function doAttack(){
   }
   // chain: pick next in combo based on timing
   p.atkIdx = (p._lastAtkEnd && performance.now()-p._lastAtkEnd<900) ? (p.atkIdx+1)%3 : 0;
-  p.state = 'atk'+(p.atkIdx+1); p.stateT=0; p.atkHitDone=false;
-  p.stam -= 10;
+  p.state = 'atk'+(p.atkIdx+1); p.stateT=0; p.atkHitDone=false; p._landed=false;
+  p.stam -= 16; p.regenDelay = .5;
+  p.atkLog.push(G.time); while(p.atkLog.length>6) p.atkLog.shift();
   p._lastAtkEnd = performance.now() + ATK[p.atkIdx].dur*1000;
 }
 function doDodge(){
@@ -1379,6 +1416,7 @@ function bossSetState(s){ boss.state=s; boss.stateT=0; }
 function updateBoss(dt){
   const b = boss;
   b.stateT += dt;
+  if(b._parryCD>0) b._parryCD -= dt;
   if(!b.alive){ animBoss(dt); b.root.position.copy(b.pos); return; }
   const d = dist2D(b.pos, player.pos);
   const toP = Math.atan2(player.pos.x-b.pos.x, player.pos.z-b.pos.z);
@@ -1403,6 +1441,11 @@ function updateBoss(dt){
     case 'idle': case 'walk': {
       b.yaw = angLerp(b.yaw, toP, 1-Math.pow(.001,dt));
       b.thinkT -= dt;
+      // read repetitive input: 3+ swings inside 2.4s in range -> parry the next one
+      if(b._parryCD<=0 && d<3.6){
+        const now=G.time, recent=player.atkLog.filter(t=>now-t<2.4).length;
+        if(recent>=3){ bossSetState('parry'); b._parryCD=7; sfx.charge(); break; }
+      }
       if(d > 3.6){
         b.pos.x += Math.sin(b.yaw)*2.1*dt;
         b.pos.z += Math.cos(b.yaw)*2.1*dt;
@@ -1419,6 +1462,19 @@ function updateBoss(dt){
       }
       break;
     }
+    case 'parry':
+      b.yaw = angLerp(b.yaw, toP, .2);
+      if(b.stateT>=.6) bossSetState('idle');
+      break;
+    case 'counter':
+      if(!b._counterHit && b.stateT>=.2){
+        b._counterHit=true;
+        slashArc(b.pos.clone().setY(1.3), b.yaw, 4.2, 3.6, .1, false, .8);
+        if(d<3.4) hurtPlayer(18, b.pos);
+        sfx.whooshBig();
+      }
+      if(b.stateT>=.5){ b._counterHit=false; bossSetState('idle'); }
+      break;
     case 'windup_spin':
       b.yaw = angLerp(b.yaw, toP, .06);
       if(b.stateT>=.7){ bossSetState('spin');
@@ -1812,6 +1868,7 @@ el('endscreen').addEventListener('click', startOrRetry);
 function resetFight(){
   player.pos.set(0,0,3.5); player.yaw=Math.PI; player.hp=100; player.stam=100; player.pips=4;
   player.state='idle'; player.stateT=0; player.vel.set(0,0,0); player.iframe=0; player._lastAtkEnd=0; player.queuedAtk=false;
+  player.atkLog=[]; player.regenDelay=0; player._landed=false; boss._parryCD=0; boss._counterHit=false;
   boss.pos.set(0,0,-7); boss.hp=185; boss.posture=130; boss.alive=true;
   boss.root.visible=false; boss.state='vanish'; boss.stateT=.2; boss.thinkT=1.2;
   inkCloud(boss.pos, 22);
