@@ -1514,6 +1514,7 @@ const sfx = (()=>{
     // reactive control: call every frame with fight intensity 0..1
     tick:(dt, intense)=>{
       try{
+        if(ac && ac.state==='suspended') ac.resume(); // recover from autoplay suspension once a real gesture lands
         if(!windG) return;
         windCur += ((.045+intense*.075)-windCur)*Math.min(1, 2.2*dt);
         windG.gain.value = windCur;
