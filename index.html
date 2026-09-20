@@ -1445,6 +1445,7 @@ function updateBoss(dt){
 /* ================= audio (tiny synth) ================= */
 const sfx = (()=>{
   let ac = null;
+  let windG=null, windF=null, rustleG=null, windCur=.05, rustleCur=0, rustleTarget=0, rustleT=0;
   const ctx = ()=>{ if(!ac) ac = new (window.AudioContext||window.webkitAudioContext)(); return ac; };
   function noise(dur, f0, f1, vol=.2, type='bandpass'){
     try{
@@ -1499,10 +1500,43 @@ const sfx = (()=>{
         lfo.connect(lg); lg.connect(g.gain);
         src.connect(f); f.connect(g); g.connect(a.destination);
         src.start(); lfo.start();
+        // bamboo rustle: high bandpassed noise, amplitude fluttered in tick()
+        const rb=a.createBuffer(1,n,a.sampleRate), rch=rb.getChannelData(0);
+        for(let i=0;i<n;i++) rch[i]=Math.random()*2-1;
+        const rsrc=a.createBufferSource(); rsrc.buffer=rb; rsrc.loop=true;
+        const rf=a.createBiquadFilter(); rf.type='bandpass'; rf.frequency.value=4200; rf.Q.value=.8;
+        const rg=a.createGain(); rg.gain.value=0;
+        rsrc.connect(rf); rf.connect(rg); rg.connect(a.destination);
+        rsrc.start();
+        windG=g; windF=f; rustleG=rg;
+      }catch(e){}
+    },
+    // reactive control: call every frame with fight intensity 0..1
+    tick:(dt, intense)=>{
+      try{
+        if(!windG) return;
+        windCur += ((.045+intense*.075)-windCur)*Math.min(1, 2.2*dt);
+        windG.gain.value = windCur;
+        windF.frequency.value = 240 + intense*420;
+        rustleT -= dt;
+        if(rustleT<=0){ rustleT=.12+Math.random()*.3; rustleTarget = Math.random()<.75 ? Math.random()*.02 : .05+Math.random()*.04; }
+        rustleCur += (rustleTarget-rustleCur)*Math.min(1, 7*dt);
+        if(rustleG) rustleG.gain.value = rustleCur*(.6+intense*.9);
+        window.__windDbg = {wind:+windCur.toFixed(4), rustle:+rustleCur.toFixed(4), freq:Math.round(windF.frequency.value), ac:ac?ac.state:'none'};
       }catch(e){}
     },
   };
 })();
+
+function windIntensity(){
+  if(!G.running) return .15;
+  if(G.slowmo>0) return 1;
+  const s = boss.state;
+  if(s==='windup_iai'||s==='iai'||s==='leap') return 1;
+  if(s==='windup_spin'||s==='windup_slam'||s==='spin'||s==='slam') return .7;
+  if(s==='vanish'||s==='appear') return .5;
+  return .15;
+}
 
 /* ================= HUD ================= */
 const el = id=>document.getElementById(id);
@@ -1779,7 +1813,7 @@ function loop(now){
     if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
     updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt);
-    updateCamera(dt); updateHUD(dt); }
+    sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
 window.QA_norender=false;
@@ -1796,6 +1830,7 @@ requestAnimationFrame(loop);
     updateBoss(dt);
   }
   updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt);
+  sfx.tick(dt, windIntensity());
   updateCamera(dt);
   updateHUD(dt);
   renderer.render(scene, camera);
@@ -1812,7 +1847,7 @@ window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, camer
     if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
     updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt);
-    updateCamera(dt); updateHUD(dt); }
+    sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
 window.QA_norender=false;
