@@ -1424,10 +1424,15 @@ function brushKanji(ch){
     x1.beginPath(); x1.arc(bx,by,r,0,6.283); x1.fill();
   }
   // a few horizontal dry streaks across the glyph
-  x1.globalAlpha=.10+Math.random()*.08;
-  for(let i=0;i<7;i++){
-    const sy=S*.15+Math.random()*S*.7, sw=S*(.2+Math.random()*.5), sx=Math.random()*S*.4;
-    x1.fillRect(sx, sy, sw, 1+Math.random()*2.5);
+  for(let i=0;i<14;i++){
+    x1.globalAlpha=.16+Math.random()*.2;
+    const sy=S*.12+Math.random()*S*.76, sw=S*(.25+Math.random()*.6), sx=Math.random()*S*.35;
+    x1.fillRect(sx, sy, sw, 1.5+Math.random()*3.5);
+  }
+  for(let i=0;i<8;i++){
+    x1.globalAlpha=.12+Math.random()*.16;
+    const sx=S*.12+Math.random()*S*.76, sh=S*(.2+Math.random()*.5), sy=Math.random()*S*.35;
+    x1.fillRect(sx, sy, 1+Math.random()*2.5, sh);
   }
   x1.globalAlpha=1; x1.globalCompositeOperation='source-over';
   const url=c1.toDataURL();
