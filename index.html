@@ -1377,8 +1377,8 @@ function updateBoss(dt){
       b._iaiSmear = (b._iaiSmear||0) + dt;
       if(b._iaiSmear > .028){
         b._iaiSmear = 0;
-        slashArc(b.pos.clone().setY(1.25), b.yaw, 3.0, 1.6, .22, false, 0);
-        slashArc(b.pos.clone().setY(.8), b.yaw+.5, 2.4, 1.3, .16, false, 0);
+        slashArc(b.pos.clone().setY(1.25), b.yaw+2.1, 3.0, 1.6, .22, true, 0);
+        slashArc(b.pos.clone().setY(.8), b.yaw-1.6, 2.4, 1.3, .16, true, 0);
       }
       if(!b._iaiTrail && b.stateT>.06){
         b._iaiTrail = true;
