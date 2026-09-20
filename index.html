@@ -260,7 +260,7 @@ const M = {
   skin:  inkMat(0xf3ecdc, 0x241f16, .62),
   clothL:inkMat(0x6e6552, 0x131008, 1.25, .32),
   hair:  inkMat(0x6b6250, 0x0d0a06, 1.55, .58, 0, .5, 0, .8),
-  pale:  inkMat(0xe9e2cc, 0x2a241a, .92, .10, .35, .4),
+  pale:  inkMat(0xe9e2cc, 0x2a241a, .92, .10, .35, .4, 0, .45),
   dark:  inkMat(0x9a917c, 0x171208, 1.15, .30, 0, .5, 0, .7),
   wrap:  inkMat(0x7c7260, 0x14100a, 1.3, .5, 1, .5, 0, .8),
   robe:  inkMat(0xb0a68c, 0x14100a, 1.38, .38, 1, 1.25, 1.0, .9),
@@ -1364,7 +1364,7 @@ function updateBoss(dt){
         b.leapTo.set(
           clamp(b.pos.x + Math.sin(toP)*dash, -ARENA_R+1.5, ARENA_R-1.5), 0,
           clamp(b.pos.z + Math.cos(toP)*dash, -ARENA_R+1.5, ARENA_R-1.5));
-        b._iaiHit = false;
+        b._iaiHit = false; b._iaiSmear = 0;
         bossSetState('iai');
         sfx.whooshBig();
       }
@@ -1373,6 +1373,13 @@ function updateBoss(dt){
     case 'iai': {
       const k = clamp(b.stateT/.22, 0, 1);
       b.pos.lerpVectors(b.leapFrom, b.leapTo, k);
+      // lingering ink smear along the dash line
+      b._iaiSmear = (b._iaiSmear||0) + dt;
+      if(b._iaiSmear > .028){
+        b._iaiSmear = 0;
+        slashArc(b.pos.clone().setY(1.25), b.yaw, 2.7, 1.35, .10, false, 0);
+        slashArc(b.pos.clone().setY(.8), b.yaw+.5, 2.2, 1.1, .08, false, 0);
+      }
       if(!b._iaiTrail && b.stateT>.06){
         b._iaiTrail = true;
         slashArc(b.pos.clone().setY(1.3), b.yaw, 2.8, 2.2, .16, false, 0);
