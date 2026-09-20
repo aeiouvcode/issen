@@ -1290,7 +1290,7 @@ function tryHitBoss(a){
     boss.phase=2; boss._wspeed=1.22;
     boss.J.eyes.visible=true;
     boss.state='awaken'; boss.stateT=0;
-    kanjiFlash('\u899a', .8); // 覚 - awakening
+    kanjiFlash('\u6012', .8); // 怒 - rage: the duel turns
     G.slowmo=Math.max(G.slowmo,.4); G.camShake=Math.max(G.camShake||0,.6);
     inkBurst(boss.pos.clone().setY(1.6), 40, 7, 2, .8);
     slashArc(boss.pos.clone().setY(.5), 0, 3.6, 6.28, .25, true, .7);
@@ -1835,8 +1835,167 @@ function brushKanji(ch, color='#a92e22'){
   kanjiCache[key]=url;
   return url;
 }
+// stroke-authored kanji: each glyph = array of strokes, each stroke = polyline [x,y] on a 1000-grid
+const STROKES = {
+'斬': [ // 車 + 斤
+  [[220,215],[480,215]],
+  [[250,295],[250,470]],
+  [[250,295],[430,295],[430,470]],
+  [[250,382],[430,382]],
+  [[250,470],[430,470]],
+  [[200,560],[490,560]],
+  [[340,160],[340,830]],
+  [[660,150],[600,235],[555,315]],
+  [[600,300],[815,310]],
+  [[610,310],[595,400],[565,520]],
+  [[735,310],[740,830]]
+],
+'見': [ // eye over legs
+  [[335,180],[335,470]],
+  [[335,180],[660,180],[660,470]],
+  [[335,295],[660,295]],
+  [[335,385],[660,385]],
+  [[335,470],[660,470]],
+  [[430,470],[380,600],[290,770]],
+  [[565,470],[575,690],[620,730],[730,700]]
+],
+'破': [ // 石 + 皮
+  [[190,200],[455,200]],
+  [[265,205],[230,300],[195,395]],
+  [[275,320],[275,470]],
+  [[275,320],[435,320],[435,470]],
+  [[275,470],[435,470]],
+  [[565,185],[760,190],[745,235]],
+  [[605,195],[555,380],[505,555]],
+  [[690,250],[690,535]],
+  [[620,430],[745,440],[690,560],[610,700]],
+  [[700,460],[760,580],[835,720]]
+],
+'怒': [ // 奴 over 心
+  [[375,150],[305,320],[435,330]],
+  [[335,255],[285,370],[240,475]],
+  [[225,360],[480,345]],
+  [[565,240],[725,250],[655,380],[590,475]],
+  [[665,265],[720,370],[795,475]],
+  [[300,590],[280,690]],
+  [[410,610],[540,620],[610,720],[600,800],[545,800]],
+  [[475,520],[495,590]],
+  [[725,580],[760,670]]
+],
+'一': [
+  [[180,500],[500,490],[820,500]]
+],
+'閃': [ // gate + person
+  [[225,185],[225,730]],
+  [[225,185],[440,195],[440,420]],
+  [[225,300],[440,300]],
+  [[590,195],[590,420]],
+  [[590,195],[790,185],[790,730],[745,690]],
+  [[590,300],[790,300]],
+  [[455,380],[410,530],[350,690]],
+  [[550,380],[595,530],[665,690]]
+],
+'勝': [ // 月 + 朕-right
+  [[275,185],[240,340],[215,520]],
+  [[275,185],[440,195],[440,530],[405,495]],
+  [[275,320],[440,320]],
+  [[275,425],[440,425]],
+  [[570,160],[545,220]],
+  [[690,165],[715,225]],
+  [[540,265],[800,265]],
+  [[570,360],[780,360]],
+  [[525,450],[825,450]],
+  [[665,450],[600,560],[545,660]],
+  [[680,450],[745,560],[815,660]]
+],
+'死': [
+  [[200,225],[800,225]],
+  [[430,270],[360,420],[305,530]],
+  [[355,345],[535,355],[450,560]],
+  [[455,450],[478,515]],
+  [[565,340],[540,460],[518,550]],
+  [[630,300],[638,520],[705,640],[795,615]]
+]};
+function strokeKanji(ch, color='#a92e22'){
+  const key='S'+ch+'|'+color;
+  if(kanjiCache[key]) return kanjiCache[key];
+  const S=512, sc=S/1000;
+  const c=document.createElement('canvas'); c.width=S*ch.length; c.height=S;
+  const x=c.getContext('2d');
+  x.fillStyle=color;
+  let ci=0;
+  for(const glyph of ch){
+  x.save(); x.translate(S*ci, 0); ci++;
+  for(const pts of STROKES[glyph]){
+    // resample by arc length
+    let L=0; const segs=[];
+    for(let i=1;i<pts.length;i++){ const l=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]); segs.push(l); L+=l; }
+    const base=Math.max(30, Math.min(58, 58-L/38)); // longer strokes slightly thinner
+    const n=Math.max(6, Math.round(L/7));
+    for(let i=0;i<=n;i++){
+      let d=L*i/n, si=0;
+      while(si<segs.length-1 && d>segs[si]){ d-=segs[si]; si++; }
+      const k=segs[si]? d/segs[si]:0;
+      const px=pts[si][0]+(pts[si+1][0]-pts[si][0])*k, py=pts[si][1]+(pts[si+1][1]-pts[si][1])*k;
+      const t=i/n;
+      const press=Math.pow(Math.sin(Math.PI*Math.min(1,.04+t*1.08)), .95); // sharp tip in, fat belly, lift out
+      const w=(base*(.22+.92*press))*sc/2;
+      // main dabs
+      x.globalAlpha=.88+Math.random()*.12;
+      x.beginPath(); x.arc(px*sc,py*sc,w*(0.85+Math.random()*.3),0,6.283); x.fill();
+      // dry tail: stretch the last dabs along the stroke direction
+      if(t>.86){
+        const e=pts[pts.length-1], p2=pts[pts.length-2];
+        const ang=Math.atan2(e[1]-p2[1], e[0]-p2[0]);
+        x.globalAlpha=.5+Math.random()*.3;
+        x.save(); x.translate(px*sc,py*sc); x.rotate(ang);
+        x.beginPath(); x.ellipse(0,0,w*1.9,w*.4,0,0,6.283); x.fill(); x.restore();
+      }
+      // bristle side dabs
+      for(let b=0;b<2;b++){
+        if(Math.random()<.6) continue;
+        x.globalAlpha=.25+Math.random()*.3;
+        const off=w*(.5+Math.random()*.9);
+        x.beginPath(); x.arc(px*sc+(Math.random()-.5)*2*off, py*sc+(Math.random()-.5)*2*off, w*(.3+Math.random()*.35),0,6.283); x.fill();
+      }
+    }
+    // end splash for pressed finishes
+    if(L<130 || Math.random()<.22){
+      const e=pts[pts.length-1];
+      x.globalAlpha=.25+Math.random()*.25;
+      x.beginPath(); x.arc(e[0]*sc+(Math.random()-.5)*8, e[1]*sc+(Math.random()-.5)*8, base*sc*.32,0,6.283); x.fill();
+    }
+  }
+  // dry-brush erosion, same family as brushKanji
+  x.globalCompositeOperation='destination-out';
+  for(let i=0;i<200;i++){
+    const bx=Math.random()*S, by=Math.random()*S;
+    const edge=Math.min(bx,S-bx,by,S-by);
+    const near=edge<S*.16?1.7:.45;
+    const r=(1+Math.random()*4.5)*near;
+    x.globalAlpha=Math.random()<.5?.12+Math.random()*.3:.05+Math.random()*.12;
+    x.beginPath(); x.arc(bx,by,r,0,6.283); x.fill();
+  }
+  x.restore();
+  }
+  // dry-brush erosion across the whole strip
+  const W=c.width;
+  x.globalCompositeOperation='destination-out';
+  for(let i=0;i<220*ch.length;i++){
+    const bx=Math.random()*W, by=Math.random()*S;
+    const edge=Math.min(bx,W-bx,by,S-by);
+    const near=edge<S*.16?1.7:.45;
+    const r=(1+Math.random()*4.5)*near;
+    x.globalAlpha=Math.random()<.5?.12+Math.random()*.3:.05+Math.random()*.12;
+    x.beginPath(); x.arc(bx,by,r,0,6.283); x.fill();
+  }
+  x.globalAlpha=1; x.globalCompositeOperation='source-over';
+  const url=c.toDataURL();
+  kanjiCache[key]=url;
+  return url;
+}
 function kanjiFlash(ch, scale=1){
-  hud.kanji.style.backgroundImage='url('+brushKanji(ch)+')';
+  hud.kanji.style.backgroundImage='url('+(STROKES[ch]?strokeKanji(ch):brushKanji(ch))+')';
   hud.kanji.dataset.scale=scale;
   hud.kanji.style.display='block'; kanjiT = 1;
 }
@@ -1988,7 +2147,7 @@ function startOrRetry(){
   sk.textContent='';
   sk.style.width='min(58vmin,330px)'; sk.style.height='min(29vmin,165px)';
   sk.style.backgroundSize='contain'; sk.style.backgroundRepeat='no-repeat'; sk.style.backgroundPosition='center';
-  sk.style.backgroundImage='url('+brushKanji('\u4e00\u9583','#241d12')+')';
+  sk.style.backgroundImage='url('+strokeKanji('\u4e00\u9583','#241d12')+')';
 }
 function endGame(win){
   if(G.over) return;
@@ -1997,7 +2156,7 @@ function endGame(win){
   ek.textContent = '';
   ek.style.width = 'min(34vmin,180px)'; ek.style.height = 'min(34vmin,180px)';
   ek.style.backgroundSize = 'contain'; ek.style.backgroundRepeat = 'no-repeat'; ek.style.backgroundPosition = 'center';
-  ek.style.backgroundImage = 'url('+brushKanji(win ? '\u52dd' : '\u6b7b', win ? '#241d12' : '#a92e22')+')';
+  ek.style.backgroundImage = 'url('+strokeKanji(win ? '\u52dd' : '\u6b7b', win ? '#241d12' : '#a92e22')+')';
   el('endtitle').textContent = win ? 'VICTORY' : 'FALLEN';
   const t=G.time, mm=String(Math.floor(t/60)).padStart(2,'0'), ss=(t%60).toFixed(2).padStart(5,'0');
   el('endtime').textContent = win ? `Time ${mm}:${ss}` : '';
