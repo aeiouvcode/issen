@@ -863,6 +863,45 @@ function updatePuffs(dt){
   }
 }
 
+/* ---------------- falling ink leaves (ambient drift) ---------------- */
+function leafTexture(){
+  const c=document.createElement('canvas'); c.width=64; c.height=64;
+  const x=c.getContext('2d');
+  x.translate(32,32); x.rotate(.6);
+  x.fillStyle='rgba(30,25,17,.9)';
+  x.beginPath();
+  x.moveTo(-20,0);
+  x.quadraticCurveTo(-6,-9, 14,-2);
+  x.quadraticCurveTo(20,0, 14,2);
+  x.quadraticCurveTo(-6,9, -20,0);
+  x.fill();
+  return new THREE.CanvasTexture(c);
+}
+const leafTex = leafTexture();
+const leaves = [];
+let leafT = 0;
+for(let i=0;i<14;i++){
+  const m = new THREE.SpriteMaterial({map:leafTex, transparent:true, depthWrite:false, opacity:.28+Math.random()*.3});
+  const sp = new THREE.Sprite(m);
+  const s=.10+Math.random()*.14;
+  sp.scale.set(s*2.2, s, 1);
+  sp.position.set((Math.random()-.5)*26, .5+Math.random()*7, (Math.random()-.5)*26);
+  m.rotation = Math.random()*7;
+  scene.add(sp);
+  leaves.push({sp, ph:Math.random()*7, sway:.4+Math.random()*.5, fall:.28+Math.random()*.3, spin:(Math.random()-.5)*.8});
+}
+function updateLeaves(dt){
+  leafT += dt;
+  for(const l of leaves){
+    const p=l.sp.position;
+    p.y -= l.fall*dt;
+    p.x += Math.sin(leafT*l.sway+l.ph)*dt*.5;
+    p.z += Math.cos(leafT*l.sway*.8+l.ph)*dt*.35;
+    l.sp.material.rotation += l.spin*dt;
+    if(p.y<.15){ p.y=6.5+Math.random()*2; p.x=(Math.random()-.5)*26; p.z=(Math.random()-.5)*26; }
+  }
+}
+
 /* ---------------- ink cloud (teleport / vanish) ---------------- */
 function inkCloud(pos, n=18){
   inkPuff(pos, .9+Math.random()*.3);
@@ -1807,13 +1846,13 @@ function updateCamera(dt){
 /* ================= main loop ================= */
 let last = performance.now();
 function loop(now){
-  window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, camera, scene, inkCloud, inkPuff,
+  window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     const rawDt=dt;
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
     if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
-    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt);
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
     sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
@@ -1830,7 +1869,7 @@ requestAnimationFrame(loop);
     updatePlayer(dt);
     updateBoss(dt);
   }
-  updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt);
+  updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
   sfx.tick(dt, windIntensity());
   updateCamera(dt);
   updateHUD(dt);
@@ -1841,13 +1880,13 @@ addEventListener('resize', ()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, camera, scene, inkCloud, inkPuff,
+window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     const rawDt=dt;
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
     if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
-    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt);
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
     sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
