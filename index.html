@@ -1345,8 +1345,9 @@ function updatePlayer(dt){
         p.queuedAtk=false;
         if(p.stam>=16){
           p.atkIdx=(p.atkIdx+1)%3;
-          p.state='atk'+(p.atkIdx+1); p.stateT=0; p.atkHitDone=false;
-          p.stam-=10; p._lastAtkEnd = performance.now() + ATK[p.atkIdx].dur*1000;
+          p.state='atk'+(p.atkIdx+1); p.stateT=0; p.atkHitDone=false; p._landed=false;
+          p.stam-=16; p.regenDelay=.5; p._lastAtkEnd = performance.now() + ATK[p.atkIdx].dur*1000;
+          p.atkLog.push(G.time); while(p.atkLog.length>6) p.atkLog.shift();
         }
       }
     }
