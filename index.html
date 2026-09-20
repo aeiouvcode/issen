@@ -57,6 +57,8 @@
   .pip.off{opacity:.22;filter:grayscale(1);}
   #stamwrap,#hpwrap{width:100%;display:flex;flex-direction:column;align-items:center;}
   #stambar{width:120px;height:5px;} #stambar .fill{background:linear-gradient(90deg,#241d12,#4a3e2a);}
+  @keyframes drypulse{0%,100%{filter:none} 50%{filter:drop-shadow(0 0 7px #a92e22) brightness(1.4)}}
+  #stambar.dry{animation:drypulse .45s ease}
   #hpbar{width:172px;height:11px;} #hpbar .fill{background:linear-gradient(90deg,#8e2418,var(--red-hi));}
   /* ---- start / end screens ---- */
   .screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;
@@ -1255,7 +1257,24 @@ function tryHitBoss(a){
   }
 }
 function hurtPlayer(dmg, fromPos){
-  if(player.iframe>0 || player.state==='dead' || G.over) return;
+  if(player.iframe>0){
+    // perfect dodge: the blow landed inside fresh iframes - read and deflected
+    if(!G.over && player.state==='dodge' && (G.time-(player._dodgeAt||-9)) < .18){
+      boss.posture = Math.max(0, boss.posture - 20);
+      const dp = player.pos.clone(); dp.y=1.4;
+      inkBurst(dp, 22, 5, 0, .5);
+      slashArc(dp, player.yaw+Math.PI/2, 3.4, 2.6, .12, false, .6);
+      kanjiFlash('\u898b', .45); // 見 - the read
+      G.hitstop = Math.max(G.hitstop, .09); G.slowmo = Math.max(G.slowmo, .18);
+      sfx.hit();
+      if(boss.posture<=0 && boss.state!=='stagger'){
+        boss.state='stagger'; boss.stateT=0; boss.posture=boss.maxposture;
+        kanjiFlash('\u7834', .55); sfx.big();
+      }
+    }
+    return;
+  }
+  if(player.state==='dead' || G.over) return;
   player.hp = Math.max(0, player.hp - dmg);
   player.state='hit'; player.stateT=0;
   inkBurst(player.pos.clone().setY(1.2), 13, 4.5, 2, .55); inkBurst(player.pos.clone().setY(1.2), 5, 3, 0, .4);
@@ -1370,6 +1389,7 @@ function updatePlayer(dt){
   p.root.rotation.y = p.yaw;
   animPlayer(dt);
 }
+function flashStam(){ const b=el('stambar'); b.classList.remove('dry'); void b.offsetWidth; b.classList.add('dry'); }
 function doAttack(){
   if(G.intro>0) return;
   const p=player;
@@ -1379,7 +1399,8 @@ function doAttack(){
     if(p.stateT > a.dur*.45) p.queuedAtk = true;
     return;
   }
-  if(!['idle','run'].includes(p.state) || p.stam<16) return;
+  if(!['idle','run'].includes(p.state)) return;
+  if(p.stam<16){ flashStam(); return; }
   // soft auto-face: snap toward the boss when close (touch-friendly)
   if(boss.alive && boss.root.visible){
     const db = dist2D(p.pos, boss.pos);
@@ -1395,8 +1416,9 @@ function doAttack(){
 function doDodge(){
   if(G.intro>0) return;
   const p=player;
-  if(!['idle','run','heal'].includes(p.state) || p.stam<25) return;
-  p.state='dodge'; p.stateT=0; p.stam-=25; p.iframe=.34;
+  if(!['idle','run','heal'].includes(p.state)) return;
+  if(p.stam<25){ flashStam(); return; }
+  p.state='dodge'; p.stateT=0; p.stam-=25; p.iframe=.34; p._dodgeAt=G.time;
   if(input.x||input.z){
     p.moveYaw = Math.atan2(input.x,input.z)+G.camYaw;
   }
@@ -1869,7 +1891,7 @@ el('endscreen').addEventListener('click', startOrRetry);
 function resetFight(){
   player.pos.set(0,0,3.5); player.yaw=Math.PI; player.hp=100; player.stam=100; player.pips=4;
   player.state='idle'; player.stateT=0; player.vel.set(0,0,0); player.iframe=0; player._lastAtkEnd=0; player.queuedAtk=false;
-  player.atkLog=[]; player.regenDelay=0; player._landed=false; boss._parryCD=0; boss._counterHit=false;
+  player.atkLog=[]; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; boss._parryCD=0; boss._counterHit=false;
   boss.pos.set(0,0,-7); boss.hp=185; boss.posture=130; boss.alive=true;
   boss.root.visible=false; boss.state='vanish'; boss.stateT=.2; boss.thinkT=1.2;
   inkCloud(boss.pos, 22);
