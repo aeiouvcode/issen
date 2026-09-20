@@ -1384,11 +1384,11 @@ function updateBoss(dt){
         b._iaiTrail = true;
         slashArc(b.pos.clone().setY(1.3), b.yaw, 2.8, 2.2, .16, false, 0);
       }
-      if(!b._iaiHit && dist2D(b.pos, player.pos) < 1.7){
+      if(!b._iaiHit && dist2D(b.pos, player.pos) < 1.7 && player.iframe<=0 && player.state!=='dead'){
         b._iaiHit = true;
         hurtPlayer(26, b.pos);
-        // red only where the blade connects
-        slashArc(player.pos.clone().setY(1.3), b.yaw, 2.4, 1.9, .2, false, .9);
+        // red only where the blade actually connects
+        slashArc(player.pos.clone().setY(1.3), b.yaw, 2.4, 1.9, .2, true, .9);
         G.hitstop = Math.max(G.hitstop, .09);
         G.camShake = Math.max(G.camShake||0, .35);
       }
