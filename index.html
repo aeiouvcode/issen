@@ -1257,6 +1257,7 @@ function updatePlayer(dt){
   animPlayer(dt);
 }
 function doAttack(){
+  if(G.intro>0) return;
   const p=player;
   // input buffering: queue the next chain hit during the back half of a swing
   if(p.state.startsWith('atk')){
@@ -1277,6 +1278,7 @@ function doAttack(){
   p._lastAtkEnd = performance.now() + ATK[p.atkIdx].dur*1000;
 }
 function doDodge(){
+  if(G.intro>0) return;
   const p=player;
   if(!['idle','run','heal'].includes(p.state) || p.stam<25) return;
   p.state='dodge'; p.stateT=0; p.stam-=25; p.iframe=.34;
@@ -1288,6 +1290,7 @@ function doDodge(){
   sfx.dodge();
 }
 function doHeal(){
+  if(G.intro>0) return;
   const p=player;
   if(!['idle','run'].includes(p.state) || p.pips<=0 || p.hp>=p.maxhp) return;
   p.pips--; p.state='heal'; p.stateT=0; p.healT=0;
@@ -1620,6 +1623,7 @@ addEventListener('keydown', e=>{
 addEventListener('keyup', e=>keys[e.code]=false);
 const joyIn = {x:0, z:0};
 function pollKeys(){
+  if(G.intro>0){ input.x=input.z=0; return; }
   input.x = (keys.KeyD?1:0)-(keys.KeyA?1:0) + (keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0) + joyIn.x;
   input.z = (keys.KeyW?1:0)-(keys.KeyS?1:0) + (keys.ArrowUp?1:0)-(keys.ArrowDown?1:0) + joyIn.z;
 }
@@ -1699,7 +1703,7 @@ function resetFight(){
   boss.pos.set(0,0,-7); boss.hp=185; boss.posture=130; boss.alive=true;
   boss.root.visible=false; boss.state='vanish'; boss.stateT=.2; boss.thinkT=1.2;
   inkCloud(boss.pos, 22);
-  G.time=0; G.over=false; G.timeScale=1; G.hitstop=0; G.slowmo=0; kanjiT=0; hud.kanji.style.display='none';
+  G.time=0; G.over=false; G.intro=0; G.timeScale=1; G.hitstop=0; G.slowmo=0; kanjiT=0; hud.kanji.style.display='none';
   G.camYaw=Math.PI; G.camPitch=.8;
 }
 function startOrRetry(){
@@ -1707,6 +1711,7 @@ function startOrRetry(){
   el('endscreen').classList.add('hidden');
   resetFight();
   G.running=true;
+  G.intro=2.4; boss.thinkT=2.4; // duel-intro camera sweep; boss holds the standoff
   sfx.heal(); // unlock audio on gesture
   if(!window._windOn){ window._windOn=true; sfx.wind(); }
 }
@@ -1734,6 +1739,14 @@ function endGame(win){
 
 /* ================= camera ================= */
 function updateCamera(dt){
+  if(G.intro>0){
+    G.intro-=dt;
+    const p=1-Math.max(0,G.intro)/2.4, e=p*p*(3-2*p);
+    const yaw=G.camYaw+(1-e)*1.15, pitch=.12+e*.43, dist=7.2+e*2.6;
+    camera.position.set(player.pos.x-Math.sin(yaw)*dist*Math.cos(pitch), Math.max(.5,1.0+Math.sin(pitch)*8.0), player.pos.z-Math.cos(yaw)*dist*Math.cos(pitch));
+    camera.lookAt(player.pos.x+Math.sin(G.camYaw)*2.2, 1.1, player.pos.z+Math.cos(G.camYaw)*2.2);
+    return;
+  }
   if(G.camDrag>0) G.camDrag-=dt;
   else {
     if(player.state==='run') G.camYaw = angLerp(G.camYaw, player.moveYaw, .9*dt);
