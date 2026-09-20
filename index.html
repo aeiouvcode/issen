@@ -96,6 +96,10 @@
   #joyknob{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;
     background:rgba(58,50,38,.55);}
   #hitflash{position:fixed;inset:0;z-index:8;pointer-events:none;background:radial-gradient(ellipse at center, rgba(169,46,34,0) 40%, rgba(169,46,34,.38) 100%);opacity:0;}
+  #kanji{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:9;pointer-events:none;
+    font-family:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;font-weight:700;
+    font-size:min(36vw,280px);line-height:1;color:#a92e22;opacity:0;display:none;
+    text-shadow:0 0 22px rgba(120,20,10,.35);filter:url(#rough);}
 </style>
 </head>
 <body>
@@ -108,6 +112,7 @@
 <canvas id="game"></canvas>
 <div id="vignette"></div>
 <div id="hitflash"></div>
+<div id="kanji"></div>
 
 <div id="timebox"><div class="lbl">Time:</div><div class="val" id="timeval">00:00.00</div></div>
 
@@ -348,6 +353,58 @@ function bambooTexture(){
   mk(ARENA_R+11, 4, .95, 9, 3.6);
   mk(ARENA_R+20, 6, .6, 12, 4.6);
 }
+
+/* ---- drifting mist banks + far ink ridge (Ronin depth) ---- */
+const mists = [];
+function mistTexture(){
+  const c=document.createElement('canvas'); c.width=512; c.height=128;
+  const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,0,128);
+  g.addColorStop(0,'rgba(238,230,205,0)');
+  g.addColorStop(.5,'rgba(238,230,205,.85)');
+  g.addColorStop(1,'rgba(238,230,205,0)');
+  x.fillStyle=g; x.fillRect(0,0,512,128);
+  x.globalCompositeOperation='destination-out';
+  for(let i=0;i<90;i++){
+    const bx=Math.random()*512, by=Math.random()*128, r=6+Math.random()*26;
+    const rg=x.createRadialGradient(bx,by,0,bx,by,r);
+    rg.addColorStop(0,'rgba(0,0,0,'+(.25+Math.random()*.4)+')');
+    rg.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=rg; x.beginPath(); x.arc(bx,by,r,0,6.283); x.fill();
+  }
+  const t=new THREE.CanvasTexture(c); t.wrapS=THREE.RepeatWrapping; return t;
+}
+{
+  const tex = mistTexture();
+  for(let i=0;i<5;i++){
+    const t = tex.clone(); t.needsUpdate=true; t.repeat.x=2+(i%2);
+    const r = ARENA_R+4+i*3.2;
+    const geo = new THREE.CylinderGeometry(r, r, 1.6+i*.5, 48, 1, true);
+    const mat = new THREE.MeshBasicMaterial({map:t, transparent:true, opacity:.16-i*.02,
+      side:THREE.DoubleSide, depthWrite:false, fog:true});
+    const m = new THREE.Mesh(geo, mat);
+    m.position.y = 1.0+i*.55;
+    m.userData.sp = (i%2? -1:1)*(.03+i*.012);
+    scene.add(m); mists.push(m);
+  }
+  // far pale ink ridge behind the bamboo
+  const rc=document.createElement('canvas'); rc.width=1024; rc.height=256;
+  const rx=rc.getContext('2d'); rx.clearRect(0,0,1024,256);
+  const g2=rx.createLinearGradient(0,50,0,256);
+  g2.addColorStop(0,'rgba(96,88,70,.40)');
+  g2.addColorStop(1,'rgba(96,88,70,.08)');
+  rx.fillStyle=g2;
+  rx.beginPath(); rx.moveTo(0,256);
+  let ry=120;
+  for(let px=0;px<=1024;px+=16){ ry += (Math.random()-.5)*46; ry=Math.max(60,Math.min(190,ry)); rx.lineTo(px,ry); }
+  rx.lineTo(1024,256); rx.closePath(); rx.fill();
+  const rt=new THREE.CanvasTexture(rc); rt.wrapS=THREE.RepeatWrapping; rt.repeat.x=3;
+  const rgeo=new THREE.CylinderGeometry(ARENA_R+30, ARENA_R+30, 10, 64, 1, true);
+  const rmat=new THREE.MeshBasicMaterial({map:rt, transparent:true, opacity:.85,
+    side:THREE.BackSide, depthWrite:false, fog:true});
+  const rm=new THREE.Mesh(rgeo, rmat); rm.position.y=3.4; scene.add(rm);
+}
+function updateMist(dt){ for(const m of mists) m.rotation.y += m.userData.sp*dt; }
 
 /* ---- distant ink-grass ring (billboard strokes) ---- */
 function grassTexture(){
@@ -812,7 +869,7 @@ function updateGhosts(dt){
 
 /* ================= game state ================= */
 const G = {
-  running:false, over:false, time:0, timeScale:1, hitstop:0,
+  running:false, over:false, time:0, timeScale:1, hitstop:0, slowmo:0,
   camYaw:Math.PI, camPitch:.8, camDrag:0,
 };
 const player = {
@@ -1010,6 +1067,7 @@ function tryHitBoss(a){
     inkBurst(boss.pos.clone().setY(1.5), 70, 8, 2, 1.0); inkBurst(boss.pos.clone().setY(1.5), 20, 6, 0, .8);
     groundSplat(boss.pos.x, boss.pos.z, 4, 30);
     inkCloud(boss.pos, 26);
+    G.slowmo = .6; G.camShake = .9; kanjiFlash('\u65ac');
     sfx.big();
     setTimeout(()=>endGame(true), 1400);
   } else if(boss.posture<=0 && boss.state!=='stagger'){
@@ -1024,15 +1082,18 @@ function tryHitBoss(a){
     groundSplat(boss.pos.x, boss.pos.z, 2.2, 12, true);
     G.hitstop = Math.max(G.hitstop, .12); G.camShake = Math.max(G.camShake||0, .5);
     sfx.big();
+    kanjiFlash('\u7834');
   }
 }
 function hurtPlayer(dmg, fromPos){
   if(player.iframe>0 || player.state==='dead' || G.over) return;
   player.hp = Math.max(0, player.hp - dmg);
   player.state='hit'; player.stateT=0;
-  inkBurst(player.pos.clone().setY(1.2), 16, 4, 0, .45);
+  inkBurst(player.pos.clone().setY(1.2), 13, 4.5, 2, .55); inkBurst(player.pos.clone().setY(1.2), 5, 3, 0, .4);
+  if(Math.random()<.4) groundSplat(player.pos.x+(Math.random()-.5), player.pos.z+(Math.random()-.5), .8, 7, true);
   flashHit();
-  G.camShake = .2;
+  G.camShake = .3;
+  G.hitstop = Math.max(G.hitstop, .05);
   sfx.hit();
   if(fromPos){
     const dx = player.pos.x-fromPos.x, dz = player.pos.z-fromPos.z;
@@ -1328,9 +1389,12 @@ const hud = {
   postT: el('boss-posture-t'),
   pips: [el('pip0'),el('pip1'),el('pip2'),el('pip3')],
   flash: el('hitflash'),
+  kanji: el('kanji'),
 };
 let flashA = 0;
 function flashHit(){ flashA = 1; }
+let kanjiT = 0;
+function kanjiFlash(ch){ hud.kanji.textContent = ch; hud.kanji.style.display='block'; kanjiT = 1; }
 const projV = new THREE.Vector3();
 function updateHUD(dt){
   const t = Math.max(0, G.time);
@@ -1356,7 +1420,15 @@ function updateHUD(dt){
   hud.bossHpT.textContent = `${Math.ceil(boss.hp)}/${boss.maxhp}`;
   hud.postFill.style.width = (boss.posture/boss.maxposture*100)+'%';
   hud.postT.textContent = `${Math.floor(boss.posture)}/${boss.maxposture}`;
-  if(flashA>0){ flashA=Math.max(0,flashA-dt*3); hud.flash.style.opacity=flashA; }
+  if(flashA>0) flashA=Math.max(0,flashA-dt*3);
+  const lowHp = !G.over && player.hp>0 && player.hp/player.maxhp<.3;
+  const pulse = lowHp ? .14+.08*Math.sin(G.time*5) : 0;
+  hud.flash.style.opacity = Math.max(flashA, pulse);
+  if(kanjiT>0){ kanjiT=Math.max(0,kanjiT-dt*1.1);
+    hud.kanji.style.opacity = Math.min(1, kanjiT*2.2);
+    hud.kanji.style.transform = 'translate(-50%,-50%) scale('+(1+.55*kanjiT)+')';
+    if(kanjiT<=0) hud.kanji.style.display='none';
+  }
 }
 
 /* ================= input ================= */
@@ -1450,7 +1522,7 @@ function resetFight(){
   boss.pos.set(0,0,-7); boss.hp=185; boss.posture=130; boss.alive=true;
   boss.root.visible=false; boss.state='vanish'; boss.stateT=.2; boss.thinkT=1.2;
   inkCloud(boss.pos, 22);
-  G.time=0; G.over=false; G.timeScale=1; G.hitstop=0;
+  G.time=0; G.over=false; G.timeScale=1; G.hitstop=0; G.slowmo=0; kanjiT=0; hud.kanji.style.display='none';
   G.camYaw=Math.PI; G.camPitch=.8;
 }
 function startOrRetry(){
@@ -1499,8 +1571,11 @@ let last = performance.now();
 function loop(now){
   window.QA = {player, boss, G, arcs, ghosts, decals, parts, puffs, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
+    const rawDt=dt;
+    if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
+    if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
-    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt);
     updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
@@ -1508,14 +1583,16 @@ window.QA_norender=false;
 requestAnimationFrame(loop);
   let dt = Math.min(.05, (now-last)/1000);
   last = now;
-  if(G.hitstop>0){ G.hitstop-=dt; dt*=.08; }
+  const rawDt = dt;
+  if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
+  if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
   if(G.running){
     G.time += dt;
     pollKeys();
     updatePlayer(dt);
     updateBoss(dt);
   }
-  updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
+  updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt);
   updateCamera(dt);
   updateHUD(dt);
   renderer.render(scene, camera);
@@ -1527,8 +1604,11 @@ addEventListener('resize', ()=>{
 });
 window.QA = {player, boss, G, arcs, ghosts, decals, parts, puffs, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
+    const rawDt=dt;
+    if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
+    if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
-    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt);
     updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
