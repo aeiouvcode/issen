@@ -1274,6 +1274,7 @@ function updateBoss(dt){
         // choose attack
         if(d < 2.4 && Math.random()<.45){ bossSetState('burst'); sfx.charge(); }
         else if(d < 4.2){ bossSetState('windup_spin'); sfx.charge(); }
+        else if(d < 9.5 && Math.random()<.5){ bossSetState('windup_iai'); sfx.charge(); }
         else if(d < 12 && Math.random()<.6){ bossSetState('windup_slam'); sfx.charge(); }
         else { bossSetState('vanish'); inkCloud(b.pos, 16); sfx.poof(); }
         b.thinkT = 1.4+Math.random()*1.3;
@@ -1332,6 +1333,43 @@ function updateBoss(dt){
         if(d<2.6) hurtPlayer(15, b.pos);
       }
       if(b.stateT>=.5){ b._burstHit=false; bossSetState('idle'); }
+      break;
+    case 'windup_iai': {
+      // slow sheathe - long readable telegraph, tracks the player
+      b.yaw = angLerp(b.yaw, toP, .10);
+      if(b.stateT>=.75){
+        b.leapFrom.copy(b.pos);
+        const dash = Math.min(d + 3.5, 12);
+        b.leapTo.set(
+          clamp(b.pos.x + Math.sin(toP)*dash, -ARENA_R+1.5, ARENA_R-1.5), 0,
+          clamp(b.pos.z + Math.cos(toP)*dash, -ARENA_R+1.5, ARENA_R-1.5));
+        b._iaiHit = false;
+        bossSetState('iai');
+        sfx.whooshBig();
+      }
+      break;
+    }
+    case 'iai': {
+      const k = clamp(b.stateT/.22, 0, 1);
+      b.pos.lerpVectors(b.leapFrom, b.leapTo, k);
+      if(!b._iaiTrail && b.stateT>.06){
+        b._iaiTrail = true;
+        slashArc(b.pos.clone().setY(1.3), b.yaw, 2.8, 2.2, .16, false, 0);
+      }
+      if(!b._iaiHit && dist2D(b.pos, player.pos) < 1.7){
+        b._iaiHit = true;
+        hurtPlayer(26, b.pos);
+        // red only where the blade connects
+        slashArc(player.pos.clone().setY(1.3), b.yaw, 2.4, 1.9, .2, false, .9);
+        G.hitstop = Math.max(G.hitstop, .09);
+        G.camShake = Math.max(G.camShake||0, .35);
+      }
+      if(b.stateT>=.22){ b._iaiTrail=false; bossSetState('iai_recover'); }
+      break;
+    }
+    case 'iai_recover':
+      b.yaw = angLerp(b.yaw, toP, .05);
+      if(b.stateT>=.55) bossSetState('idle');
       break;
     case 'stagger':
       if(b.stateT>=2.5) bossSetState('idle');
