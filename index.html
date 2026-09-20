@@ -734,7 +734,7 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true, red=
     vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
       gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
     fragmentShader:`
-      precision mediump float; varying vec2 vUv; uniform float uT; uniform float uPale;
+      precision mediump float; varying vec2 vUv; uniform float uT; uniform float uPale; uniform float uRed;
       ${noiseGLSL}
       void main(){
         float streak = fbm(vec2(vUv.x*2.5, vUv.y*16.0));
