@@ -399,10 +399,10 @@ function mistTexture(){
   for(let px=0;px<=1024;px+=16){ ry += (Math.random()-.5)*46; ry=Math.max(60,Math.min(190,ry)); rx.lineTo(px,ry); }
   rx.lineTo(1024,256); rx.closePath(); rx.fill();
   const rt=new THREE.CanvasTexture(rc); rt.wrapS=THREE.RepeatWrapping; rt.repeat.x=3;
-  const rgeo=new THREE.CylinderGeometry(ARENA_R+30, ARENA_R+30, 10, 64, 1, true);
-  const rmat=new THREE.MeshBasicMaterial({map:rt, transparent:true, opacity:.85,
-    side:THREE.BackSide, depthWrite:false, fog:true});
-  const rm=new THREE.Mesh(rgeo, rmat); rm.position.y=3.4; scene.add(rm);
+  const rgeo=new THREE.CylinderGeometry(ARENA_R+27, ARENA_R+27, 12, 64, 1, true);
+  const rmat=new THREE.MeshBasicMaterial({map:rt, transparent:true, opacity:.42,
+    side:THREE.BackSide, depthWrite:false, fog:false});
+  const rm=new THREE.Mesh(rgeo, rmat); rm.position.y=3.8; scene.add(rm);
 }
 function updateMist(dt){ for(const m of mists) m.rotation.y += m.userData.sp*dt; }
 
