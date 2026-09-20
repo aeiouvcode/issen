@@ -773,6 +773,43 @@ function updateArcs(dt){
   }
 }
 
+/* ---- ink smear ribbons (dash trail) ---- */
+const ribbons = [];
+function smearRibbon(from, to, y=1.15, width=1.35, life=.6){
+  const len = from.distanceTo(to)+2.0;
+  const g = new THREE.PlaneGeometry(len, width, 24, 1);
+  const mat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, side:THREE.DoubleSide,
+    uniforms:{uT:{value:0}},
+    vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader:`
+      precision mediump float; varying vec2 vUv; uniform float uT;
+      ${noiseGLSL}
+      void main(){
+        float a = smoothstep(0.,.10,vUv.x)*smoothstep(1.,.80,vUv.x);
+        a *= smoothstep(0.,.30,vUv.y)*smoothstep(1.,.60,vUv.y);
+        a *= .55 + .85*fbm(vec2(vUv.x*7.0, vUv.y*22.0));
+        a *= .40 + .60*vUv.x;   // taper toward the tail
+        float fade = 1.0-uT; a *= fade*fade*(.65+.35*fade);
+        gl_FragColor = vec4(vec3(.10,.085,.06), min(a*1.7,1.0));
+      }`
+  });
+  const m = new THREE.Mesh(g, mat);
+  m.position.copy(from).lerp(to,.5); m.position.y=y;
+  m.lookAt(to.x, y, to.z); m.rotateY(Math.PI/2);
+  m.renderOrder=5;
+  scene.add(m);
+  ribbons.push({m, t:0, life});
+}
+function updateRibbons(dt){
+  for(let i=ribbons.length-1;i>=0;i--){
+    const r=ribbons[i]; r.t+=dt/r.life;
+    r.m.material.uniforms.uT.value = r.t;
+    if(r.t>=1){ scene.remove(r.m); r.m.geometry.dispose(); r.m.material.dispose(); ribbons.splice(i,1); }
+  }
+}
+
 /* ---------------- ink puff cloud (vanish, f014) ---------------- */
 function puffTexture(){
   const blobs = [[128,150,66],[205,118,78],[290,140,72],[360,160,58],[170,180,60],[255,190,62],[330,95,50],[95,115,45]];
@@ -1364,8 +1401,9 @@ function updateBoss(dt){
         b.leapTo.set(
           clamp(b.pos.x + Math.sin(toP)*dash, -ARENA_R+1.5, ARENA_R-1.5), 0,
           clamp(b.pos.z + Math.cos(toP)*dash, -ARENA_R+1.5, ARENA_R-1.5));
-        b._iaiHit = false; b._iaiSmear = 0;
+        b._iaiHit = false;
         bossSetState('iai');
+        smearRibbon(b.leapFrom, b.leapTo);
         sfx.whooshBig();
       }
       break;
@@ -1373,13 +1411,6 @@ function updateBoss(dt){
     case 'iai': {
       const k = clamp(b.stateT/.22, 0, 1);
       b.pos.lerpVectors(b.leapFrom, b.leapTo, k);
-      // lingering ink smear along the dash line
-      b._iaiSmear = (b._iaiSmear||0) + dt;
-      if(b._iaiSmear > .028){
-        b._iaiSmear = 0;
-        slashArc(b.pos.clone().setY(1.25), b.yaw+2.1, 3.0, 1.6, .22, true, 0);
-        slashArc(b.pos.clone().setY(.8), b.yaw-1.6, 2.4, 1.3, .16, true, 0);
-      }
       if(!b._iaiTrail && b.stateT>.06){
         b._iaiTrail = true;
         slashArc(b.pos.clone().setY(1.3), b.yaw, 2.8, 2.2, .16, false, 0);
@@ -1694,13 +1725,13 @@ function updateCamera(dt){
 /* ================= main loop ================= */
 let last = performance.now();
 function loop(now){
-  window.QA = {player, boss, G, arcs, ghosts, decals, parts, puffs, camera, scene, inkCloud, inkPuff,
+  window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     const rawDt=dt;
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
     if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
-    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt);
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt);
     updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
@@ -1717,7 +1748,7 @@ requestAnimationFrame(loop);
     updatePlayer(dt);
     updateBoss(dt);
   }
-  updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt);
+  updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt);
   updateCamera(dt);
   updateHUD(dt);
   renderer.render(scene, camera);
@@ -1727,13 +1758,13 @@ addEventListener('resize', ()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-window.QA = {player, boss, G, arcs, ghosts, decals, parts, puffs, camera, scene, inkCloud, inkPuff,
+window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     const rawDt=dt;
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
     if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); }
-    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt);
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt);
     updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
