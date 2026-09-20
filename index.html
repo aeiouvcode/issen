@@ -1031,6 +1031,27 @@ function animBoss(dt){
     const k=easeOut(clamp(t/.45,0,1));
     boss.body.scale.y = k; boss.body.scale.x = 1.4-k*.4; boss.body.scale.z = 1.4-k*.4;
     boss.body.position.y = -(1-k)*1.2;
+  } else if(s==='windup_iai'){
+    // sheathe: sink low, blade drawn back across the body, kasa dips
+    const k=easeOut(clamp(t/.75,0,1));
+    boss.body.position.y = -k*.28;
+    boss.body.scale.y = 1-k*.09;
+    boss.body.rotation.y = k*.55;
+    J.armR.rotation.x = -k*1.9; J.armR.rotation.z = k*.45;
+    J.armL.rotation.x = k*.5;
+    J.kasa.rotation.x = k*.3; J.kasa.rotation.z = .06+k*.12;
+  } else if(s==='iai'){
+    // the draw-cut: full extension, body snaps forward
+    const k=easeOut(clamp(t/.22,0,1));
+    boss.body.rotation.y = .55-k*.75;
+    boss.body.rotation.x = k*.14;
+    J.armR.rotation.x = -1.9-k*1.1; J.armR.rotation.z = .45-k*.45;
+    J.kasa.rotation.x = .3-k*.38;
+  } else if(s==='iai_recover'){
+    const k=easeOut(clamp(t/.55,0,1));
+    boss.body.rotation.x = .14*(1-k);
+    J.armR.rotation.x = lerp(-3.0,.15,k);
+    J.kasa.rotation.x = -.08*(1-k);
   } else if(s==='stagger'){
     const k=easeOut(clamp(t/.4,0,1));
     boss.body.position.y = -k*.55;
