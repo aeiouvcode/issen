@@ -1270,7 +1270,16 @@ function tryHitBoss(a){
   // land
   player._landed = true;
   const staggered = boss.state==='stagger';
-  const dmg = staggered ? Math.round(a.dmg*1.5) : a.dmg;
+  const counter = (player.counterT||0) > 0;
+  const dmg = staggered ? Math.round(a.dmg*(counter?3:1.5)) : counter ? Math.round(a.dmg*2) : a.dmg;
+  if(counter){
+    player.counterT = 0;
+    kanjiFlash('\u9583', .5); // 閃 - the flash: the answer lands
+    G.hitstop = Math.max(G.hitstop, .14); G.slowmo = Math.max(G.slowmo, .22);
+    inkBurst(boss.pos.clone().setY(1.6), 30, 7, 0, .7);
+    slashArc(boss.pos.clone().setY(1.4), player.yaw+Math.PI/2, 3.8, 3.0, .16, false, .8);
+    sfx.big();
+  }
   boss.hp = Math.max(0, boss.hp - dmg);
   boss.posture = Math.max(0, boss.posture - a.post);
   const hitPos = boss.pos.clone(); hitPos.y = 1.6;
@@ -1320,9 +1329,11 @@ function hurtPlayer(dmg, fromPos){
     // perfect dodge: the blow landed inside fresh iframes - read and deflected
     if(!G.over && player.state==='dodge' && (G.time-(player._dodgeAt||-9)) < .18){
       boss.posture = Math.max(0, boss.posture - 20);
+      player.counterT = 1.6; // the answer: a read opens one true strike
       const dp = player.pos.clone(); dp.y=1.4;
       inkBurst(dp, 22, 5, 0, .5);
       slashArc(dp, player.yaw+Math.PI/2, 3.4, 2.6, .12, false, .6);
+      slashArc(player.pos.clone().setY(.25), 0, 2.2, 6.28, .35, false, 0); // pale ground ring while the window is open
       kanjiFlash('\u898b', .45); // 見 - the read
       G.hitstop = Math.max(G.hitstop, .09); G.slowmo = Math.max(G.slowmo, .18);
       sfx.hit();
@@ -1356,6 +1367,11 @@ function updatePlayer(dt){
   const p = player;
   p.stateT += dt;
   if(p.iframe>0) p.iframe -= dt;
+  if(p.counterT>0){
+    p.counterT -= dt;
+    p._ctTrail=(p._ctTrail||0)+dt;
+    if(p._ctTrail>.09){ p._ctTrail=0; inkBurst(p.pos.clone().setY(.3), 1, .8, 0, .3); }
+  }
   // stamina regen (paused briefly after each swing - no free pressure)
   if(p.regenDelay>0) p.regenDelay -= dt;
   else if(!['atk1','atk2','atk3','dodge'].includes(p.state))
@@ -2223,7 +2239,7 @@ el('endscreen').addEventListener('click', startOrRetry);
 function resetFight(){
   player.pos.set(0,0,3.5); player.yaw=Math.PI; player.hp=100; player.stam=100; player.pips=4;
   player.state='idle'; player.stateT=0; player.vel.set(0,0,0); player.iframe=0; player._lastAtkEnd=0; player.queuedAtk=false;
-  player.atkLog=[]; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; boss._parryCD=0; boss._counterHit=false; boss.phase=1; boss._wspeed=1; boss._iaiChain=false; boss.J.eyes.visible=false;
+  player.atkLog=[]; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; player.counterT=0; boss._parryCD=0; boss._counterHit=false; boss.phase=1; boss._wspeed=1; boss._iaiChain=false; boss.J.eyes.visible=false;
   boss.pos.set(0,0,-7); boss.hp=185; boss.posture=130; boss.alive=true;
   boss.root.visible=false; boss.state='vanish'; boss.stateT=.2; boss.thinkT=1.2;
   inkCloud(boss.pos, 22);
