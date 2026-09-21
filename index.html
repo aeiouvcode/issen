@@ -29,11 +29,12 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");}
   /* ---- brush bars ---- */
   .brushbar{position:relative;height:9px;filter:url(#rough);}
-  .brushbar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:1px;}
+  .brushbar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:1px;transition:width .18s ease-out;}
   .bartext{font-size:12px;letter-spacing:.5px;color:var(--ink);opacity:.85;text-align:right;
            text-shadow:0 0 2px rgba(236,225,194,.8);line-height:1.05;font-weight:600;}
   /* ---- boss floating bars ---- */
   #bossbars{position:fixed;left:0;top:0;width:130px;z-index:6;pointer-events:none;display:none;}
+  #bossbars .bartext{display:none;}
   #bossbars .brushbar{width:118px;margin:1px 0 4px 0;}
   #boss-hp .fill{background:linear-gradient(90deg,#8e2418,var(--red-hi));}
   #boss-posture .fill{background:linear-gradient(90deg,#241d12,#463a28);}
@@ -53,18 +54,18 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   #timebox .val{font-size:21px;font-weight:700;letter-spacing:1px;color:var(--ink);}
   /* ---- player HUD ---- */
   #playerhud{position:fixed;left:50%;bottom:4.5%;transform:translateX(-50%);z-index:7;
-    display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;width:190px;}
-  #pips{display:flex;gap:9px;margin-bottom:3px;}
-  .pip{width:26px;height:26px;border-radius:50%;border:2px solid var(--ink-soft);
-    display:flex;align-items:center;justify-content:center;background:rgba(236,225,194,.35);
-    box-shadow:0 1px 3px rgba(40,30,12,.3), inset 0 0 6px rgba(120,95,50,.3);}
-  .pip svg{width:16px;height:16px;stroke:var(--ink);fill:none;stroke-width:2.2;stroke-linecap:round;}
-  .pip.off{opacity:.22;filter:grayscale(1);}
+    display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;width:160px;}
+  #pips{display:flex;gap:8px;margin-bottom:4px;}
+  .pip{width:11px;height:11px;border-radius:50%;background:var(--ink-soft);
+    display:flex;align-items:center;justify-content:center;}
+  .pip svg{display:none;}
+  .pip.off{background:transparent;border:1.5px solid var(--ink-soft);opacity:.4;}
   #stamwrap,#hpwrap{width:100%;display:flex;flex-direction:column;align-items:center;}
-  #stambar{width:120px;height:5px;} #stambar .fill{background:linear-gradient(90deg,#241d12,#4a3e2a);}
+  #playerhud .bartext{display:none;}
+  #stambar{width:104px;height:3px;opacity:.8;} #stambar .fill{background:linear-gradient(90deg,#241d12,#4a3e2a);}
   @keyframes drypulse{0%,100%{filter:none} 50%{filter:drop-shadow(0 0 7px #a92e22) brightness(1.4)}}
   #stambar.dry{animation:drypulse .45s ease}
-  #hpbar{width:172px;height:11px;} #hpbar .fill{background:linear-gradient(90deg,#8e2418,var(--red-hi));}
+  #hpbar{width:148px;height:8px;} #hpbar .fill{background:linear-gradient(90deg,#8e2418,var(--red-hi));}
   /* ---- start / end screens ---- */
   .screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;
     justify-content:center;background:
@@ -72,17 +73,26 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
     transition:opacity .5s;}
   .screen.hidden{opacity:0;pointer-events:none;}
   body.prestart #timebox, body.prestart #bossbars, body.prestart #playerhud, body.prestart #touchui{display:none!important;}
+  body.endui #timebox, body.endui #bossbars, body.endui #playerhud, body.endui #touchui{display:none!important;}
   .qtoggle{margin-top:16px;font-size:13px;opacity:.55;letter-spacing:.08em;cursor:pointer;}
   .kanji-big{font-size:min(34vmin,180px);line-height:1;color:var(--ink);
     font-family:'Hiragino Mincho ProN','Yu Mincho','MS Mincho',serif;
     text-shadow:2px 3px 0 rgba(26,21,14,.14);filter:url(#rough);}
   .title-en{font-size:min(9vmin,44px);letter-spacing:.42em;margin:14px 0 4px 30px;font-weight:700;}
   .subtitle{font-size:14px;letter-spacing:.28em;opacity:.7;margin-bottom:26px;}
-  .controls{font-size:13.5px;line-height:1.9;letter-spacing:.06em;opacity:.85;text-align:center;}
+  .controls{font-size:13.5px;line-height:1.9;letter-spacing:.06em;opacity:.85;text-align:center;max-width:330px;margin:0 auto;}
   .controls b{display:inline-block;min-width:92px;text-align:right;margin-right:10px;}
-  .prompt{margin-top:30px;font-size:16px;letter-spacing:.24em;animation:breathe 1.8s ease-in-out infinite;}
+  .prompt{margin-top:30px;font-size:16px;letter-spacing:.24em;opacity:0;animation:breathe 1.8s ease-in-out 2s infinite;}
   @keyframes breathe{0%,100%{opacity:.45}50%{opacity:1}}
   #endtime{font-size:20px;margin-top:10px;letter-spacing:.12em;}
+  .controls .flat b{display:inline;min-width:0;margin:0;text-align:inherit;}
+  @media (min-width:900px){
+    #hpbar{width:172px;height:9px;} #stambar{width:122px;} .pip{width:12px;height:12px;}
+  }
+  /* ---- entrances & micro-interactions ---- */
+  @keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:var(--o,1);transform:translateY(0)}}
+  .stag{opacity:0;animation:riseIn .7s cubic-bezier(.22,1.2,.36,1) forwards;}
+  .estag{opacity:0;animation:riseIn .7s cubic-bezier(.22,1.2,.36,1) forwards;}
   /* ---- touch controls ---- */
   #touchui{position:fixed;inset:0;z-index:10;pointer-events:none;display:none;}
   body.coarse #touchui{display:block;}
@@ -93,13 +103,16 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
     border:2px solid rgba(58,50,38,.75);background:rgba(236,225,194,.30);
     color:var(--ink);font-size:26px;display:flex;align-items:center;justify-content:center;
     font-family:'Hiragino Mincho ProN','Yu Mincho',serif;backdrop-filter:blur(2px);
-    box-shadow:0 2px 6px rgba(40,30,12,.25);}
-  .tbtn:active{background:rgba(169,46,34,.35);}
+    box-shadow:0 2px 6px rgba(40,30,12,.25);transition:transform .08s ease-out,background .12s ease;}
+  .tbtn:active{background:rgba(169,46,34,.35);transform:scale(.93);}
   #btn-atk{right:20px;bottom:128px;width:76px;height:76px;font-size:32px;}
   #btn-dodge{right:26px;bottom:222px;}
   #btn-heal{right:26px;bottom:306px;}
-  body.coarse #playerhud{width:160px;bottom:12px;}
-  body.coarse #timebox{top:12%;}
+  body.coarse #playerhud{width:160px;bottom:20px;}
+  body.coarse #timebox{top:12%;background:none;border:none;box-shadow:none;padding:4px 10px;min-width:0;}
+  body.coarse #timebox::before,body.coarse #timebox::after{display:none;}
+  body.coarse #timebox .lbl{display:none;}
+  body.coarse #timebox .val{font-size:15px;font-weight:600;opacity:.7;}
   #joy{position:absolute;width:110px;height:110px;border-radius:50%;border:2px solid rgba(58,50,38,.5);
     background:rgba(236,225,194,.18);display:none;pointer-events:none;}
   #joyknob{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;
@@ -155,25 +168,25 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
 
 <div class="screen" id="startscreen">
   <div class="kanji-big" id="startkanji">一閃</div>
-  <div class="title-en">ISSEN</div>
-  <div class="subtitle">A SUMI-E DUEL</div>
-  <div class="controls">
+  <div class="title-en stag" style="animation-delay:.9s">ISSEN</div>
+  <div class="subtitle stag" style="animation-delay:1.15s">A SUMI-E DUEL</div>
+  <div class="controls stag" style="--o:.85;animation-delay:1.4s">
     <div class="kbhint"><b>WASD</b> move &nbsp; <b>drag</b> camera</div>
     <div class="thint"><b>left thumb</b> move &nbsp; <b>right side</b> camera</div>
     <div class="kbhint"><b>click / J</b> strike &nbsp; <b>space / shift</b> dodge</div>
     <div class="kbhint"><b>F</b> heal (4 charges)</div>
-    <div class="kbhint" style="opacity:.75">a last-breath dodge <b>reads</b> a strike - no ring on the ground means the strike is a lie</div>
+    <div class="kbhint flat" style="opacity:.75">a last-breath dodge <b>reads</b> a strike - no ring on the ground means the strike is a lie</div>
     <div class="thint"><b>斬</b> strike &nbsp; <b>避</b> dodge &nbsp; <b>気</b> heal</div>
-    <div class="thint" style="opacity:.75;margin-top:6px">a last-breath dodge <b>reads</b> a strike - no ring means the strike is a lie</div>
+    <div class="thint flat" style="opacity:.75;margin-top:6px">a last-breath dodge <b>reads</b> a strike - no ring means the strike is a lie</div>
   </div>
   <div class="prompt" id="startprompt">- click to begin -</div>
-  <div class="qtoggle" id="qtoggle">brush: <b id="qcur">濃 rich</b> &nbsp;·&nbsp; tap to change (reloads)</div>
+  <div class="qtoggle stag" id="qtoggle" style="--o:.55;animation-delay:2.2s">brush: <b id="qcur">濃 rich</b> &nbsp;·&nbsp; tap to change (reloads)</div>
 </div>
 
 <div class="screen hidden" id="endscreen">
   <div class="kanji-big" id="endkanji">死</div>
-  <div class="title-en" id="endtitle">FALLEN</div>
-  <div id="endtime"></div>
+  <div class="title-en estag" id="endtitle">FALLEN</div>
+  <div id="endtime" class="estag"></div>
   <div class="prompt" id="endprompt">- click to try again -</div>
 </div>
 
@@ -2273,6 +2286,7 @@ function resetFight(){
   G.camYaw=Math.PI; G.camPitch=.8;
 }
 function startOrRetry(){
+  document.body.classList.remove('endui');
   el('startscreen').classList.add('hidden');
   el('endscreen').classList.add('hidden');
   resetFight();
@@ -2306,6 +2320,7 @@ function startOrRetry(){
 }
 function endGame(win){
   if(G.over) return;
+  document.body.classList.add('endui');
   G.over=true; G.running=false;
   const ek = el('endkanji');
   ek.textContent = '';
@@ -2319,6 +2334,7 @@ function endGame(win){
   el('endtitle').textContent = win ? 'VICTORY' : 'FALLEN';
   const t=G.time, mm=String(Math.floor(t/60)).padStart(2,'0'), ss=(t%60).toFixed(2).padStart(5,'0');
   el('endtime').textContent = win ? `Time ${mm}:${ss}` : '';
+  ['endtitle','endtime'].forEach((id,i)=>{const e=el(id); e.classList.remove('estag'); void e.offsetHeight; e.style.animationDelay=(.9+i*.3)+'s'; e.classList.add('estag');});
   setTimeout(()=>el('endscreen').classList.remove('hidden'), 600);
 }
 
