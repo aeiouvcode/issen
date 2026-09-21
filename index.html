@@ -1347,6 +1347,7 @@ function hurtPlayer(dmg, fromPos){
   if(player.state==='dead' || G.over) return;
   player.hp = Math.max(0, player.hp - dmg);
   player.state='hit'; player.stateT=0;
+  player.iframe = Math.max(player.iframe, .45); // post-hit poise: stacked simultaneous hits can't chain
   inkBurst(player.pos.clone().setY(1.2), 13, 4.5, 2, .55); inkBurst(player.pos.clone().setY(1.2), 5, 3, 0, .4);
   if(Math.random()<.4) groundSplat(player.pos.x+(Math.random()-.5), player.pos.z+(Math.random()-.5), .8, 7, true);
   flashHit(); inkLens();
@@ -1668,10 +1669,14 @@ function updateBoss(dt){
       if(b.stateT>=.6){
         bossSetState('wave_recover');
         const wy = b.yaw;
-        slashArc(b.pos.clone().setY(.5), wy-Math.PI/2, 2.2, 2.6, 0, false, 0);
-        const w = arcs[arcs.length-1];
-        w.life = 1.7; w.wave = true; w.hit = false;
-        w.vx = Math.sin(wy)*10.5; w.vz = Math.cos(wy)*10.5;
+        // awakened: two crescents at an angle - sidestepping one line no longer clears both
+        const wangs = b.phase===2 ? [wy, wy + (Math.random()<.5?-1:1)*.4] : [wy]; // one dead-on, one cuts an escape line
+        for(const wa of wangs){
+          slashArc(b.pos.clone().setY(.5), wa-Math.PI/2, 2.2, 2.6, 0, false, 0);
+          const w = arcs[arcs.length-1];
+          w.life = 1.7; w.wave = true; w.hit = false;
+          w.vx = Math.sin(wa)*10.5; w.vz = Math.cos(wa)*10.5;
+        }
         inkBurst(b.pos.clone().setY(.8), 16, 4, 0, .5);
         sfx.whooshBig();
       }
