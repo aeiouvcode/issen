@@ -1289,11 +1289,10 @@ function animBoss(dt){
     // slow in, brief held stillness, slow out: respect, not submission
     const bin=easeInOut(clamp(t/.8,0,1)), bout=easeInOut(clamp((t-1.6)/.8,0,1));
     const bend=bin*(1-bout);
-    J.torso.rotation.x = .06+bend*.5;
-    J.head.rotation.x = bend*.22;
-    J.kasa.rotation.x = bend*.34;      // the hat tips forward, hiding the eyes
+    boss.body.rotation.x = bend*.42;   // the whole figure inclines
+    boss.body.position.y = -bend*.08;
+    J.kasa.rotation.x = bend*.3;       // the hat tips forward, hiding the eyes
     J.armR.rotation.x = .15+bend*.18; J.armL.rotation.x = .12+bend*.18;
-    boss.body.position.y = -bend*.05;
   } else if(s==='vanish'){
     const k=clamp(t/.5,0,1);
     boss.body.scale.y = 1-k; boss.body.scale.x = 1+k*.4; boss.body.scale.z = 1+k*.4;
@@ -1676,6 +1675,8 @@ function updateBoss(dt){
         if(b.state!=='walk') bossSetState('walk');
       } else if(b.state!=='idle') bossSetState('idle');
       if(b.thinkT<=0){
+        // a patient opponent is studied, not struck: hold while the standoff holds
+        if(!b._engaged && player.atkLog.length===0 && G.time<6.5){ b.thinkT=.5; break; }
         b._engaged=true;
         // choose attack
         if(d < 2.4 && Math.random()<.45){ bossSetState('burst'); sfx.charge(); }
