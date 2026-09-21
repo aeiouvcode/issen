@@ -2176,7 +2176,7 @@ function startOrRetry(){
   // brushed touch-button kanji
   for(const [id,ch] of [['btn-atk','\u65ac'],['btn-dodge','\u907f'],['btn-heal','\u6c97']]){
     const b=el(id); b.textContent='';
-    b.style.backgroundImage='url('+strokeKanji(ch,'#3a3226')+')';
+    try{ b.style.backgroundImage='url('+strokeKanji(ch,'#3a3226')+')'; }catch(e){ window._glyphErr=ch+' u'+ch.codePointAt(0).toString(16)+' keys='+Object.keys(STROKES).map(k=>k.codePointAt(0).toString(16)).join(',')+' :: '+e; }
     b.style.backgroundSize='62%'; b.style.backgroundRepeat='no-repeat'; b.style.backgroundPosition='center';
   }
 }
