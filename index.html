@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+/* one-time cleanup: retire the legacy service worker + shell cache from early builds */
+if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())); }
+if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k))); }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>ISSEN - 一閃</title>
@@ -2269,7 +2274,7 @@ window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leave
     if(!window.QA_norender) renderer.render(scene, camera); },
   attack:doAttack, dodge:doDodge, heal:doHeal};
 window.QA_norender=false;
-requestAnimationFrame(loop);
+loop(performance.now());
 </script>
 </body>
 </html>
