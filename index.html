@@ -32,6 +32,8 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   .brushbar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:1px;transition:width .18s ease-out;}
   .bartext{font-size:12px;letter-spacing:.5px;color:var(--ink);opacity:.85;text-align:right;
            text-shadow:0 0 2px rgba(236,225,194,.8);line-height:1.05;font-weight:600;}
+  #koifish{position:fixed;left:0;top:0;width:150px;height:75px;pointer-events:none;opacity:0;
+    background-size:contain;background-repeat:no-repeat;background-position:center;z-index:1;}
   /* ---- boss floating bars ---- */
   #bossbars{position:fixed;left:0;top:0;width:130px;z-index:6;pointer-events:none;display:none;}
   #bossbars .bartext{display:none;}
@@ -481,7 +483,7 @@ function mistTexture(){
     side:THREE.BackSide, depthWrite:false, fog:false});
   const rm=new THREE.Mesh(rgeo, rmat); rm.position.y=3.8; scene.add(rm);
 }
-/* ---- rare sumi-e koi drifting through the title mist: a quiet secret ---- */
+/* ---- rare sumi-e koi gliding across the title paper: a quiet secret ---- */
 function koiTexture(){
   const c=document.createElement('canvas'); c.width=256; c.height=128;
   const x=c.getContext('2d');
@@ -514,38 +516,34 @@ function koiTexture(){
   x.beginPath(); x.ellipse(40,-2,8,5,.2,0,6.283); x.fill();
   return new THREE.CanvasTexture(c);
 }
-const _kv=new THREE.Vector3(), _kv2=new THREE.Vector3();
-const koi = (()=>{
-  const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.6,1.3),
-    new THREE.MeshBasicMaterial({map:koiTexture(), transparent:true, opacity:0, depthWrite:false, fog:true, side:THREE.DoubleSide}));
-  m.visible=false; m.renderOrder=3; scene.add(m);
-  return {m, active:false, t:0, dur:16, next:14+Math.random()*14, x0:0,z0:0,x1:0,z1:0, wob:0};
-})();
+const _koiURL = koiTexture().image.toDataURL();
+const koi = {active:false, t:0, dur:16, next:14+Math.random()*14, x0:0,y0:0,x1:0,y1:0, wob:0, el:null};
 function spawnKoi(){
-  const a=Math.random()*6.283, r=8.5;
-  koi.x0=Math.sin(a)*r; koi.z0=Math.cos(a)*r;
-  koi.x1=-koi.x0+(Math.random()-.5)*5; koi.z1=-koi.z0+(Math.random()-.5)*5;
-  koi.t=0; koi.dur=15+Math.random()*6; koi.active=true; koi.m.visible=true;
+  const w=innerWidth, h=innerHeight, ltr=Math.random()<.5;
+  koi.x0=ltr?-170:w+20; koi.x1=ltr?w+20:-170;
+  koi.y0=koi.y1=h*(.7+Math.random()*.22);
+  koi.t=0; koi.dur=16+Math.random()*8; koi.active=true;
+  if(!koi.el){
+    koi.el=document.createElement('div'); koi.el.id='koifish';
+    koi.el.style.backgroundImage='url('+_koiURL+')';
+    el('startscreen').appendChild(koi.el);
+  }
+  koi.el.style.opacity='0';
 }
 function updateMist(dt){
   for(const m of mists) m.rotation.y += m.userData.sp*dt;
-  // the koi keeps the title company; it slips away once the duel begins
+  // the koi keeps the title company; the duel hides it with the startscreen
   if(!koi.active && !G.running && !G.over){ koi.next-=dt; if(koi.next<=0) spawnKoi(); }
-  if(koi.active){
+  if(koi.active && koi.el){
     koi.t+=dt;
     const p=Math.min(1,koi.t/koi.dur), e=p*p*(3-2*p);
-    const x=koi.x0+(koi.x1-koi.x0)*e, z=koi.z0+(koi.z1-koi.z0)*e;
+    const x=koi.x0+(koi.x1-koi.x0)*e, y=koi.y0+(koi.y1-koi.y0)*e;
     koi.wob+=dt*2.1;
-    koi.m.position.set(x, 1.35+Math.sin(koi.wob*.7)*.18, z);
-    koi.m.quaternion.copy(camera.quaternion);
-    _kv.set(x+(koi.x1-koi.x0), koi.m.position.y, z+(koi.z1-koi.z0)).project(camera);
-    _kv2.copy(koi.m.position).project(camera);
-    koi.m.scale.set((_kv.x-_kv2.x)>=0?1:-1, 1, 1); // head leads in screen space
-    koi.m.rotateZ(Math.sin(koi.wob)*.1);
+    const flip=koi.x1>koi.x0?1:-1;
+    koi.el.style.transform=`translate(${(x|0)}px,${((y+Math.sin(koi.wob*.7)*10)|0)}px) scaleX(${flip}) rotate(${(Math.sin(koi.wob)*4).toFixed(1)}deg)`;
     const fade=Math.min(1, Math.min(p, 1-p)/.18);
-    koi.m.material.opacity = .5*Math.max(0,fade)*(G.running?.22:1); // a whisper if the duel starts mid-swim
-    if(p>=1){ koi.active=false; koi.m.visible=false; koi.next=26+Math.random()*30; }
+    koi.el.style.opacity=(.17*Math.max(0,fade)).toFixed(3);
+    if(p>=1){ koi.active=false; koi.el.style.opacity='0'; koi.next=26+Math.random()*30; }
   }
 }
 
