@@ -2174,9 +2174,9 @@ function startOrRetry(){
   sk.style.backgroundSize='contain'; sk.style.backgroundRepeat='no-repeat'; sk.style.backgroundPosition='center';
   sk.style.backgroundImage='url('+strokeKanji('\u4e00\u9583','#241d12')+')';
   // brushed touch-button kanji
-  for(const [id,ch] of [['btn-atk','\u65ac'],['btn-dodge','\u907f'],['btn-heal','\u6c97']]){
+  for(const [id,ch] of [['btn-atk','\u65ac'],['btn-dodge','\u907f'],['btn-heal','\u6c17']]){
     const b=el(id); b.textContent='';
-    try{ b.style.backgroundImage='url('+strokeKanji(ch,'#3a3226')+')'; }catch(e){ window._glyphErr=ch+' u'+ch.codePointAt(0).toString(16)+' keys='+Object.keys(STROKES).map(k=>k.codePointAt(0).toString(16)).join(',')+' :: '+e; }
+    b.style.backgroundImage='url('+strokeKanji(ch,'#3a3226')+')';
     b.style.backgroundSize='62%'; b.style.backgroundRepeat='no-repeat'; b.style.backgroundPosition='center';
   }
 }
