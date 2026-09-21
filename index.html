@@ -2040,17 +2040,18 @@ const STROKES = {
   [[565,340],[540,460],[518,550]],
   [[630,300],[638,520],[705,640],[795,615]]
 ]};
-function strokeKanji(ch, color='#a92e22'){
-  const key='S'+ch+'|'+color;
+function strokeKanji(ch, color='#a92e22', maxStrokes=Infinity){
+  const key='S'+ch+'|'+color+'|'+maxStrokes;
   if(kanjiCache[key]) return kanjiCache[key];
   const S=512, sc=S/1000;
   const c=document.createElement('canvas'); c.width=S*ch.length; c.height=S;
   const x=c.getContext('2d');
   x.fillStyle=color;
-  let ci=0;
+  let ci=0, strokeIdx=0;
   for(const glyph of ch){
   x.save(); x.translate(S*ci, 0); ci++;
   for(const pts of STROKES[glyph]){
+    if(strokeIdx++>=maxStrokes) break;
     // resample by arc length
     let L=0; const segs=[];
     for(let i=1;i<pts.length;i++){ const l=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]); segs.push(l); L+=l; }
@@ -2273,7 +2274,13 @@ function startOrRetry(){
   sk.textContent='';
   sk.style.width='min(58vmin,330px)'; sk.style.height='min(29vmin,165px)';
   sk.style.backgroundSize='contain'; sk.style.backgroundRepeat='no-repeat'; sk.style.backgroundPosition='center';
-  sk.style.backgroundImage='url('+strokeKanji('\u4e00\u9583','#241d12')+')';
+  // draw-on: the title brushes itself in, stroke by stroke
+  const titleFrames=[];
+  const titleStrokes = STROKES['\u4e00'].length + STROKES['\u9583'].length;
+  for(let k=1;k<=titleStrokes;k++) titleFrames.push('url('+strokeKanji('\u4e00\u9583','#241d12',k)+')');
+  let tf=0;
+  sk.style.backgroundImage=titleFrames[0];
+  const titleIv=setInterval(()=>{ if(++tf>=titleFrames.length){ clearInterval(titleIv); return; } sk.style.backgroundImage=titleFrames[tf]; }, 210);
   // brushed touch-button kanji
   for(const [id,ch] of [['btn-atk','\u65ac'],['btn-dodge','\u907f'],['btn-heal','\u6c17']]){
     const b=el(id); b.textContent='';
@@ -2288,7 +2295,11 @@ function endGame(win){
   ek.textContent = '';
   ek.style.width = 'min(34vmin,180px)'; ek.style.height = 'min(34vmin,180px)';
   ek.style.backgroundSize = 'contain'; ek.style.backgroundRepeat = 'no-repeat'; ek.style.backgroundPosition = 'center';
-  ek.style.backgroundImage = 'url('+strokeKanji(win ? '\u52dd' : '\u6b7b', win ? '#241d12' : '#a92e22')+')';
+  const eCh = win ? '\u52dd' : '\u6b7b', eCol = win ? '#241d12' : '#a92e22';
+  const eStrokes = STROKES[eCh].length;
+  let ef = 0;
+  ek.style.backgroundImage = 'url('+strokeKanji(eCh, eCol, 1)+')';
+  const eIv = setInterval(()=>{ if(++ef>eStrokes){ clearInterval(eIv); return; } ek.style.backgroundImage='url('+strokeKanji(eCh, eCol, ef)+')'; }, 150);
   el('endtitle').textContent = win ? 'VICTORY' : 'FALLEN';
   const t=G.time, mm=String(Math.floor(t/60)).padStart(2,'0'), ss=(t%60).toFixed(2).padStart(5,'0');
   el('endtime').textContent = win ? `Time ${mm}:${ss}` : '';
