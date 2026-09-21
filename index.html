@@ -72,6 +72,7 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
     transition:opacity .5s;}
   .screen.hidden{opacity:0;pointer-events:none;}
   body.prestart #timebox, body.prestart #bossbars, body.prestart #playerhud, body.prestart #touchui{display:none!important;}
+  .qtoggle{margin-top:16px;font-size:13px;opacity:.55;letter-spacing:.08em;cursor:pointer;}
   .kanji-big{font-size:min(34vmin,180px);line-height:1;color:var(--ink);
     font-family:'Hiragino Mincho ProN','Yu Mincho','MS Mincho',serif;
     text-shadow:2px 3px 0 rgba(26,21,14,.14);filter:url(#rough);}
@@ -166,6 +167,7 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
     <div class="thint" style="opacity:.75;margin-top:6px">a last-breath dodge <b>reads</b> a strike - no ring means the strike is a lie</div>
   </div>
   <div class="prompt" id="startprompt">- click to begin -</div>
+  <div class="qtoggle" id="qtoggle">brush: <b id="qcur">濃 rich</b> &nbsp;·&nbsp; tap to change (reloads)</div>
 </div>
 
 <div class="screen hidden" id="endscreen">
@@ -190,8 +192,9 @@ const RED   = new THREE.Color(0xa92e22);
 const ARENA_R = 26;
 
 const canvas = document.getElementById('game');
+const QUALITY = (()=>{ try{ return localStorage.getItem('issen-ink') || 'rich'; }catch(e){ return 'rich'; } })(); // 濃 rich / 淡 light
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(QUALITY==='light' ? 1 : Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 
 const scene = new THREE.Scene();
@@ -399,8 +402,9 @@ function stalkTexture(){
   return new THREE.CanvasTexture(c);
 }
 const fgStalks = [];
-for(let i=0;i<7;i++){
-  const a = i/7*Math.PI*2 + Math.random()*.6;
+const STALK_N = QUALITY==='light'?4:7;
+for(let i=0;i<STALK_N;i++){
+  const a = i/STALK_N*Math.PI*2 + Math.random()*.6;
   const r = 13+Math.random()*6.5; // mid-ground ring: frames the duel as the camera orbits
   const h = 8+Math.random()*3.5, w = .55+Math.random()*.3;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h),
@@ -435,7 +439,8 @@ function mistTexture(){
 }
 {
   const tex = mistTexture();
-  for(let i=0;i<5;i++){
+  const MIST_N = QUALITY==='light'?2:5;
+  for(let i=0;i<MIST_N;i++){
     const t = tex.clone(); t.needsUpdate=true; t.repeat.x=2+(i%2);
     const r = ARENA_R+4+i*3.2;
     const geo = new THREE.CylinderGeometry(r, r, 1.6+i*.5, 48, 1, true);
@@ -959,7 +964,7 @@ function leafTexture(){
 const leafTex = leafTexture();
 const leaves = [];
 let leafT = 0;
-for(let i=0;i<18;i++){
+for(let i=0;i<(QUALITY==='light'?6:18);i++){
   const m = new THREE.SpriteMaterial({map:leafTex, transparent:true, depthWrite:false, opacity:.4+Math.random()*.35});
   const sp = new THREE.Sprite(m);
   const s=.17+Math.random()*.16;
@@ -2281,6 +2286,9 @@ function startOrRetry(){
   let tf=0;
   sk.style.backgroundImage=titleFrames[0];
   const titleIv=setInterval(()=>{ if(++tf>=titleFrames.length){ clearInterval(titleIv); return; } sk.style.backgroundImage=titleFrames[tf]; }, 210);
+  const qt = el('qtoggle');
+  el('qcur').textContent = QUALITY==='rich' ? '濃 rich' : '淡 light';
+  qt.addEventListener('click', e=>{ e.stopPropagation(); try{ localStorage.setItem('issen-ink', QUALITY==='rich'?'light':'rich'); location.reload(); }catch(e2){ el('qcur').textContent='unavailable here'; } });
   // brushed touch-button kanji
   for(const [id,ch] of [['btn-atk','\u65ac'],['btn-dodge','\u907f'],['btn-heal','\u6c17']]){
     const b=el(id); b.textContent='';
