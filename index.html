@@ -481,7 +481,22 @@ function mistTexture(){
   const rgeo=new THREE.CylinderGeometry(ARENA_R+27, ARENA_R+27, 12, 64, 1, true);
   const rmat=new THREE.MeshBasicMaterial({map:rt, transparent:true, opacity:.42,
     side:THREE.BackSide, depthWrite:false, fog:false});
-  const rm=new THREE.Mesh(rgeo, rmat); rm.position.y=3.8; scene.add(rm);
+  const rm=new THREE.Mesh(rgeo, rmat); rm.position.y=3.8; rm.userData.sp=.006; scene.add(rm); mists.push(rm);
+  // nearer second ridge: counter-rotating parallax against the far one
+  const rt2=rt.clone(); rt2.needsUpdate=true; rt2.repeat.x=2;
+  const rgeo2=new THREE.CylinderGeometry(ARENA_R+18, ARENA_R+18, 9, 64, 1, true);
+  const rmat2=new THREE.MeshBasicMaterial({map:rt2, transparent:true, opacity:.24,
+    side:THREE.BackSide, depthWrite:false, fog:false});
+  const rm2=new THREE.Mesh(rgeo2, rmat2); rm2.position.y=2.9; rm2.userData.sp=-.011; scene.add(rm2); mists.push(rm2);
+  // low ground-fog banks drifting between the duel and the bamboo: depth you can feel
+  const GFOG=[[ARENA_R*.55,.10,.021],[ARENA_R*.8,.085,-.016]];
+  for(const [gr,gop,gsp] of GFOG){
+    const gt=tex.clone(); gt.needsUpdate=true; gt.repeat.x=3;
+    const gg=new THREE.CylinderGeometry(gr, gr, 1.15, 48, 1, true);
+    const gm=new THREE.Mesh(gg, new THREE.MeshBasicMaterial({map:gt, transparent:true, opacity:gop,
+      side:THREE.DoubleSide, depthWrite:false, fog:true}));
+    gm.position.y=.55; gm.userData.sp=gsp; scene.add(gm); mists.push(gm);
+  }
 }
 /* ---- rare sumi-e koi gliding across the title paper: a quiet secret ---- */
 function koiTexture(){
