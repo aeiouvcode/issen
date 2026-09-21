@@ -2168,12 +2168,27 @@ function strokeKanji(ch, color='#a92e22', maxStrokes=Infinity){
   const key='S'+ch+'|'+color+'|'+maxStrokes;
   if(kanjiCache[key]) return kanjiCache[key];
   const S=512, sc=S/1000;
-  const c=document.createElement('canvas'); c.width=S*ch.length; c.height=S;
+  const glyphs=[...ch];
+  // letterfit: ink-tight advances + deliberate gap for multi-glyph strips
+  const PAD=70, BEAR=60, GAP=160;
+  let offs=[], stripU=S;
+  if(glyphs.length>1){
+    let cum=0;
+    for(const g of glyphs){
+      let mn=1000, mx=0;
+      for(const pts of STROKES[g]) for(const pt of pts){ mn=Math.min(mn,pt[0]); mx=Math.max(mx,pt[0]); }
+      mn-=PAD; mx+=PAD;
+      offs.push(cum - mn + BEAR);
+      cum += mx-mn + 2*BEAR + GAP;
+    }
+    stripU = cum - GAP;
+  }
+  const c=document.createElement('canvas'); c.width=Math.round(stripU*sc); c.height=S;
   const x=c.getContext('2d');
   x.fillStyle=color;
   let ci=0, strokeIdx=0;
-  for(const glyph of ch){
-  x.save(); x.translate(S*ci, 0); ci++;
+  for(const glyph of glyphs){
+  x.save(); x.translate(offs.length? offs[ci]*sc : 0, 0); ci++;
   for(const pts of STROKES[glyph]){
     if(strokeIdx++>=maxStrokes) break;
     // resample by arc length
@@ -2407,7 +2422,13 @@ function startOrRetry(){
 {
   const sk = el('startkanji');
   sk.textContent='';
-  sk.style.width='min(58vmin,330px)'; sk.style.height='min(29vmin,165px)';
+  // fitted strip is narrower than 2 full cells: size the box to the strip aspect
+  let stripAspect=2; { let mn=1000,mx=0;
+    for(const pt of STROKES['\u4e00'][0]){ mn=Math.min(mn,pt[0]); mx=Math.max(mx,pt[0]); }
+    const one=(mx-mn+140)+120; mn=1000; mx=0;
+    for(const st of STROKES['\u9583']) for(const pt of st){ mn=Math.min(mn,pt[0]); mx=Math.max(mx,pt[0]); }
+    stripAspect=((one + (mx-mn+140)+120 + 160)/1000); }
+  sk.style.height='min(29vmin,165px)'; sk.style.width='auto'; sk.style.aspectRatio=''+stripAspect;
   sk.style.backgroundSize='contain'; sk.style.backgroundRepeat='no-repeat'; sk.style.backgroundPosition='center';
   // draw-on: the title brushes itself in, stroke by stroke
   const titleFrames=[];
