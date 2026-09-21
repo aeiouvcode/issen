@@ -2255,8 +2255,9 @@ function updateHUD(dt){
       else{
         hud.bossBars.style.display='block';
         hud.bossBars.style.opacity = edge>.8 ? Math.max(0,1-(edge-.8)/.32).toFixed(2) : '1';
-        hud.bossBars.style.transform =
-          `translate(${((projV.x*.5+.5)*innerWidth-65)|0}px, ${((-projV.y*.5+.5)*innerHeight)|0}px)`;
+        const bx=Math.max(6, Math.min(innerWidth-136, (projV.x*.5+.5)*innerWidth-65));
+        const by=Math.max(6, Math.min(innerHeight-40, (-projV.y*.5+.5)*innerHeight));
+        hud.bossBars.style.transform = `translate(${bx|0}px, ${by|0}px)`;
       }
     } else hud.bossBars.style.display='none';
   } else hud.bossBars.style.display='none';
