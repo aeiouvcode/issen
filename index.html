@@ -1278,7 +1278,7 @@ function tryHitBoss(a){
     G.hitstop = Math.max(G.hitstop, .14); G.slowmo = Math.max(G.slowmo, .22);
     inkBurst(boss.pos.clone().setY(1.6), 30, 7, 0, .7);
     slashArc(boss.pos.clone().setY(1.4), player.yaw+Math.PI/2, 3.8, 3.0, .16, false, .8);
-    sfx.big();
+    sfx.crack();
   }
   boss.hp = Math.max(0, boss.hp - dmg);
   boss.posture = Math.max(0, boss.posture - a.post);
@@ -1333,7 +1333,7 @@ function hurtPlayer(dmg, fromPos){
       const dp = player.pos.clone(); dp.y=1.4;
       inkBurst(dp, 22, 5, 0, .5);
       slashArc(dp, player.yaw+Math.PI/2, 3.4, 2.6, .12, false, .6);
-      slashArc(player.pos.clone().setY(.25), 0, 2.2, 6.28, .35, false, 0); // pale ground ring while the window is open
+      slashArc(player.pos.clone().setY(.25), 0, 2.2, 6.28, .6, false, 0); // pale ground ring while the window is open
       kanjiFlash('\u898b', .45); // 見 - the read
       G.hitstop = Math.max(G.hitstop, .09); G.slowmo = Math.max(G.slowmo, .18);
       sfx.hit();
@@ -1371,6 +1371,10 @@ function updatePlayer(dt){
     p.counterT -= dt;
     p._ctTrail=(p._ctTrail||0)+dt;
     if(p._ctTrail>.09){ p._ctTrail=0; inkBurst(p.pos.clone().setY(.3), 1, .8, 0, .3); }
+    if(p.counterT<=0 && boss.alive && boss.root.visible && dist2D(p.pos,boss.pos)<7){
+      // the read went unanswered - he takes the initiative back
+      boss.thinkT = Math.min(boss.thinkT, .1);
+    }
   }
   // stamina regen (paused briefly after each swing - no free pressure)
   if(p.regenDelay>0) p.regenDelay -= dt;
@@ -1776,6 +1780,7 @@ const sfx = (()=>{
     ringTick:(p=0)=>tone(300+p*170, 250+p*170, .07, .055, 'square'),
     drum:()=>{ tone(82, 36, .7, .3, 'sine'); noise(.18, 240, 70, .18, 'lowpass'); },
     big:()=>{ noise(.6, 800, 80, .3, 'lowpass'); tone(70, 30, .6, .3, 'sine'); },
+    crack:()=>{ noise(.09, 3400, 900, .24); tone(1150, 260, .09, .16, 'square'); },
     wind:()=>{
       try{
         const a=ctx();
