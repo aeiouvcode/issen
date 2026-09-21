@@ -154,7 +154,7 @@
     <div class="kbhint"><b>click / J</b> strike &nbsp; <b>space / shift</b> dodge</div>
     <div class="kbhint"><b>F</b> heal (4 charges)</div>
     <div class="kbhint" style="opacity:.75">a last-breath dodge <b>reads</b> a strike - no ring on the ground means the strike is a lie</div>
-    <div class="thint"><b>斬</b> strike &nbsp; <b>避</b> dodge &nbsp; <b>癒</b> heal</div>
+    <div class="thint"><b>斬</b> strike &nbsp; <b>避</b> dodge &nbsp; <b>気</b> heal</div>
     <div class="thint" style="opacity:.75;margin-top:6px">a last-breath dodge <b>reads</b> a strike - no ring means the strike is a lie</div>
   </div>
   <div class="prompt" id="startprompt">- click to begin -</div>
@@ -1882,6 +1882,26 @@ const STROKES = {
   [[475,520],[495,590]],
   [[725,580],[760,670]]
 ],
+'避': [
+  [[270,190],[290,290]],
+  [[430,165],[615,175],[598,285]],
+  [[445,180],[395,325]],
+  [[445,355],[580,360],[578,460],[445,455],[445,355]],
+  [[640,205],[668,262]],
+  [[612,325],[795,325]],
+  [[608,445],[802,445]],
+  [[700,320],[700,570]],
+  [[250,425],[288,515]],
+  [[175,615],[420,645],[685,685],[850,590]]
+],
+'気': [
+  [[400,150],[345,230],[310,300]],
+  [[360,225],[630,225]],
+  [[330,330],[680,320]],
+  [[300,450],[680,440],[660,560],[725,615]],
+  [[430,400],[520,520]],
+  [[540,400],[440,520]]
+,
 '一': [
   [[180,500],[500,490],[820,500]]
 ],
@@ -2148,6 +2168,12 @@ function startOrRetry(){
   sk.style.width='min(58vmin,330px)'; sk.style.height='min(29vmin,165px)';
   sk.style.backgroundSize='contain'; sk.style.backgroundRepeat='no-repeat'; sk.style.backgroundPosition='center';
   sk.style.backgroundImage='url('+strokeKanji('\u4e00\u9583','#241d12')+')';
+  // brushed touch-button kanji
+  for(const [id,ch] of [['btn-atk','\u65ac'],['btn-dodge','\u907f'],['btn-heal','\u6c97']]){
+    const b=el(id); b.textContent='';
+    b.style.backgroundImage='url('+strokeKanji(ch,'#3a3226')+')';
+    b.style.backgroundSize='62%'; b.style.backgroundRepeat='no-repeat'; b.style.backgroundPosition='center';
+  }
 }
 function endGame(win){
   if(G.over) return;
