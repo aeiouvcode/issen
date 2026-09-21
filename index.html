@@ -763,7 +763,7 @@ function groundSplat(x, z, scale=1, life=7, blood=false){
   m.position.set(x, .03+Math.random()*.02, z);
   scene.add(m);
   decals.push({m, life, maxLife:life});
-  if(decals.length>24){ const d=decals.shift(); scene.remove(d.m); d.m.material.dispose(); }
+  if(decals.length>40){ const d=decals.shift(); scene.remove(d.m); d.m.material.dispose(); }
 }
 function updateDecals(dt){
   for(let i=decals.length-1;i>=0;i--){
@@ -1409,6 +1409,14 @@ function updatePlayer(dt){
       p.vel.x = Math.sin(mv)*sp*Math.min(1,il);
       p.vel.z = Math.cos(mv)*sp*Math.min(1,il);
       if(canAct && p.state!=='run'){ p.state='run'; p.stateT=0; }
+      if(p.state==='run'){
+        p._stepT=(p._stepT||0)+dt;
+        if(p._stepT>.22){
+          p._stepT=0; p._stepSide=!p._stepSide;
+          const off = p._stepSide ? .12 : -.12;
+          groundSplat(p.pos.x+Math.cos(p.yaw)*off, p.pos.z-Math.sin(p.yaw)*off, .2, 4, false);
+        }
+      }
     } else {
       p.vel.x *= Math.pow(.0001,dt); p.vel.z *= Math.pow(.0001,dt);
       if(canAct && p.state!=='idle'){ p.state='idle'; p.stateT=0; }
