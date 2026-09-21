@@ -2170,7 +2170,7 @@ function strokeKanji(ch, color='#a92e22', maxStrokes=Infinity){
   const S=512, sc=S/1000;
   const glyphs=[...ch];
   // letterfit: ink-tight advances + deliberate gap for multi-glyph strips
-  const PAD=70, BEAR=60, GAP=160;
+  const PAD=45, BEAR=20, GAP=120;
   let offs=[], stripU=S;
   if(glyphs.length>1){
     let cum=0;
@@ -2425,9 +2425,9 @@ function startOrRetry(){
   // fitted strip is narrower than 2 full cells: size the box to the strip aspect
   let stripAspect=2; { let mn=1000,mx=0;
     for(const pt of STROKES['\u4e00'][0]){ mn=Math.min(mn,pt[0]); mx=Math.max(mx,pt[0]); }
-    const one=(mx-mn+140)+120; mn=1000; mx=0;
+    const one=(mx-mn+90)+40; mn=1000; mx=0;
     for(const st of STROKES['\u9583']) for(const pt of st){ mn=Math.min(mn,pt[0]); mx=Math.max(mx,pt[0]); }
-    stripAspect=((one + (mx-mn+140)+120 + 160)/1000); }
+    stripAspect=((one + (mx-mn+90)+40 + 120)/1000); }
   sk.style.height='min(29vmin,165px)'; sk.style.width='auto'; sk.style.aspectRatio=''+stripAspect;
   sk.style.backgroundSize='contain'; sk.style.backgroundRepeat='no-repeat'; sk.style.backgroundPosition='center';
   // draw-on: the title brushes itself in, stroke by stroke
