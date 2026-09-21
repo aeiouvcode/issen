@@ -1285,6 +1285,15 @@ function animBoss(dt){
     const k=easeOut(clamp(t/.3,0,1));
     J.armR.rotation.x = (-1.6+k*2.6);
     J.chest.rotation.y = .5-k*.9;
+  } else if(s==='bow'){
+    // slow in, brief held stillness, slow out: respect, not submission
+    const bin=easeInOut(clamp(t/.8,0,1)), bout=easeInOut(clamp((t-1.6)/.8,0,1));
+    const bend=bin*(1-bout);
+    J.torso.rotation.x = .06+bend*.5;
+    J.head.rotation.x = bend*.22;
+    J.kasa.rotation.x = bend*.34;      // the hat tips forward, hiding the eyes
+    J.armR.rotation.x = .15+bend*.18; J.armL.rotation.x = .12+bend*.18;
+    boss.body.position.y = -bend*.05;
   } else if(s==='vanish'){
     const k=clamp(t/.5,0,1);
     boss.body.scale.y = 1-k; boss.body.scale.x = 1+k*.4; boss.body.scale.z = 1+k*.4;
@@ -1628,6 +1637,10 @@ function updateBoss(dt){
   const d = dist2D(b.pos, player.pos);
   const toP = Math.atan2(player.pos.x-b.pos.x, player.pos.z-b.pos.z);
   switch(b.state){
+    case 'bow':
+      b.yaw = angLerp(b.yaw, toP, 1-Math.pow(.001,dt));
+      if(b.stateT>=2.4){ bossSetState('idle'); b.thinkT=Math.max(b.thinkT, .9); }
+      break;
     case 'vanish':
       if(b.stateT>=.5){
         b.root.visible=false;
@@ -1648,6 +1661,10 @@ function updateBoss(dt){
     case 'idle': case 'walk': {
       b.yaw = angLerp(b.yaw, toP, 1-Math.pow(.001,dt));
       b.thinkT -= dt;
+      // the patient-player secret: hold the standoff, blade down, and he honors it
+      if(!b._bowed && !b._engaged && player.atkLog.length===0 && G.time>6.5 && d<10){
+        b._bowed=true; bossSetState('bow'); break;
+      }
       // read repetitive input: 3+ swings inside 2.4s in range -> parry the next one
       if(b._parryCD<=0 && d<3.6){
         const now=G.time, recent=player.atkLog.filter(t=>now-t<2.4).length;
@@ -1659,6 +1676,7 @@ function updateBoss(dt){
         if(b.state!=='walk') bossSetState('walk');
       } else if(b.state!=='idle') bossSetState('idle');
       if(b.thinkT<=0){
+        b._engaged=true;
         // choose attack
         if(d < 2.4 && Math.random()<.45){ bossSetState('burst'); sfx.charge(); }
         else if(d < 4.2){ bossSetState('windup_spin'); b._feint = Math.random()<(b.phase===2?.45:.3); sfx.charge(); }
@@ -2351,7 +2369,7 @@ el('endscreen').addEventListener('click', startOrRetry);
 function resetFight(){
   player.pos.set(0,0,3.5); player.yaw=Math.PI; player.hp=100; player.stam=100; player.pips=4;
   player.state='idle'; player.stateT=0; player.vel.set(0,0,0); player.iframe=0; player._lastAtkEnd=0; player.queuedAtk=false;
-  player.atkLog=[]; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; player.counterT=0; boss._parryCD=0; boss._counterHit=false; boss.phase=1; boss._wspeed=1; boss._iaiChain=false; boss.J.eyes.visible=false;
+  player.atkLog=[]; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; player.counterT=0; boss._parryCD=0; boss._counterHit=false; boss._bowed=false; boss._engaged=false; boss.phase=1; boss._wspeed=1; boss._iaiChain=false; boss.J.eyes.visible=false;
   boss.pos.set(0,0,-7); boss.hp=185; boss.posture=130; boss.alive=true;
   boss.root.visible=false; boss.state='vanish'; boss.stateT=.2; boss.thinkT=1.2;
   inkCloud(boss.pos, 22);
