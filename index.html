@@ -2436,7 +2436,7 @@ function updateHUD(dt){
   hud.pips.forEach((p,i)=>p.classList.toggle('off', i>=player.pips));
   // boss bars follow boss on screen
   if(boss.root.visible && boss.alive){
-    projV.copy(boss.pos); projV.y += 2.9; // hug the kasa - 3.6 floated ~100px detached
+    projV.copy(boss.pos); projV.y += 2.75; // kasa crown
     projV.project(camera);
     if(projV.z<1){
       const edge=Math.max(Math.abs(projV.x), Math.abs(projV.y));
@@ -2445,7 +2445,7 @@ function updateHUD(dt){
         hud.bossBars.style.display='block';
         hud.bossBars.style.opacity = edge>.8 ? Math.max(0,1-(edge-.8)/.32).toFixed(2) : '1';
         const bx=Math.max(6, Math.min(innerWidth-136, (projV.x*.5+.5)*innerWidth-65));
-        const by=Math.max(6, Math.min(innerHeight-40, (-projV.y*.5+.5)*innerHeight));
+        const by=Math.max(6, Math.min(innerHeight-40, (-projV.y*.5+.5)*innerHeight-35)); // 27px bar block + 8px gap above the crown, pitch-independent
         hud.bossBars.style.transform = `translate(${bx|0}px, ${by|0}px)`;
       }
     } else hud.bossBars.style.display='none';
