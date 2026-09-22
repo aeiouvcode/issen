@@ -1711,7 +1711,7 @@ function updateBoss(dt){
     if(k>.55 && b._ringK<.55){ sfx.ringTick(1); b._ringK=1; }
     timeRing.visible = true;
     timeRing.position.set(b.pos.x, .075, b.pos.z);
-    const s = 2.4 - k*1.5;
+    const s = 2.6 - k*1.05; // ends at 1.55 - the band must finish outside the robe silhouette
     timeRing.scale.set(s, s, 1);
     timeRing.material.opacity = .5 + .4*k;
   } else { timeRing.visible = false; b._ringK=undefined; }
