@@ -2436,7 +2436,7 @@ function updateHUD(dt){
   hud.pips.forEach((p,i)=>p.classList.toggle('off', i>=player.pips));
   // boss bars follow boss on screen
   if(boss.root.visible && boss.alive){
-    projV.copy(boss.pos); projV.y += 3.6;
+    projV.copy(boss.pos); projV.y += 2.9; // hug the kasa - 3.6 floated ~100px detached
     projV.project(camera);
     if(projV.z<1){
       const edge=Math.max(Math.abs(projV.x), Math.abs(projV.y));
