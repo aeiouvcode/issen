@@ -1074,7 +1074,7 @@ const timeRing = new THREE.Mesh(
   new THREE.PlaneGeometry(2, 2),
   new THREE.MeshBasicMaterial({map:ensoTexture(), transparent:true, depthWrite:false, fog:true}));
 timeRing.rotation.x = -Math.PI/2;
-timeRing.renderOrder = 6; // above arcs/ribbons(5) and shadows: the tell must never lose a draw
+timeRing.renderOrder = 99; // empirically required: anything below ~90 loses the draw against the boss ground stack
 timeRing.visible = false;
 scene.add(timeRing);
 
