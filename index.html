@@ -332,6 +332,8 @@ void main(){
   // breathing room - low-freq pool mask leaves patches of bare paper
   float pool = fbm(p*.11+5.7);
   dots *= mix(.15, 1.0, smoothstep(.34,.60,pool));
+  // drift clusters - splatter gathers in patches, bare paper between
+  dots *= mix(.10, 1.05, smoothstep(.40,.74, fbm(p*.95+2.2)+.18*fbm(p*2.9+8.1)));
   // blotch field
   float blotch = smoothstep(.74,.99,fbm(p*.35+9.3))*.13;
   float edge = smoothstep(13.0, 31.0, length(p));
