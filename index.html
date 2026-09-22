@@ -2252,7 +2252,7 @@ function strokeKanji(ch, color='#a92e22', maxStrokes=Infinity){
   const glyphs=[...ch];
   // letterfit: ink-tight advances + deliberate gap for multi-glyph strips
   const PAD=45, BEAR=20, GAP=120;
-  let offs=[], stripU=S;
+  let offs=[], stripU=1000; // 1000-unit glyph space: canvas width must be stripU*sc, not S*sc (was clipping every single-glyph kanji's right side)
   if(glyphs.length>1){
     let cum=0;
     for(const g of glyphs){
