@@ -386,8 +386,8 @@ function bambooTexture(){
   }
   // bases dissolve into ground mist
   x.globalCompositeOperation='destination-out';
-  const bf=x.createLinearGradient(0,340,0,512);
-  bf.addColorStop(0,'rgba(0,0,0,0)'); bf.addColorStop(1,'rgba(0,0,0,.9)');
+  const bf=x.createLinearGradient(0,360,0,512);
+  bf.addColorStop(0,'rgba(0,0,0,0)'); bf.addColorStop(1,'rgba(0,0,0,.5)');
   x.fillStyle=bf; x.fillRect(0,0,1024,512);
   x.globalCompositeOperation='source-over';
   const t = new THREE.CanvasTexture(c);
@@ -404,7 +404,7 @@ function bambooTexture(){
     m.position.y = y;
     scene.add(m);
   };
-  mk(ARENA_R+11, 4, .8, 9, 3.6);
+  mk(ARENA_R+11, 4, .88, 9, 3.6);
   mk(ARENA_R+20, 6, .6, 12, 4.6);
 }
 
