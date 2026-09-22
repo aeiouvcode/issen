@@ -513,19 +513,19 @@ function mistTexture(){
     }
     const t=new THREE.CanvasTexture(rc); t.wrapS=THREE.RepeatWrapping; return t;
   };
-  const rt=ridgeTexture(96, 26, 6, 120, 130, 'rgba(96,88,68,.5)','rgba(96,88,68,.06)', 'rgba(70,62,48,.38)');
+  const rt=ridgeTexture(96, 26, 6, 150, 130, 'rgba(96,88,68,.58)','rgba(96,88,68,.06)', 'rgba(70,62,48,.5)');
   rt.repeat.x=3;
-  const rgeo=new THREE.CylinderGeometry(ARENA_R+27, ARENA_R+27, 12, 64, 1, true);
-  const rmat=new THREE.MeshBasicMaterial({map:rt, transparent:true, opacity:.48,
+  const rgeo=new THREE.CylinderGeometry(ARENA_R+27, ARENA_R+27, 16, 64, 1, true);
+  const rmat=new THREE.MeshBasicMaterial({map:rt, transparent:true, opacity:.52,
     side:THREE.BackSide, depthWrite:false, fog:false});
-  const rm=new THREE.Mesh(rgeo, rmat); rm.position.y=3.8; rm.userData.sp=.006; scene.add(rm); mists.push(rm);
+  const rm=new THREE.Mesh(rgeo, rmat); rm.position.y=5.2; rm.userData.sp=.006; scene.add(rm); mists.push(rm);
   // nearer second ridge: counter-rotating parallax against the far one
   const rt2=ridgeTexture(112, 22, 5, 95, 170, 'rgba(96,88,68,.34)','rgba(96,88,68,.05)', 'rgba(70,62,48,.24)');
   rt2.repeat.x=2;
   const rgeo2=new THREE.CylinderGeometry(ARENA_R+18, ARENA_R+18, 9, 64, 1, true);
   const rmat2=new THREE.MeshBasicMaterial({map:rt2, transparent:true, opacity:.28,
     side:THREE.BackSide, depthWrite:false, fog:false});
-  const rm2=new THREE.Mesh(rgeo2, rmat2); rm2.position.y=2.9; rm2.userData.sp=-.011; scene.add(rm2); mists.push(rm2);
+  const rm2=new THREE.Mesh(rgeo2, rmat2); rm2.position.y=3.3; rm2.userData.sp=-.011; scene.add(rm2); mists.push(rm2);
   // low ground-fog banks drifting between the duel and the bamboo: depth you can feel
   const GFOG=[[ARENA_R*.55,.10,.021],[ARENA_R*.8,.085,-.016]];
   for(const [gr,gop,gsp] of GFOG){
