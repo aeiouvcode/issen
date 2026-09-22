@@ -673,7 +673,7 @@ function tuftTexture(){
 
 /* ---- rim grass: discrete ink tufts with real mist gaps, not a hedge ---- */
 {
-  const tm2 = new THREE.MeshBasicMaterial({map:tt, transparent:true, opacity:.6,
+  const tm2 = new THREE.MeshBasicMaterial({map:tuftTexture(), transparent:true, opacity:.6,
     side:THREE.DoubleSide, depthWrite:false, fog:true});
   const TUFTN = QUALITY==='light'?24:46;
   for(let i=0;i<TUFTN;i++){
