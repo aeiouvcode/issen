@@ -513,14 +513,14 @@ function mistTexture(){
     }
     const t=new THREE.CanvasTexture(rc); t.wrapS=THREE.RepeatWrapping; return t;
   };
-  const rt=ridgeTexture(96, 26, 6, 150, 130, 'rgba(96,88,68,.58)','rgba(96,88,68,.06)', 'rgba(70,62,48,.5)');
+  const rt=ridgeTexture(130, 26, 6, 70, 130, 'rgba(96,88,68,.62)','rgba(96,88,68,.06)', 'rgba(70,62,48,.55)');
   rt.repeat.x=3;
   const rgeo=new THREE.CylinderGeometry(ARENA_R+27, ARENA_R+27, 16, 64, 1, true);
   const rmat=new THREE.MeshBasicMaterial({map:rt, transparent:true, opacity:.52,
     side:THREE.BackSide, depthWrite:false, fog:false});
   const rm=new THREE.Mesh(rgeo, rmat); rm.position.y=5.2; rm.userData.sp=.006; scene.add(rm); mists.push(rm);
   // nearer second ridge: counter-rotating parallax against the far one
-  const rt2=ridgeTexture(112, 22, 5, 95, 170, 'rgba(96,88,68,.34)','rgba(96,88,68,.05)', 'rgba(70,62,48,.24)');
+  const rt2=ridgeTexture(120, 22, 5, 60, 170, 'rgba(96,88,68,.4)','rgba(96,88,68,.05)', 'rgba(70,62,48,.3)');
   rt2.repeat.x=2;
   const rgeo2=new THREE.CylinderGeometry(ARENA_R+18, ARENA_R+18, 9, 64, 1, true);
   const rmat2=new THREE.MeshBasicMaterial({map:rt2, transparent:true, opacity:.28,
