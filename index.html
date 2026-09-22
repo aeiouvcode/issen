@@ -790,9 +790,11 @@ function buildBoss(){
     const tri = new THREE.Mesh(new THREE.ConeGeometry(.06,.14,3), M.red);
     tri.position.set(.17*s, 2.08, .42); tri.rotation.x = Math.PI/2; body.add(tri);
   }
-  // large brush wound on the chest (f004)
-  const wound = new THREE.Mesh(new THREE.CircleGeometry(.16, 10), M.red);
-  wound.position.set(0, 1.98, .44); wound.rotation.x = -.12; body.add(wound);
+  // brush-gash wound: ragged ink stroke wrapped to the ribcage (was a flat red disc)
+  const wound = new THREE.Mesh(
+    new THREE.SphereGeometry(.465, 20, 10, Math.PI/2-.62, 1.24, Math.PI/2-.34, .68),
+    new THREE.MeshBasicMaterial({map:woundTexture(), transparent:true, depthWrite:false}));
+  wound.renderOrder = 1; chest.add(wound);
   // head under kasa
   const head = new THREE.Mesh(new THREE.SphereGeometry(.19, 12, 10), M.dark);
   head.position.y = 2.42; body.add(head); J.head = head;
@@ -929,6 +931,27 @@ function splatTexture(){
     x.fillStyle=g; x.beginPath(); x.arc(px,py,rad,0,7); x.fill();
   }
   return new THREE.CanvasTexture(c);
+}
+
+function woundTexture(){
+  const cv=document.createElement('canvas'); cv.width=cv.height=256; const x=cv.getContext('2d');
+  const P=(t)=>[30+195*t, 68+118*t+18*Math.sin(t*2.6)];
+  x.lineCap='round';
+  for(let i=0;i<46;i++){ const t0=i/46, t1=(i+1)/46; const [ax,ay]=P(t0),[bx,by]=P(t1);
+    x.strokeStyle='rgba(126,31,22,'+(0.28+Math.random()*0.5)+')';
+    x.lineWidth=30-24*t0+(Math.random()*8-4); x.beginPath(); x.moveTo(ax,ay); x.lineTo(bx,by); x.stroke(); }
+  for(let i=0;i<40;i++){ const t0=i/40, t1=(i+1)/40; const [ax,ay]=P(t0),[bx,by]=P(t1);
+    x.strokeStyle='rgba(74,15,10,'+(0.4+Math.random()*0.4)+')';
+    x.lineWidth=11-8*t0; x.beginPath(); x.moveTo(ax,ay); x.lineTo(bx,by); x.stroke(); }
+  x.globalCompositeOperation='destination-out';
+  for(let i=0;i<130;i++){ const t=Math.random(); const [px,py]=P(t); const a=Math.random()*6.28;
+    x.strokeStyle='rgba(0,0,0,'+(0.25+Math.random()*0.5)+')'; x.lineWidth=.8+Math.random()*2.2;
+    x.beginPath(); x.moveTo(px,py); x.lineTo(px+Math.cos(a)*(4+Math.random()*16), py+Math.sin(a)*(4+Math.random()*16)); x.stroke(); }
+  x.globalCompositeOperation='source-over';
+  for(let i=0;i<14;i++){ const t=Math.random(); const [px,py]=P(t);
+    x.fillStyle='rgba(110,24,16,'+(0.3+Math.random()*0.5)+')';
+    x.beginPath(); x.arc(px+(Math.random()*56-28), py+(Math.random()*44-22), .7+Math.random()*2.6, 0, 6.28); x.fill(); }
+  const t=new THREE.CanvasTexture(cv); return t;
 }
 const splatTex = splatTexture();
 const decals = [];
