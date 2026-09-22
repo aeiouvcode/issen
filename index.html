@@ -1051,10 +1051,30 @@ function updatePuffs(dt){
 }
 
 /* ---------------- windup timing ring (teaches dodge timing) ---------------- */
+function ensoTexture(){
+  // hand-drawn enso circle: jittered multi-arc stroke with a dry-brush opening
+  const c=document.createElement('canvas'); c.width=256; c.height=256;
+  const x=c.getContext('2d');
+  x.translate(128,128);
+  x.strokeStyle='rgba(22,17,11,.95)'; x.lineCap='round';
+  const steps=140;
+  for(let i=0;i<steps;i++){
+    const a0=i/steps*Math.PI*2, a1=(i+1.6)/steps*Math.PI*2;
+    const r=95+Math.sin(a0*3+1.2)*4+(Math.random()-.5)*6;
+    x.lineWidth=Math.max(3, 8+Math.sin(a0*2.2)*3.5+(Math.random()-.5)*3.5);
+    x.globalAlpha=.5+Math.random()*.45;
+    x.beginPath(); x.arc(0,0,r,a0,a1); x.stroke();
+  }
+  x.globalCompositeOperation='destination-out'; x.globalAlpha=1;
+  x.beginPath(); x.moveTo(0,0);
+  x.arc(0,0,150, Math.PI*.27, Math.PI*.41); x.lineTo(0,0); x.fill();
+  return new THREE.CanvasTexture(c);
+}
 const timeRing = new THREE.Mesh(
-  new THREE.RingGeometry(.8, 1, 40),
-  new THREE.MeshBasicMaterial({color:0x2a2118, transparent:true, opacity:.55, side:THREE.DoubleSide, depthWrite:false, fog:true}));
+  new THREE.PlaneGeometry(2, 2),
+  new THREE.MeshBasicMaterial({map:ensoTexture(), transparent:true, depthWrite:false, fog:true}));
 timeRing.rotation.x = -Math.PI/2;
+timeRing.renderOrder = 4; // draw over the boss's ground ink pool so the tell stays legible
 timeRing.visible = false;
 scene.add(timeRing);
 
@@ -1690,10 +1710,10 @@ function updateBoss(dt){
     if(b._ringK===undefined){ sfx.ringTick(0); b._ringK=0; }
     if(k>.55 && b._ringK<.55){ sfx.ringTick(1); b._ringK=1; }
     timeRing.visible = true;
-    timeRing.position.set(b.pos.x, .06, b.pos.z);
+    timeRing.position.set(b.pos.x, .075, b.pos.z);
     const s = 2.4 - k*1.5;
     timeRing.scale.set(s, s, 1);
-    timeRing.material.opacity = .35 + .3*k;
+    timeRing.material.opacity = .5 + .4*k;
   } else { timeRing.visible = false; b._ringK=undefined; }
   if(!b.alive){ animBoss(dt); b.root.position.copy(b.pos); return; }
   const d = dist2D(b.pos, player.pos);
