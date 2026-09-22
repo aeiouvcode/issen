@@ -326,6 +326,9 @@ void main(){
   float s2 = vnoise(p*15.0+7.7);
   float s3 = vnoise(vec2(p.x*4.2, p.y*13.0)+3.3);
   float dots = smoothstep(.82,.89,s1)*.20 + smoothstep(.86,.93,s2)*.13 + smoothstep(.80,.88,s3)*.15;
+  // breathing room - low-freq pool mask leaves patches of bare paper
+  float pool = fbm(p*.11+5.7);
+  dots *= mix(.15, 1.0, smoothstep(.34,.60,pool));
   // blotch field
   float blotch = smoothstep(.74,.99,fbm(p*.35+9.3))*.13;
   float edge = smoothstep(13.0, 31.0, length(p));
