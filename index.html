@@ -1385,19 +1385,20 @@ function animBoss(dt){
   } else if(s==='windup_iai'){
     // sheathe: sink low, blade drawn back across the body, kasa dips
     const k=easeOut(clamp(t/.75,0,1));
-    boss.body.position.y = -k*.28;
-    boss.body.scale.y = 1-k*.09;
+    boss.body.position.y = -k*.42;
+    boss.body.scale.y = 1-k*.13;
     boss.body.rotation.y = k*.55;
-    J.armR.rotation.x = -k*1.9; J.armR.rotation.z = k*.45;
+    boss.body.rotation.x = k*.12; // predatory hunch toward the player
+    J.armR.rotation.x = -k*1.9; J.armR.rotation.z = k*.8; // blade crosses the torso - distinct from every other windup
     J.armL.rotation.x = k*.5;
-    J.kasa.rotation.x = k*.3; J.kasa.rotation.z = .06+k*.12;
+    J.kasa.rotation.x = k*.45; J.kasa.rotation.z = .06+k*.12; // face fully shadowed
   } else if(s==='iai'){
     // the draw-cut: full extension, body snaps forward
     const k=easeOut(clamp(t/.22,0,1));
     boss.body.rotation.y = .55-k*.75;
-    boss.body.rotation.x = k*.14;
-    J.armR.rotation.x = -1.9-k*1.1; J.armR.rotation.z = .45-k*.45;
-    J.kasa.rotation.x = .3-k*.38;
+    boss.body.rotation.x = .12+k*.02; // continue from the windup hunch into the snap
+    J.armR.rotation.x = -1.9-k*1.1; J.armR.rotation.z = .8-k*.8;
+    J.kasa.rotation.x = .45-k*.53;
   } else if(s==='iai_recover'){
     const k=easeOut(clamp(t/.55,0,1));
     boss.body.rotation.x = .14*(1-k);
