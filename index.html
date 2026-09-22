@@ -195,8 +195,11 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   <div class="prompt" id="endprompt">- click to try again -</div>
 </div>
 
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"},"integrity":{"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js":"sha384-61S/Nu32S3E5+n+KpCOTb2eRYps6fVKm+9Gz1QBvSePFthb46f063Aa/qe/lykFZ"}}
+</script>
 <script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import * as THREE from 'three';
 
 /* ============================================================
    ISSEN - a sumi-e duel. Original from-scratch build.
