@@ -329,7 +329,7 @@ void main(){
   // blotch field
   float blotch = smoothstep(.74,.99,fbm(p*.35+9.3))*.13;
   float edge = smoothstep(13.0, 31.0, length(p));
-  float inkAmt = clamp(dots*(0.45+edge) + blotch*edge*.4 + edge*.08, 0., .8);
+  float inkAmt = clamp(dots*(0.55-0.35*edge) + blotch*edge*.4 + edge*.08, 0., .8);
   sand *= 1.0 - edge*.15;
   // soft top light wash
   float ndl = dot(normalize(vN), normalize(uLight))*.5+.5;
