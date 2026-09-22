@@ -1540,7 +1540,8 @@ function updatePlayer(dt){
     if(Math.random()<dt*22)
       spawnP(p.pos.x+(Math.random()-.5)*.6, .2, p.pos.z+(Math.random()-.5)*.6,
         0, 1.6, 0, .8, .35, 1, .5);
-    if(p.healT>=.9){ p.state='idle'; p.stateT=0; }
+    if(p.healT>=.9){ p.state='idle'; p.stateT=0;
+      slashArc(p.pos.clone().setY(.25), 0, 1.8, 6.28, .5, false, 0); } // the breath settles
   }
   const canAct = ['idle','run'].includes(p.state);
   // movement
@@ -1671,6 +1672,7 @@ function doHeal(){
   const p=player;
   if(!['idle','run'].includes(p.state) || p.pips<=0 || p.hp>=p.maxhp) return;
   p.pips--; p.state='heal'; p.stateT=0; p.healT=0;
+  kanjiFlash('\u6c17', .4); // 気 - the breath
   sfx.heal();
 }
 
