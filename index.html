@@ -247,7 +247,7 @@ void main(){
 const inkFrag = `
 precision highp float;
 uniform vec3 uPaper; uniform vec3 uInk; uniform vec3 uLight;
-uniform float uBias; uniform float uFloor; uniform float uStreakV; uniform float uStreakAmp; uniform float uTime; uniform float uHem; uniform float uHatch; uniform float uHatchF;
+uniform float uBias; uniform float uFloor; uniform float uStreakV; uniform float uStreakAmp; uniform float uTime; uniform float uHem; uniform float uHatch; uniform float uHatchF; uniform float uFade;
 varying vec3 vN; varying vec3 vW; varying vec2 vUv;
 ${noiseGLSL}
 void main(){
@@ -277,7 +277,7 @@ void main(){
   ink = clamp(ink + hatch * uHatch, 0., 1.);
   vec3 col = mix(uPaper, uInk, ink);
   col *= .93 + .07 * fbm(vW.xy*22.0 + vW.zx*23.0);
-  gl_FragColor = vec4(col, 1.0);
+  gl_FragColor = vec4(col, uFade);
 }`;
 
 const lightDir = new THREE.Vector3(.5, .9, .35).normalize();
@@ -288,7 +288,7 @@ function inkMat(paper, ink, bias, floor=0, streakV=0, streakAmp=.5, hem=0, hatch
       uPaper:{value:new THREE.Color(paper)}, uInk:{value:new THREE.Color(ink)},
       uLight:{value:lightDir}, uBias:{value:bias}, uFloor:{value:floor},
       uStreakV:{value:streakV}, uStreakAmp:{value:streakAmp}, uTime:{value:0}, uHem:{value:hem},
-      uHatch:{value:hatch}, uHatchF:{value:hatchF}
+      uHatch:{value:hatch}, uHatchF:{value:hatchF}, uFade:{value:1}
     }
   });
 }
@@ -1277,6 +1277,15 @@ scene.add(player.root); scene.add(boss.root);
 player.root.position.copy(player.pos);
 boss.pos.set(0,0,-7); boss.state='idle'; // the waiting duel: he is already there, in the mist
 boss.root.position.copy(boss.pos);
+// per-boss material clones: the camera can ink-fade him on eclipse without touching the player
+boss._fadeMats=[];
+boss.root.traverse(o=>{
+  if(o.isMesh && o.material){
+    const m=o.material.clone(); m.transparent=true;
+    if(!m.isShaderMaterial) m.userData.baseOp=(m.opacity===undefined?1:m.opacity);
+    o.material=m; boss._fadeMats.push(m);
+  }
+});
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -2711,8 +2720,12 @@ function updateCamera(dt){
     const lat=pdx*px_+pdz*pz_;
     if(Math.abs(lat)>.05) G._camSlideSide=lat>0?-1:1;
     const sl=G._camSlide*(G._camSlideSide||1);
-    ex=px_*sl*5.2; ez=pz_*sl*5.2; ey=G._camSlide*1.6;
-  } else G._camSlide=0;
+    ex=px_*sl*1.5; ez=pz_*sl*1.5; ey=G._camSlide*1.4;
+    const fade=1-G._camSlide*.70;
+    for(const m of boss._fadeMats){ if(m.isShaderMaterial) m.uniforms.uFade.value=fade; else m.opacity=(m.userData.baseOp??1)*fade; }
+  } else { G._camSlide=0;
+    for(const m of boss._fadeMats||[]){ if(m.isShaderMaterial) m.uniforms.uFade.value=1; else m.opacity=m.userData.baseOp??1; }
+  }
   camera.position.set(cx+ex+shakeX, Math.max(.5,h+ey)+shakeY, cz+ez);
   const lx = player.pos.x + Math.sin(G.camYaw)*1.6;
   const lz = player.pos.z + Math.cos(G.camYaw)*1.6;
