@@ -2,7 +2,7 @@
 
 ## Resume here
 
-Next cycle: fix F-04 (grass as dense swaths, not sparse tufts) then F-05 residual (blood flecks still drift/rotate like petals - shorten life, kill spin, faster fall). Then F-07 (boss kasa close-range dominance, low). Re-run the 390px + desktop side-by-side against the reference frames (re-extract if /tmp/refframes is gone: download mp4 via cdn.syndication.twimg.com tweet-result?id=2100371695727198244, ffmpeg -ss frames).
+Next cycle: all F-findings closed except F-07 (boss kasa close-range dominance, low). Fresh audit first: play a full exchange vs the reference frames and find NEW gaps. Candidates: figures' wet-ink silhouette read vs our smooth 3D shading (biggest structural gap), slash arc edge raggedness, camera height/framing vs reference's slightly higher follow cam, the reference's enemy variety (multiple foes) vs our single boss. Re-run the 390px + desktop side-by-side (re-extract reference frames if /tmp/refframes is gone: cdn.syndication.twimg.com tweet-result?id=2100371695727198244 + ffmpeg).
 
 ## Blocked
 
