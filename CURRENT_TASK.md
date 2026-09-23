@@ -45,6 +45,8 @@ Single-file three.js sumi-e duel that reads like sensonoken's "Thousands Layered
 | G-13 | Grass swaths thinner than reference's bold stroke combs | low | improved M74 (dabs 60+, alpha .42+, width 3.2+) |
 | G-14 | Slash arcs thin single-band ribbons; ref-0.5 arcs are wide multi-band dry-brush gray washes | high | fixed M76 (band .40->.16R wide, multiplicative tonal wash bands, second offset ribbon per player slash, hold-then-fade) |
 | G-15 | Health bars clean rounded rectangles without values; ref bars are ragged ink strokes with numerics (63/109) | medium | fixed M76 (anisotropic rag filter + live hp/posture numerics on boss + wave-2 minibars) |
+| G-16 | Touch buttons + mute were flat white circles vs the ink aesthetic | low | fixed M77 (ragged ink rings via displaced ::before, paper-wash fill) |
+| B-01 | BLADE FEEL (user priority 6:38 PM Sep 23): parry window, slow-mo finisher on perfect runs, ink-splash kill effects. All other feature work parked until blade feel is perfected | top | M78 starts |
 | G-09 | Shade read gray-mud, not the reference's bold black ink mass; its slash arc was muddy brown-red, off the sumi palette | high | fixed in M71 (uPaper lerp .82 toward 0x0d0a06; slash arc red 0 = ink; telegraph ring .55->.42) |
 
 ## Definition of done
