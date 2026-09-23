@@ -33,8 +33,10 @@ Single-file three.js sumi-e duel that reads like sensonoken's "Thousands Layered
 | F-06 | Lone bamboo stalk planes (8-11 tall) read as pole artifacts | high | fixed in M65 |
 | F-07 | Boss kasa still dominates frame at close range | low | open |
 | G-01 | Figures read as smooth shaded 3D, not wet-ink mass with dry-brush | high | improved in M68 (uBand/uDry pools+streaks); still mid-tone heavy vs reference's graphic black-on-pale contrast - open |
-| G-03 | Slash arc band edges too clean; reference edges are ragged/wispy | medium | improved in M68 (edgeN ragged edges); still smoother than reference - open |
-| G-04 | Reference robes are pale paper with bold black accent shapes; ours are mid-tan gradients | high | open - next cycle |
+| G-03 | Slash arc band edges too clean; reference edges are ragged/wispy | medium | improved M68+M69 (2-octave edgeN torn edges); close to reference now - watch, low residual |
+| G-04 | Reference robes are pale paper with bold black accent shapes; ours are mid-tan gradients | high | fixed in M69 (pale robe + black hem read verified on deployed build) |
+| G-05 | Camera sits lower than reference's high top-down follow cam; ground not the canvas | medium | fixed in M69 (duel pitch floor .40->.55) |
+| G-06 | Reference fields multiple foes with their own health bars; ours is a single boss | medium | open - structural, next-cycle candidate |
 
 ## Definition of done
 
