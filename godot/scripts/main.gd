@@ -49,7 +49,7 @@ func _ready() -> void:
 		auto_steps = [[0.3, "down", true], [1.4, "down", false], [1.8, "up", true], [3.0, "up", false], [3.2, "left", true], [3.8, "left", false]]
 		if "--autoplay-depth" in OS.get_cmdline_user_args():
 			auto_steps = [[0.2, "down", true], [1.0, "down", false], [1.2, "up", true], [1.45, "up", false], [1.6, "attack"], [1.85, "attack"], [2.1, "attack"]]
-	if autoplay:
+	if autoplay or "--autoplay-foe" in OS.get_cmdline_user_args():
 		seed(7)
 	else:
 		randomize()
@@ -369,7 +369,15 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 		var hv := _face_view(e, player)
 		e.state = "dead"; e.state_t = 0.0; e.play("die" + hv, true)
 		e.vel = _knock(hv, dir, 3.0)
-		fx.burst(hitpos, dir, 1.8, 0.5)
+		if hv != "":
+			# drift clear of the player's line so the fall isn't hidden behind them
+			var side := signf(e.global_position.x - player.global_position.x)
+			e.vel.x = (side if side != 0.0 else 1.0) * 2.4
+		if hv == "":
+			fx.burst(hitpos, dir, 1.8, 0.5)
+		else:
+			# F-24: depth kills spray from behind the body and lighter, so the turned fall stays readable
+			fx.burst(hitpos + Vector3(0, 0.3, -0.7), dir, 1.1, 0.5)
 		fx.slash(e.global_position + Vector3(0, 0.2, 0.1), dir, 0.8, 0.4, 0.8, 1)
 		kills += 1
 	else:
