@@ -94,6 +94,7 @@ var ground_mat: ShaderMaterial
 var grass_mats: Array[ShaderMaterial] = []
 var palette_i := 0
 var palette_test := false
+var kick := Vector2.ZERO   # C25 blade feel: camera push along a heavy cut
 var strike_zdir := 0.0
 var strike_dz := 0.0
 
@@ -537,6 +538,8 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	fx.stain(e.global_position + Vector3(dir * 0.6, 0, 0), 0.008, null, Color(1, 1, 1, 0.7))
 	hitstop = 0.06 if not heavy else 0.1
 	shake = 0.18 if heavy else 0.1
+	if heavy or riposte:
+		kick = Vector2(dir * (0.42 if riposte else 0.3), -0.12)
 	sfx.play("kill" if e.hp <= 0.0 else ("hit_heavy" if heavy else "hit"))
 	if e.hp <= 0.0:
 		var hv := _face_view(e, player)
@@ -897,12 +900,13 @@ func _camera(delta: float) -> void:
 		cam.global_position = want
 	# portrait: aim a little higher so the duel sits nearer the vertical middle, not above empty ground
 	cam.look_at(cam.global_position - off + Vector3(0, 2.7 if portrait else 1.2, 0), Vector3.UP)
+	kick = kick.lerp(Vector2.ZERO, 1.0 - exp(-9.0 * delta))
 	if shake > 0.0:
 		shake = maxf(0.0, shake - delta)
-		cam.h_offset = randf_range(-1, 1) * shake * 0.5
-		cam.v_offset = randf_range(-1, 1) * shake * 0.5
+		cam.h_offset = randf_range(-1, 1) * shake * 0.5 + kick.x
+		cam.v_offset = randf_range(-1, 1) * shake * 0.5 + kick.y
 	else:
-		cam.h_offset = 0.0; cam.v_offset = 0.0
+		cam.h_offset = kick.x; cam.v_offset = kick.y
 	var h: float = post_mat.get_shader_parameter("hurt")
 	post_mat.set_shader_parameter("hurt", maxf(0.0, h - delta * 2.0))
 
