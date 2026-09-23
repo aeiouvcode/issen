@@ -1,6 +1,7 @@
 # Handoff
 
 ## Resume here
+Cycle 25: per-chapter field palettes (--autoplay-palettes) + camera kick on heavy cuts. Next: C26 sprite bake (armored plates, yari spear rig, distinct boss rig), C27 Android adaptive icon + blade-feel polish.
 Cycle 24: store assets drafted in godot/store (listing.md, icon, feature graphic, 8 screenshots; regenerate with tools/bake_store.py + Movie Maker). Roadmap items 1-6 all have a first pass. Next: per-chapter field palettes, owed sprite bake (plates, yari, boss rig), Android adaptive icon from icon-512, blade-feel polish. Large binaries: the push bridge is a data: URL, keep each page under ~1.5 MB (one screenshot set per page).
 Cycle 23: chapter map + three blade stances with save data (--autoplay-map). Chapters have names on the map but the field art does not change per chapter yet. Next: C24 store assets (icon, feature graphic, screenshots, listing copy), then per-chapter ground/grass palettes and the owed sprite bake.
 Cycle 22: multi-phase boss Kageyama (every 8 kills, parry/riposte to break him, phase 2 at half HP adds thrusts; --autoplay-boss). Next: C23 chapter map + unlockable blade stances (save data), C24 store assets. Owed in the next sprite bake: armored ronin with plates, spear rig with a yari, a distinct boss rig. Cycles 18-21: riposte cue, armored and spear ronin, reactive taiko/shamisen music, kill trail streaks. Source only since the 10:02 PM web refresh (main fa7bbfd).
