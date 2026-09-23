@@ -253,3 +253,29 @@ func kill_splash(pos: Vector3, dir: float, power := 1.0) -> void:
 		var k := float(i + 1) / n
 		var at := pos + Vector3(d * (0.6 + k * 3.2 * power) + randfn(0.0, 0.15), 0, randfn(0.0, 0.35) * (0.5 + k))
 		stain(at, lerpf(0.009, 0.0025, k) * randf_range(0.8, 1.2) * power, null, Color(1, 1, 1, lerpf(0.85, 0.55, k)))
+
+var glint_tex: Texture2D
+
+## C15 parry tell: a small four-point ink star with a red heart, drawn in code, popped above a
+## foe the moment its blade enters the parry window.
+func glint(f: Node3D, pos: Vector3) -> void:
+	if glint_tex == null:
+		var n := 128
+		var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+		for y in n:
+			for x in n:
+				var u := (x - n * 0.5 + 0.5) / (n * 0.5)
+				var v := (y - n * 0.5 + 0.5) / (n * 0.5)
+				var r := sqrt(u * u + v * v)
+				# astroid-like star: thin arms along the axes, thicker core
+				var arm := maxf(1.0 - absf(u) * 14.0 * (0.2 + absf(v)), 1.0 - absf(v) * 14.0 * (0.2 + absf(u)))
+				var a := clampf(maxf(arm, 1.0 - r * 3.2), 0.0, 1.0) * clampf((1.0 - r) * 3.0, 0.0, 1.0)
+				var core := clampf(1.0 - r * 5.0, 0.0, 1.0)
+				img.set_pixel(x, y, Color(0.08 + core * 0.62, 0.06, 0.05, a))
+		glint_tex = ImageTexture.create_from_image(img)
+	var s := _billboard(glint_tex, 0.0065)
+	s.render_priority = 2
+	s.no_depth_test = true
+	f.add_child(s)
+	s.global_position = pos
+	items.append({"node": s, "kind": "redmark", "t": 0.0, "dur": 0.3, "s0": s.pixel_size})

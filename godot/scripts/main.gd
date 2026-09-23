@@ -454,6 +454,10 @@ func _enemy(e: Fighter, delta: float) -> void:
 					e.state = "windup"; e.state_t = 0.0; e.play("windup" + vw, true)
 		"windup":
 			e.vel = e.vel.lerp(Vector3.ZERO, 10.0 * delta)
+			# parry tell: glint as the window opens (a hair early to cover reaction time)
+			var open_t := 0.62 + 2.0 / 18.0 - PARRY_WIN - 0.06
+			if e.state_t >= open_t and e.state_t - delta < open_t:
+				fx.glint(e, e.global_position + Vector3(e.facing * 0.7, 2.1, 0.35))
 			if e.state_t > 0.62:
 				e.state = "swing"; e.state_t = 0.0; e.play("swing" + str(e.get_meta("vw")), true)
 				sfx.play("foe_swing")
