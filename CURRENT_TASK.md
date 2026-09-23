@@ -32,7 +32,7 @@ Single-file three.js sumi-e duel that reads like sensonoken's "Thousands Layered
 | F-05 | Hit sparks read as red butterflies; reference uses dark ink splatter | medium | fixed in M66+M67 |
 | F-06 | Lone bamboo stalk planes (8-11 tall) read as pole artifacts | high | fixed in M65 |
 | F-07 | Boss kasa still dominates frame at close range | low | improved in M72 (kasa paper 0xd9d2bd, bias 1.58, floor .30 - reads as brushed ink w/ pale streaks, not a tan mushroom); size/tilt still open |
-| G-01 | Figures read as smooth shaded 3D, not wet-ink mass with dry-brush | high | improved in M68 (uBand/uDry pools+streaks); still mid-tone heavy vs reference's graphic black-on-pale contrast - open |
+| G-01 | Figures read as smooth shaded 3D, not wet-ink mass with dry-brush | high | improved M68 (pools/streaks) + M74 (graphic accents: black obi sash at waist + 4 hakama brush dabs on the skirt slope - boss now reads black-band + pale panel + black hem masses like ref-8.5); residual: robe mid-tones still smoother than ref |
 | G-03 | Slash arc band edges too clean; reference edges are ragged/wispy | medium | improved M68+M69 (2-octave edgeN torn edges); close to reference now - watch, low residual |
 | G-04 | Reference robes are pale paper with bold black accent shapes; ours are mid-tan gradients | high | fixed in M69 (pale robe + black hem read verified on deployed build) |
 | G-05 | Camera sits lower than reference's high top-down follow cam; ground not the canvas | medium | fixed M69 (.40->.55) + M70 (pitch floor .85, dist 9.0/10.6 - near-overhead duel framing like ref-4.5) |
@@ -41,7 +41,8 @@ Single-file three.js sumi-e duel that reads like sensonoken's "Thousands Layered
 | G-10 | Reference vanish/spawn clouds carry small outlined ink-triangle shards orbiting inside them; ours were plain puff clusters | medium | fixed M73 (inkShards: 4-6 brush-stroke triangle sprites orbit/rise with each inkCloud, renderOrder above puffs, verified in File preview frame) |
 | G-11 | Lancer idle spear read horizontal; reference carries the spear upright | low | fixed M73 (glaive.rotation.x per-state: .12 idle/approach, lerps to level for windup/thrust) |
 | S-01 | No sound control for the player; two voices (hit, crack) had harsh highs | medium | fixed M73 (master gain + mute toggle 音/黙 in HUD + M key, persists in localStorage; hit 2200->1600Hz, crack 3400->2100Hz square->triangle) |
-| G-12 | Ground blotch field reads busy/muddy vs reference's even fine stipple | low | improved M73 (blotch amp .13->.09, edge contribution .4->.3) |
+| G-12 | Ground blotch field reads busy/muddy vs reference's even fine stipple | low | improved M73 (blotch amp .13->.09, edge .4->.3) |
+| G-13 | Grass swaths thinner than reference's bold stroke combs | low | improved M74 (dabs 60+, alpha .42+, width 3.2+) |
 | G-09 | Shade read gray-mud, not the reference's bold black ink mass; its slash arc was muddy brown-red, off the sumi palette | high | fixed in M71 (uPaper lerp .82 toward 0x0d0a06; slash arc red 0 = ink; telegraph ring .55->.42) |
 
 ## Definition of done
