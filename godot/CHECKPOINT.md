@@ -16,3 +16,6 @@
 - 2026-09-23 C4: F-09 spacing: player lunge and ronin swing stop forward travel inside 2.7 m of the opponent; hard separation 1.9 -> 2.5 m; ronin approach goal 2.9 m. Verified at 1280x720 and 390x844: no figure overlap through the combo.
 - 2026-09-23 C4: F-08 bloom: soft dark wash dabs under a dense cluster (34 + 30/power) of small blots, gaussian toward the hit point, darker and holding full ink longer. Replaces the grey chunky lumps.
 - 2026-09-23 C4: F-05 grass: clump textures re-baked as ~150 thin dry fibres (dark root, hairline tips); shader switched from alpha scissor to soft alpha and fades to pale grey with distance (aerial perspective).
+- 2026-09-23 C5: F-06 HUD: Caveat Brush (OFL, subset to ASCII, licenses/CaveatBrush-OFL.txt) as the project theme font, larger timer/bar numerals; baked inked skill glyphs (cut, evade, burst) in the HUD rings and on the touch attack/dodge buttons.
+- 2026-09-23 C5: F-11 portrait: camera aims 2.7 m above the focus (was 1.2) so the duel sits near 60% height instead of above an empty lower half.
+- 2026-09-23 C5: F-10 ronin 3/4 views: rig yaw applied to the ronin (near/far limbs, projected naginata); walk_f shows the kasa underside shadowing the face, walk_b from behind. AI plays them when closing mostly in depth.

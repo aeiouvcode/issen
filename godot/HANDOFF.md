@@ -1,11 +1,11 @@
 # Handoff
 
 ## Resume here
-Cycle 4 done: F-09 (no lunge overlap), F-08 bloom (dark wash + fine cluster), F-05 (grey fibre grass). Open gaps, priority order:
-1. F-06 HUD font is the engine default; skill rings are empty (reference: brush-lettered numbers, inked skill glyph icons).
-2. F-10 Ronin has side view only; the reference shows the kasa from the front. Add walk_f/walk_b and use them when a foe moves mostly in depth.
-3. F-11 Portrait: lower 40% of the frame is empty ground; drop the camera focus a little or tilt up so the duel sits nearer the middle.
-4. F-12 Slash curtain inner fibres read as fine concentric rings in close-up; reference curtain is broader grey dry-brush sweep.
+Cycle 5 done: F-06 (brush font + skill glyphs), F-11 (portrait framing), F-10 (ronin front/back walk). Open gaps, priority order:
+1. F-12 Slash curtain inner fibres read as fine concentric rings up close; reference curtain is a broader grey dry-brush sweep.
+2. F-13 Camera lags when the player runs toward the camera: figure gets huge and cropped at the bottom edge. Lead the camera on z or clamp the follow offset.
+3. F-14 At 390px the HUD (bars, rings, plaque) is small; scale the HUD up on narrow screens.
+4. F-15 Attacks, hit and death are side view only; turned locomotion snaps back to side view on attack.
 
 ## Capture method (use this, not Playwright timing)
 `printf '[display]\nwindow/size/window_width_override=1280\nwindow/size/window_height_override=720\n' > override.cfg` then
