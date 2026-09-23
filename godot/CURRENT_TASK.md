@@ -14,7 +14,7 @@ Close the gaps ISSEN can't: hand-animated brushwork silhouettes, ragged dry-brus
 ## Roadmap (Naksh 10:19 PM: "All features need working on"; blade feel keeps the lead)
 1. Blade feel - parry window, slow-mo finisher, ink-splash kills (ongoing)
 2. Enemy variety - spear types forcing different slash angles, armored foes needing two cuts (C19: armored ronin)
-3. A boss - one multi-phase duel per chapter
+3. A boss - one multi-phase duel per chapter (C22: Kageyama, 2 phases, every 8 kills)
 4. Progression - chapter map with unlockable blade stances (save data now in scope)
 5. Sound - full SFX pass + sparse shamisen/taiko loop reacting to combat (code-synthesized, low levels, soft highs)
 6. Store-ready - Play listing, icon, screenshots, publishable v1.0
