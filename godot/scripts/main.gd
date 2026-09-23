@@ -40,6 +40,14 @@ var joy_base: Control
 var touch_atk := false
 var touch_dodge := false
 var hitstop := 0.0
+## Blade feel (C15): parry window, clean-streak finisher, ink-splash kills
+const PARRY_WIN := 0.22        # seconds before a foe's blade lands in which a cut deflects it
+const FINISH_STREAK := 5       # clean hits in a row (no damage taken) that earn a slow-mo finisher
+var atk_press_t := -9.0        # elapsed time of the last attack press
+var clean_hits := 0
+var slow_t := 0.0              # real seconds of slow-mo left
+var slow_zoom := 0.0
+var auto_parry := false
 var atk_buf := 0.0
 var dodge_buf := 0.0
 # Desktop QA only: `godot -- --autoplay` drives a fixed input timeline for Movie Maker captures.
@@ -89,6 +97,8 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_spawn(Vector3(5.5, 0, -2.0))
+	if "--autoplay-parry" in OS.get_cmdline_user_args():
+		auto_parry = true; autoplay = true; auto_steps = []
 	if "--autoplay-foe" in OS.get_cmdline_user_args():
 		# QA: first foe squares up behind the player to exercise the turned attack rows
 		# then cuts back at it so the turned hit/death rows play too
@@ -220,6 +230,11 @@ func _player(delta: float) -> void:
 	if touch_dodge: dodge_buf = 0.3
 	touch_atk = false; touch_dodge = false
 	var want_atk := atk_buf > 0.0
+	# C15 parry: a cut pressed in the last PARRY_WIN seconds before a foe's blade lands deflects it
+	if want_atk and atk_press_t >= elapsed - delta * 1.5 and p.alive() and p.state in ["idle", "run", "attack"]:
+		var pe := _parry_target()
+		if pe:
+			_parry(pe)
 	var want_dodge := dodge_buf > 0.0
 	match p.state:
 		"idle", "run":
@@ -367,6 +382,10 @@ func _knock(view: String, dir: float, amt: float) -> Vector3:
 	return Vector3(0, 0, (-amt if view == "_f" else amt) * 0.8)
 
 func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
+	var riposte := e.state == "stagger"
+	if riposte:
+		dmg *= 2.0; heavy = true
+	clean_hits += 1
 	e.hp = maxf(0.0, e.hp - dmg)
 	e.posture = maxf(0.0, e.posture - dmg * 1.6)
 	e.flash = 1.0
@@ -392,6 +411,10 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 			# F-24: depth kills spray from behind the body and lighter, so the turned fall stays readable
 			fx.burst(hitpos + Vector3(0, 0.3, -0.7), dir, 1.1, 0.5)
 		fx.slash(e.global_position + Vector3(0, 0.2, 0.1), dir, 0.8, 0.4, 0.8, 1)
+		var finisher := riposte or clean_hits >= FINISH_STREAK
+		fx.kill_splash(e.global_position, dir if hv == "" else signf(e.vel.x), 1.5 if finisher else 1.0)
+		if finisher:
+			_finisher(e, dir)
 		kills += 1
 	else:
 		var hv := _face_view(e, player)
@@ -465,6 +488,11 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.state = "approach"; e.set_meta("cool", randf_range(0.8, 1.8))
 				if randf() < 0.5:
 					e.set_meta("lane", _pick_lane())
+		"stagger":
+			# deflected: reeling and open, cuts land double (C15 parry)
+			e.vel = e.vel.lerp(Vector3.ZERO, 5.0 * delta)
+			if e.state_t > 0.95:
+				e.state = "approach"; e.set_meta("cool", randf_range(0.6, 1.2))
 		"hit":
 			e.vel = e.vel.lerp(Vector3.ZERO, 7.0 * delta)
 			if e.state_t > 0.38:
@@ -489,6 +517,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 
 func _player_hurt(dmg: float, dir: float, by: Fighter) -> void:
 	var p := player
+	clean_hits = 0
 	p.hp = maxf(0.0, p.hp - dmg)
 	p.flash = 1.0
 	p.facing = -dir
@@ -506,7 +535,64 @@ func _player_hurt(dmg: float, dir: float, by: Fighter) -> void:
 		p.state = "hit"; p.state_t = 0.0; p.play("hit" + hv, true)
 		p.vel = _knock(hv, dir, 3.0)
 
+func _parry_target() -> Fighter:
+	var p := player
+	for e in enemies:
+		if not e.alive():
+			continue
+		var ttc := 9.0
+		if e.state == "windup":
+			ttc = (0.62 - e.state_t) + 2.0 / 18.0
+		elif e.state == "swing" and not e.get_meta("struck"):
+			ttc = maxf(0.0, 2.0 / 18.0 - e.state_t)
+		if ttc > PARRY_WIN:
+			continue
+		var d: Vector3 = e.global_position - p.global_position
+		if absf(d.x) < 3.9 and absf(d.z) < 3.6:
+			return e
+	return null
+
+func _parry(e: Fighter) -> void:
+	var p := player
+	var mid := (e.global_position + p.global_position) * 0.5 + Vector3(0, 1.5, 0.3)
+	e.state = "stagger"; e.state_t = 0.0
+	e.play("hit" + _face_view(e, p), true)
+	e.posture = 0.0
+	e.vel = _knock(_face_view(e, p), p.facing, 3.0)
+	fx.clash(mid, p.facing)
+	sfx.play("parry", 0.03)
+	hitstop = 0.14; shake = 0.12
+	clean_hits += 1
+	_slowmo(0.28, 0.35, 0.0)
+
+func _finisher(e: Fighter, dir: float) -> void:
+	sfx.play("finisher", 0.0)
+	fx.slash(e.global_position + Vector3(0, 0.6, 0.15), dir, 2.2, 0.7, 0.0, 2)
+	hitstop = 0.0
+	_slowmo(0.55, 0.25, 1.0)
+	clean_hits = 0
+
+## real-time slow motion: `dur` real seconds at `scale`, easing back; zoom 0..1 pushes the camera in
+func _slowmo(dur: float, scale: float, zoom: float) -> void:
+	slow_t = maxf(slow_t, dur)
+	slow_zoom = maxf(slow_zoom, zoom)
+	Engine.time_scale = minf(Engine.time_scale, scale)
+	set_meta("slow_scale", Engine.time_scale)
+	set_meta("slow_dur", slow_t)
+
+func _process(delta: float) -> void:
+	if slow_t <= 0.0:
+		return
+	var real := delta / maxf(Engine.time_scale, 0.01)
+	slow_t -= real
+	var k := clampf(slow_t / float(get_meta("slow_dur", 0.5)), 0.0, 1.0)
+	# hold the slow for the first half, then ease back to full speed
+	Engine.time_scale = lerpf(1.0, float(get_meta("slow_scale", 0.3)), clampf(k * 2.0, 0.0, 1.0))
+	if slow_t <= 0.0:
+		Engine.time_scale = 1.0; slow_zoom = 0.0
+
 func _restart() -> void:
+	Engine.time_scale = 1.0; slow_t = 0.0; slow_zoom = 0.0; clean_hits = 0
 	for e in enemies:
 		e.queue_free()
 	for b in ebars:
@@ -558,7 +644,7 @@ func _camera(delta: float) -> void:
 	cam_side = lerpf(cam_side, side, 1.0 - exp(-2.5 * delta))
 	off.x += cam_side
 	cam.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
-	cam.fov = 50.0 if portrait else 40.0
+	cam.fov = (50.0 if portrait else 40.0) - slow_zoom * clampf(slow_t * 4.0, 0.0, 1.0) * 7.0
 	var want := focus + off
 	if cam.global_position.length() > 0.1:
 		var cp := cam.global_position.lerp(want, 1.0 - exp(-5.0 * delta))
@@ -751,6 +837,7 @@ func _input(ev: InputEvent) -> void:
 	if not (ev is InputEventScreenTouch or ev is InputEventScreenDrag):
 		if ev.is_action_pressed("attack", false):
 			atk_buf = 0.3
+			atk_press_t = elapsed
 		elif ev.is_action_pressed("dodge", false):
 			dodge_buf = 0.3
 		if ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_M:
@@ -770,6 +857,7 @@ func _input(ev: InputEvent) -> void:
 					touch_dodge = true
 				else:
 					touch_atk = true
+					atk_press_t = elapsed
 		elif ev.index == joy_id:
 			joy_id = -1; joy_vec = Vector2.ZERO
 			joy_knob.position = Vector2(37, 37)
@@ -782,10 +870,16 @@ func _input(ev: InputEvent) -> void:
 
 func _autoplay(delta: float) -> void:
 	auto_t += delta
+	if auto_parry:
+		# QA bot: cut 0.1 s before every foe blade lands, then keep cutting the staggered foe
+		for e in enemies:
+			if e.alive() and ((e.state == "windup" and absf(e.state_t - 0.6) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.12) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.4) < delta * 0.6)):
+				atk_buf = 0.3; atk_press_t = elapsed
 	while auto_steps.size() > 0 and auto_t >= float(auto_steps[0][0]):
 		var st: Array = auto_steps.pop_front()
 		if st[1] == "attack":
 			atk_buf = 0.3
+			atk_press_t = elapsed
 		elif st[1] == "dodge":
 			dodge_buf = 0.3
 		elif st[2]:

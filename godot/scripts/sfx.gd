@@ -18,6 +18,8 @@ func _ready() -> void:
 	sounds["hit_heavy"] = _wav(_impact(0.40, 70.0, 0.7), -7.5)
 	sounds["hurt"] = _wav(_impact(0.32, 60.0, 0.45), -9.0)
 	sounds["kill"] = _wav(_kill(), -8.0)
+	sounds["parry"] = _wav(_ring(0.5), -14.0)
+	sounds["finisher"] = _wav(_finish(), -8.0)
 	sounds["dodge"] = _wav(_sweep(0.26, 1400.0, 500.0, 0.0), -16.0)
 	var wind := AudioStreamPlayer.new()
 	wind.stream = _wav(_wind(6.0), -24.0, true)
@@ -80,6 +82,28 @@ func _kill() -> PackedFloat32Array:
 		y += 0.12 * (rng.randf_range(-1.0, 1.0) - y)
 		var grit := 1.0 if rng.randf() < 0.02 else 0.3
 		a[i] += y * grit * 1.8 * exp(-pow((t - 0.12) * 9.0, 2.0))
+	return a
+
+## C15 parry: two inharmonic partials ring and die fast, over a short dull knock. Kept low and
+## rolled off by _wav so the steel reads as a clean "tink", never a shriek.
+func _ring(dur: float) -> PackedFloat32Array:
+	var n := int(dur * RATE)
+	var out := PackedFloat32Array(); out.resize(n)
+	var knock := _impact(0.12, 140.0, 0.3)
+	for i in n:
+		var t := float(i) / RATE
+		var r := sin(TAU * 1180.0 * t) * 0.5 + sin(TAU * 1730.0 * t) * 0.32 + sin(TAU * 2410.0 * t) * 0.12
+		out[i] = r * exp(-t * 9.0) * 0.55 + (knock[i] * 0.8 if i < knock.size() else 0.0)
+	return out
+
+## C15 finisher: a slow low cut through air, then the deep kill thump under it.
+func _finish() -> PackedFloat32Array:
+	var a := _sweep(0.5, 250.0, 900.0, 0.0)
+	var k := _kill()
+	var off := int(0.16 * RATE)
+	a.resize(off + k.size())
+	for i in k.size():
+		a[off + i] += k[i] * 1.1
 	return a
 
 ## Distant wind over grass: very dark noise with a slow swell, seamless loop.

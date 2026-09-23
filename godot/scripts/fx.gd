@@ -229,3 +229,27 @@ func _process(delta: float) -> void:
 		if st["t"] > 9.0:
 			var sp: Sprite3D = st["node"]
 			sp.modulate.a = st["a"] * clampf(1.0 - (st["t"] - 9.0) / 6.0, 0.0, 1.0)
+
+## C15 parry: a pale flash of crossed steel - a tight spray of fine specks and two thin strokes.
+func clash(pos: Vector3, dir: float) -> void:
+	for i in 40:
+		var sp := _billboard(specks[randi() % 3], randf_range(0.002, 0.005))
+		sp.modulate = Color(0.2, 0.18, 0.16)
+		add_child(sp)
+		sp.global_position = pos + Vector3(randf_range(-0.1, 0.1), randf_range(-0.1, 0.1), 0.12)
+		var a := randf() * TAU
+		var v := Vector3(cos(a), sin(a) * 0.9 + 0.4, 0) * randf_range(2.0, 6.0)
+		items.append({"node": sp, "kind": "drop", "t": 0.0, "vel": v})
+	slash(pos + Vector3(0, -0.6, 0), dir, 0.7, 0.22, 0.0, 0)
+	slash(pos + Vector3(0, -0.6, 0), -dir, 0.6, 0.22, 0.0, 1)
+
+## C15 kill: ink thrown along the cut - a trail of ground splats that thins out with distance,
+## plus a heavy pool under the body.
+func kill_splash(pos: Vector3, dir: float, power := 1.0) -> void:
+	var d := dir if dir != 0.0 else 1.0
+	stain(pos + Vector3(d * 0.3, 0, 0.1), 0.012 * power, null, Color(1, 1, 1, 0.85))
+	var n := int(9 * power)
+	for i in n:
+		var k := float(i + 1) / n
+		var at := pos + Vector3(d * (0.6 + k * 3.2 * power) + randfn(0.0, 0.15), 0, randfn(0.0, 0.35) * (0.5 + k))
+		stain(at, lerpf(0.009, 0.0025, k) * randf_range(0.8, 1.2) * power, null, Color(1, 1, 1, lerpf(0.85, 0.55, k)))
