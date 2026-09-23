@@ -1,3 +1,4 @@
 .godot/
 export/
 *.import
+export_android/

@@ -16,6 +16,7 @@ window/size/viewport_height=400
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/dpi/allow_hidpi=true
+window/handheld/orientation=6
 
 [input_devices]
 pointing/emulate_touch_from_mouse=false
