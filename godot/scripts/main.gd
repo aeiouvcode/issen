@@ -5,8 +5,8 @@ var cam: Camera3D
 var fx: InkFX
 var player: Fighter
 var enemies: Array = []
-var player_tex: Texture2D
-var ronin_tex: Texture2D
+var player_tex: Array[Texture2D] = []
+var ronin_tex: Array[Texture2D] = []
 var elapsed := 0.0
 var combo := 0
 var queued := false
@@ -54,8 +54,8 @@ func _ready() -> void:
 	else:
 		randomize()
 	_input_map()
-	player_tex = load("res://art/player.png")
-	ronin_tex = load("res://art/ronin.png")
+	player_tex = _pages("player")
+	ronin_tex = _pages("ronin")
 	cam = Camera3D.new()
 	cam.fov = 38.0
 	cam.far = 120.0
@@ -84,6 +84,7 @@ func _ready() -> void:
 		# then cuts back at it so the turned hit/death rows play too
 		autoplay = true; auto_steps = [[3.0, "attack"], [3.25, "attack"], [3.5, "attack"], [4.6, "attack"], [4.85, "attack"], [5.1, "attack"]]
 		enemies[0].set_meta("lane", -1)
+		enemies[0].hp = 52.0  # dies inside the second combo, so the turned death row is captured
 
 func _input_map() -> void:
 	var defs := {
@@ -334,6 +335,13 @@ func _start_dodge(mv: Vector2) -> void:
 	fx.puff(p.global_position)
 
 # 3/4 view for a figure struck from mostly in front of / behind it (F-19)
+func _pages(which: String) -> Array[Texture2D]:
+	var n := int(JSON.parse_string(FileAccess.get_file_as_string("res://art/%s.json" % which))["pages"])
+	var out: Array[Texture2D] = []
+	for k in n:
+		out.append(load("res://art/%s_p%d.png" % [which, k]))
+	return out
+
 func _face_view(victim: Fighter, attacker: Fighter) -> String:
 	var d := attacker.global_position - victim.global_position
 	if absf(d.z) > absf(d.x) * 1.2:
