@@ -1,11 +1,11 @@
 # Handoff
 
 ## Resume here
-Cycle 3 in progress. Done: F-04 (3/4 front and back locomotion views for the player), F-08 (fine specks + flight-aligned drip streaks, radial spray, 240 stains), F-07 (portrait midpoint focus + pull-back). Next, priority order:
-1. F-09 Figures overlap during lunges (combo forward velocity carries through spacing); clearly visible at 390px.
-2. F-05 Distant grass still reads as dark hedges, not soft grey fibres.
-3. F-06 HUD font is the engine default; skill rings are empty.
-4. F-10 Ronin has side view only; add walk_f/walk_b if enemies circle in depth. Burst bloom blots still chunky grey lumps.
+Cycle 4 done: F-09 (no lunge overlap), F-08 bloom (dark wash + fine cluster), F-05 (grey fibre grass). Open gaps, priority order:
+1. F-06 HUD font is the engine default; skill rings are empty (reference: brush-lettered numbers, inked skill glyph icons).
+2. F-10 Ronin has side view only; the reference shows the kasa from the front. Add walk_f/walk_b and use them when a foe moves mostly in depth.
+3. F-11 Portrait: lower 40% of the frame is empty ground; drop the camera focus a little or tilt up so the duel sits nearer the middle.
+4. F-12 Slash curtain inner fibres read as fine concentric rings in close-up; reference curtain is broader grey dry-brush sweep.
 
 ## Capture method (use this, not Playwright timing)
 `printf '[display]\nwindow/size/window_width_override=1280\nwindow/size/window_height_override=720\n' > override.cfg` then
@@ -27,6 +27,7 @@ Cycle 3 in progress. Done: F-04 (3/4 front and back locomotion views for the pla
 | Default 844x390 stretch base | HUD shrank to ~45% on portrait phones; now 480x400 base | 2026-09-23 |
 | CJK glyphs on HUD rings | Engine default font has no CJK, rendered as tofu boxes | 2026-09-23 |
 | Long fast drip streaks thrown along the cut | Read as horizontal speed lines, not splatter; now radial spray, short streaks, stretch capped 1.1x | 2026-09-23 |
+| Bigger bloom blots at full ink | Read as black rocks; replaced with soft wash dabs + many small blots | 2026-09-23 |
 | Per-vertex random jitter for blots | Spiky star shapes, not ink drops; switched to low-harmonic radius | 2026-09-23 |
 | Sine-stack fibres for slash texture | Read as clean concentric rings; replaced with random radial profile x arc noise | 2026-09-23 |
 
