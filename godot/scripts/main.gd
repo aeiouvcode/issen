@@ -107,6 +107,11 @@ func _ready() -> void:
 		enemies[0].set_meta("lane", -1)
 		enemies[0].hp = 52.0  # dies inside the second combo, so the turned death row is captured
 
+	if "--autoplay-die" in OS.get_cmdline_user_args():
+		# QA: player starts nearly spent and never acts, so the death banner and rise hint are captured
+		autoplay = true; auto_steps = []
+		player.hp = 12.0
+
 func _input_map() -> void:
 	var defs := {
 		"left": [KEY_A, KEY_LEFT], "right": [KEY_D, KEY_RIGHT], "up": [KEY_W, KEY_UP], "down": [KEY_S, KEY_DOWN],
@@ -309,6 +314,8 @@ func _player(delta: float) -> void:
 				p.state = "idle"; p.play("idle")
 		"dead":
 			p.vel = Vector3.ZERO
+			if p.state_t > 3.0 and not banner.text.ends_with("rise"):
+				banner.text += "\n" + ("tap cut to rise" if touch_ui and touch_ui.visible else "cut to rise")
 			if p.state_t > 3.0 and (want_atk or want_dodge):
 				_restart()
 	p.global_position += p.vel * delta
@@ -538,7 +545,7 @@ func _player_hurt(dmg: float, dir: float, by: Fighter) -> void:
 	post_mat.set_shader_parameter("hurt", 1.0)
 	if p.hp <= 0.0:
 		p.state = "dead"; p.state_t = 0.0; p.play("die" + _face_view(p, by), true)
-		banner.text = "Fallen.   %d cut down" % kills
+		banner.text = "Fallen.  %d cut down" % kills
 		banner.visible = true
 	else:
 		var hv := _face_view(p, by)
@@ -763,9 +770,18 @@ func _hud() -> void:
 	php_fill = bars.get_node("F"); php_label = bars.get_node("L")
 	banner = Label.new()
 	banner.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
-	banner.add_theme_font_size_override("font_size", 34)
+	banner.add_theme_font_size_override("font_size", 28)
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	banner.set_anchors_preset(Control.PRESET_CENTER)
+	banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# C18: the death line sits on its own parchment slip so it stays legible over ink figures
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.93, 0.89, 0.8, 0.9)
+	sb.border_color = Color(0.15, 0.12, 0.1, 0.85)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(6)
+	sb.set_content_margin_all(8)
+	banner.add_theme_stylebox_override("normal", sb)
+	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	banner.visible = false
 	hud.add_child(banner)
 
@@ -784,8 +800,9 @@ func _layout() -> void:
 	plaque.scale = Vector2(k, k)
 	plaque.position = Vector2(0, clampf(vs.y * 0.2, 50, 110))
 
-	banner.position = Vector2(vs.x * 0.5 - 200, vs.y * 0.4)
-	banner.size = Vector2(400, 40)
+	banner.size = Vector2(minf(400.0, vs.x / k - 20.0), 96)
+	banner.scale = Vector2(k, k)
+	banner.position = Vector2(vs.x * 0.5 - banner.size.x * k * 0.5, vs.y * (0.24 if vs.y > vs.x else 0.3))
 	if chips:
 		chips.size = chips.get_combined_minimum_size()
 		chips.scale = Vector2(k, k)
