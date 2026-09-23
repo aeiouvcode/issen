@@ -9,4 +9,7 @@ Completed atomic steps, newest last. Do not redo anything listed here.
 | 2026-09-22 | M56 security/SRI pass | commit series on main |
 | 2026-09-22 | M57-M60 boss robe ink, wound gash x2, ground speckle clusters | https://aeiouvcode.github.io/issen/ |
 | 2026-09-22 | M61-M64 anti-eclipse camera ink-fade, grass tufts, bamboo skyline, dash variation | md5 9cc364788fe4f72967a9fae402b176c0 |
-| 2026-09-23 | M65 first distance-to-reference audit: F-01 vertical slash curtains + F-06 bamboo clumps | this commit |
+| 2026-09-23 | M65 audit cycle 1: reference frames captured from sensonoken video (syndication API + ffmpeg) | /tmp/refframes |
+| 2026-09-23 | M65: F-01 fixed - player slash arcs are vertical camera-facing curtains (3 swing rolls), bolder ink (pale .48-.55), per-swing spawn height | live md5 ce413959c76e44a2c82891f3c5264153 |
+| 2026-09-23 | M65: F-06 fixed - bamboo stalks 4.2-6 tall, paired clumps at r 15-21 | same commit |
+| 2026-09-23 | M65: verified at 390px + 1280px on deployed build (in-page canvas capture via rAF arc hunter) | /tmp/arc-atk1b.png, /tmp/arc-desktop.png |
