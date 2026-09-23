@@ -144,14 +144,14 @@ func ghost(src: Sprite3D, pos: Vector3) -> void:
 	s.global_position = pos + Vector3(0, 0, -0.05)
 	items.append({"node": s, "kind": "ghost", "t": 0.0, "dur": 0.4})
 
-func stain(pos: Vector3, size: float, tex: Texture2D = null, col := Color(1, 1, 1, 0.8)) -> void:
+func stain(pos: Vector3, size: float, tex: Texture2D = null, col := Color(1, 1, 1, 0.8), rot := INF) -> Sprite3D:
 	var s := Sprite3D.new()
 	s.texture = tex if tex else blots[randi() % 6]
 	s.axis = Vector3.AXIS_Y
 	s.pixel_size = size
 	s.shaded = false
 	s.modulate = col
-	s.rotation.y = randf() * TAU
+	s.rotation.y = randf() * TAU if rot == INF else rot
 	s.scale = Vector3(1.0, 1.0, 0.6)
 	add_child(s)
 	s.global_position = Vector3(pos.x, 0.015 + randf() * 0.01, pos.z)
@@ -159,6 +159,7 @@ func stain(pos: Vector3, size: float, tex: Texture2D = null, col := Color(1, 1, 
 	if stains.size() > MAX_STAINS:
 		var old = stains.pop_front()
 		old["node"].queue_free()
+	return s
 
 func footprint(pos: Vector3) -> void:
 	stain(pos, randf_range(0.003, 0.0045), dab_tex, Color(1, 1, 1, 0.85))
@@ -204,7 +205,9 @@ func _process(delta: float) -> void:
 				n.global_position += vf * delta
 				if n.global_position.y <= 0.02:
 					var sf: Sprite3D = n
-					stain(n.global_position, it["sz"], sf.texture, Color(1, 1, 1, it["a"]))
+					var st_ := stain(n.global_position, it["sz"], sf.texture, Color(1, 1, 1, it["a"]), it["rot"])
+					if it["rot"] != INF:
+						st_.scale = Vector3(1.0, 1.0, 0.45)
 					n.queue_free(); continue
 			"cue":
 				var fc = it["f"]
@@ -273,7 +276,9 @@ func kill_splash(pos: Vector3, dir: float, power := 1.0) -> void:
 		var k := float(i + 1) / n
 		var at := pos + Vector3(d * (1.0 + k * 2.6 * power) + randfn(0.0, 0.15), 0, 0.35 + k * 0.4 + randfn(0.0, 0.18))
 		var sz := lerpf(0.011, 0.0035, k) * randf_range(0.8, 1.2) * power
-		var sp := _billboard(blots[randi() % 6], sz * 0.6)
+		# C20: the far end of the trail lands as dragged streaks pointing along the cut
+		var streak := k > 0.55
+		var sp := _billboard(drips[randi() % 3] if streak else blots[randi() % 6], sz * (0.9 if streak else 0.6))
 		sp.modulate = Color(1, 1, 1, 0.9)
 		add_child(sp)
 		var t := 0.12 + k * 0.28
@@ -281,7 +286,7 @@ func kill_splash(pos: Vector3, dir: float, power := 1.0) -> void:
 		sp.global_position = pos + Vector3(d * 0.2, h0, 0.2)
 		var v := (at - sp.global_position) / t
 		v.y = (0.02 - h0 + 8.0 * t * t) / t
-		items.append({"node": sp, "kind": "fling", "t": 0.0, "vel": v, "sz": sz, "a": lerpf(0.9, 0.6, k)})
+		items.append({"node": sp, "kind": "fling", "t": 0.0, "vel": v, "sz": sz * (1.7 if streak else 1.0), "a": lerpf(0.9, 0.6, k), "rot": (0.0 if d > 0.0 else PI) + randfn(0.0, 0.12) if streak else INF})
 
 var glint_tex: Texture2D
 
