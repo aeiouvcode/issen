@@ -10,7 +10,7 @@ var shadow: Sprite3D
 var anim := "idle"
 var frame_t := 0.0
 var frame := 0
-var fps := {"idle": 8.0, "run": 15.0, "idle_f": 8.0, "run_f": 15.0, "idle_b": 8.0, "run_b": 15.0, "walk": 10.0, "walk_f": 10.0, "walk_b": 10.0, "atk1": 20.0, "atk2": 20.0, "atk3": 18.0, "dodge": 18.0, "hit": 14.0, "die": 9.0, "windup": 9.0, "swing": 18.0, "recover": 10.0}
+var fps := {"idle": 8.0, "run": 15.0, "idle_f": 8.0, "run_f": 15.0, "idle_b": 8.0, "run_b": 15.0, "walk": 10.0, "walk_f": 10.0, "walk_b": 10.0, "atk1": 20.0, "atk1_f": 20.0, "atk1_b": 20.0, "atk2": 20.0, "atk2_f": 20.0, "atk2_b": 20.0, "atk3": 18.0, "atk3_f": 18.0, "atk3_b": 18.0, "dodge": 18.0, "hit": 14.0, "die": 9.0, "windup": 9.0, "swing": 18.0, "recover": 10.0}
 var loops := {"idle": true, "run": true, "walk": true, "idle_f": true, "run_f": true, "idle_b": true, "run_b": true, "walk_f": true, "walk_b": true}
 ## View suffix for locomotion rows: "" side, "_f" 3/4 toward camera, "_b" 3/4 away.
 var view := ""
@@ -62,8 +62,8 @@ func frame_count() -> int:
 	return int(meta["anims"][anim]["count"])
 
 func _apply() -> void:
-	var row := int(meta["anims"][anim]["row"])
-	sprite.frame = row * int(meta["cols"]) + frame
+	var info: Dictionary = meta["anims"][anim]
+	sprite.frame = int(info["row"]) * int(meta["cols"]) + int(info.get("col0", 0)) + frame
 	sprite.flip_h = facing < 0.0
 	sprite.offset.x = 10.0 * facing
 

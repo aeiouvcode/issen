@@ -43,10 +43,12 @@ var auto_steps := [[0.3, "right", true], [0.9, "right", false], [1.0, "attack"],
 var banner: Label
 
 func _ready() -> void:
-	autoplay = "--autoplay" in OS.get_cmdline_user_args() or "--autoplay-views" in OS.get_cmdline_user_args()
-	if "--autoplay-views" in OS.get_cmdline_user_args():
+	autoplay = "--autoplay" in OS.get_cmdline_user_args() or "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args()
+	if "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args():
 		# locomotion views: toward camera, away, then sideways
 		auto_steps = [[0.3, "down", true], [1.4, "down", false], [1.8, "up", true], [3.0, "up", false], [3.2, "left", true], [3.8, "left", false]]
+		if "--autoplay-depth" in OS.get_cmdline_user_args():
+			auto_steps = [[0.2, "down", true], [1.0, "down", false], [1.2, "up", true], [1.45, "up", false], [1.6, "attack"], [1.85, "attack"], [2.1, "attack"]]
 	if autoplay:
 		seed(7)
 	else:
@@ -233,6 +235,8 @@ func _player(delta: float) -> void:
 			var near := _nearest(p.global_position, 3.0)
 			if near and (near.global_position.x - p.global_position.x) * p.facing > 0.0 and absf(near.global_position.x - p.global_position.x) < 2.7:
 				p.vel.x = 0.0
+			if near and p.view != "" and absf(near.global_position.z - p.global_position.z) < 1.8:
+				p.vel.z = 0.0
 			if want_atk:
 				atk_buf = 0.0
 				queued = true
@@ -275,24 +279,33 @@ func _start_attack() -> void:
 	if tgt:
 		p.facing = signf(tgt.global_position.x - p.global_position.x) if absf(tgt.global_position.x - p.global_position.x) > 0.1 else p.facing
 	p.state = "attack"; p.state_t = 0.0
+	# target mostly in depth: swing in the 3/4 view facing it instead of snapping to profile
 	p.view = ""
-	p.play(["atk1", "atk2", "atk3"][combo], true)
+	if tgt:
+		var td: Vector3 = tgt.global_position - p.global_position
+		if absf(td.z) > absf(td.x) * 1.1:
+			p.view = "_f" if td.z > 0.0 else "_b"
+	p.play(["atk1", "atk2", "atk3"][combo] + p.view, true)
 	queued = false; hit_done = false
 	var mv := _move_input()
-	p.vel = Vector3(p.facing * 3.2, 0, mv.y * 1.5)
+	p.vel = Vector3(p.facing * 3.2, 0, mv.y * 1.5) if p.view == "" else Vector3(p.facing * 1.0, 0, (3.2 if p.view == "_f" else -3.2))
 
 func _player_strike() -> void:
 	var p := player
 	var dmg: float = [12.0, 14.0, 24.0][combo]
 	var yoff: float = [0.1, 0.3, -0.1][combo]
-	var anchor := p.global_position + Vector3(p.facing * 1.1, yoff, 0.2)
+	var zdir := 0.0 if p.view == "" else (1.0 if p.view == "_f" else -1.0)
+	var anchor := p.global_position + (Vector3(p.facing * 1.1, yoff, 0.2) if zdir == 0.0 else Vector3(p.facing * 0.4, yoff, zdir * 1.0 + 0.2))
 	var sk: float = [1.2, 1.15, 1.45][combo]
-	fx.slash(anchor, p.facing, sk, 0.42, 0.0, combo)
+	fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.42, 0.0, combo)
 	for e in enemies:
 		if not e.alive():
 			continue
 		var d: Vector3 = e.global_position - p.global_position
-		if absf(d.z) < 1.3 and d.x * p.facing > -0.4 and absf(d.x) < 3.4:
+		var in_arc := absf(d.z) < 1.3 and d.x * p.facing > -0.4 and absf(d.x) < 3.4
+		if zdir != 0.0:
+			in_arc = absf(d.x) < 1.6 and d.z * zdir > -0.4 and absf(d.z) < 3.2
+		if in_arc:
 			_hurt(e, dmg, p.facing, combo == 2)
 
 func _start_dodge(mv: Vector2) -> void:

@@ -59,6 +59,10 @@ def player_anims():
     A['run_f'] = [dict(p) for p in A['run']]
     A['idle_b'] = [dict(p) for p in A['idle']]
     A['run_b'] = [dict(p) for p in A['run']]
+    # turned attacks for targets that lie mostly in depth (F-15)
+    for v in ('_f', '_b'):
+        for a in ('atk1', 'atk2', 'atk3'):
+            A[a + v] = [dict(p) for p in A[a]]
     return A
 
 R_IDLE = dict(lean=10, fa_sh=40, fa_el=40, pole=-20, ba_sh=20, ba_el=50, fl_hip=24, fl_knee=-18, bl_hip=-18, bl_knee=-12)
@@ -95,22 +99,25 @@ def ronin_anims():
     A['walk_b'] = [dict(p) for p in A['walk']]
     return A
 
-def bake(name, anims, dims, drawer, seed0, cols=8, only=None):
+def bake(name, anims, dims, drawer, seed0, cols=8, only=None, per_row=1):
+    """per_row > 1 packs several animations side by side in one sheet row (cols*per_row
+    frames wide) so tall sheets stay under the 4096 px texture limit on phones."""
     order = list(anims.keys())
-    rows = len(order)
-    sheet = Image.new('RGBA', (cols * FR, rows * FR), (0, 0, 0, 0))
-    meta = {'frame': FR, 'cols': cols, 'anims': {}}
+    rows = (len(order) + per_row - 1) // per_row
+    sheet = Image.new('RGBA', (cols * per_row * FR, rows * FR), (0, 0, 0, 0))
+    meta = {'frame': FR, 'cols': cols * per_row, 'anims': {}}
     tips = {}
     for r, an in enumerate(order):
         if only and an not in only: continue
         frames = anims[an]
-        meta['anims'][an] = {'row': r, 'count': len(frames)}
+        row, col0 = r // per_row, (r % per_row) * cols
+        meta['anims'][an] = {'row': row, 'col0': col0, 'count': len(frames)}
         for i, pose in enumerate(frames):
             c = Canvas(FR, 2, seed=seed0 + r * 100 + i)
             yaw = YAW.get(an[-2:], 0.0)
             J = F.place(F.turn(F.fk(pose, dims), yaw), pose, CX, GROUND)
             tip = drawer(c, J, pose)
-            sheet.paste(c.render(), (i * FR, r * FR))
+            sheet.paste(c.render(), ((col0 + i) * FR, row * FR))
             tips.setdefault(an, []).append([round(float(tip[0]), 1), round(float(tip[1]), 1)] if tip is not None else None)
         print(name, an, len(frames), flush=True)
     meta['tips'] = tips
@@ -120,7 +127,7 @@ if __name__ == '__main__':
     which = sys.argv[1]; only = sys.argv[2].split(',') if len(sys.argv) > 2 else None
     out = sys.argv[3] if len(sys.argv) > 3 else '../art'
     if which == 'player':
-        s, m = bake('player', player_anims(), F.PDIM, F.draw_player, 1000, only=only)
+        s, m = bake('player', player_anims(), F.PDIM, F.draw_player, 1000, only=only, per_row=2)
     else:
         s, m = bake('ronin', ronin_anims(), F.RDIM, F.draw_ronin, 5000, only=only)
     # palette PNG: ink + red need few colours; keeps the repo and the Pages download small
