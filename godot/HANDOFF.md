@@ -1,12 +1,11 @@
 # Handoff
 
 ## Resume here
-Cycle 3 in progress. Done: F-04 (3/4 front and back locomotion views for the player), F-08 (fine specks + flight-aligned drip streaks, radial spray, 240 stains). Next, priority order:
-1. F-07 Portrait: the target sits at the right edge; bias the focus toward the midpoint on narrow screens.
+Cycle 3 in progress. Done: F-04 (3/4 front and back locomotion views for the player), F-08 (fine specks + flight-aligned drip streaks, radial spray, 240 stains), F-07 (portrait midpoint focus + pull-back). Next, priority order:
+1. F-09 Figures overlap during lunges (combo forward velocity carries through spacing); clearly visible at 390px.
 2. F-05 Distant grass still reads as dark hedges, not soft grey fibres.
 3. F-06 HUD font is the engine default; skill rings are empty.
-4. F-09 Figures overlap during lunges (combo forward velocity carries through spacing).
-5. F-10 Ronin has side view only; add walk_f/walk_b if enemies circle in depth. Burst bloom blots still chunky grey lumps.
+4. F-10 Ronin has side view only; add walk_f/walk_b if enemies circle in depth. Burst bloom blots still chunky grey lumps.
 
 ## Capture method (use this, not Playwright timing)
 `printf '[display]\nwindow/size/window_width_override=1280\nwindow/size/window_height_override=720\n' > override.cfg` then
