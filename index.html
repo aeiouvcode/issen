@@ -656,13 +656,35 @@ function grassTexture(){
 function tuftTexture(){
   const c=document.createElement('canvas'); c.width=128; c.height=128;
   const x=c.getContext('2d');
-  for(let i=0;i<16;i++){
-    const bx=24+Math.random()*80, h=40+Math.random()*60, lean=(Math.random()-.5)*30;
-    x.strokeStyle=`rgba(90,84,66,${.3+Math.random()*.35})`;
-    x.lineWidth=2+Math.random()*2.5; x.lineCap='round';
-    x.beginPath(); x.moveTo(bx,128);
-    x.quadraticCurveTo(bx+lean*.4, 128-h*.6, bx+lean, 128-h);
-    x.stroke();
+  // sumi-e grass: blades spring from a tight root, fan outward, brush lifts and dries toward the tip
+  const blades=12;
+  for(let i=0;i<blades;i++){
+    const t=(i/(blades-1))*2-1;
+    const bx=64+t*13+(Math.random()-.5)*7;
+    const h=46+Math.random()*66;
+    const lean=t*26+(Math.random()-.5)*16;
+    const dark=Math.random()<.9;
+    const a0=dark?.46+Math.random()*.24:.15+Math.random()*.08;
+    const w0=dark?2.8+Math.random()*1.6:1.5+Math.random()*.8;
+    const col=dark?'50,45,34':'74,68,54';
+    let px=bx, py=128;
+    for(let seg=1;seg<=4;seg++){
+      const u=seg/4, pu=(seg-1)/4;
+      const nx=bx+lean*(u*u*.9+u*.1), ny=128-h*u;
+      x.strokeStyle=`rgba(${col},${(a0*(1-u*.5)).toFixed(3)})`;
+      x.lineWidth=Math.max(.7,w0*(1-u*.72)); x.lineCap='round';
+      x.beginPath(); x.moveTo(px,py);
+      x.quadraticCurveTo(bx+lean*pu*1.2, 128-h*(pu+.09), nx, ny);
+      x.stroke();
+      px=nx; py=ny;
+    }
+  }
+  // root dabs anchor the clump to the paper
+  for(let i=0;i<4;i++){
+    x.strokeStyle=`rgba(46,41,32,${(.34+Math.random()*.2).toFixed(3)})`;
+    x.lineWidth=2.8+Math.random()*1.8; x.lineCap='round';
+    const dx=64+(Math.random()-.5)*22;
+    x.beginPath(); x.moveTo(dx-4-Math.random()*3,127); x.lineTo(dx+4+Math.random()*3,126); x.stroke();
   }
   return new THREE.CanvasTexture(c);
 }
