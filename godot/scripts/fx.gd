@@ -107,12 +107,14 @@ func puff(pos: Vector3) -> void:
 	items.append({"node": s, "kind": "puff", "t": 0.0, "dur": 0.9, "s0": s.pixel_size})
 
 ## Dash trail: small upright black ink dabs stepping along the dodge path.
-func dash_mark(pos: Vector3) -> void:
-	var s := _billboard(blots[randi() % 3], randf_range(0.0032, 0.0042))
+func dash_mark(pos: Vector3, k := 0.5) -> void:
+	# k = dodge progress 0..1: marks grow along the dash like the reference's stepping dabs
+	var s := _billboard(blots[randi() % 3], lerpf(0.0036, 0.0062, k) * randf_range(0.9, 1.1))
 	s.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
-	s.scale = Vector3(0.8, 1.7, 1.0)
+	s.scale = Vector3(0.7, 2.1, 1.0)
+	s.modulate = Color(0.7, 0.7, 0.7)
 	add_child(s)
-	s.global_position = pos + Vector3(randf_range(-0.1, 0.1), 0.22, 0.0)
+	s.global_position = pos + Vector3(randf_range(-0.08, 0.08), lerpf(0.3, 0.5, k), 0.0)
 	items.append({"node": s, "kind": "mark", "t": 0.0, "dur": 1.6})
 
 ## Hit mark: a red ink blot that blooms on the struck figure's body, then fades.
