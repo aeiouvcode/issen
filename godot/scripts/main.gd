@@ -428,9 +428,13 @@ func _camera(delta: float) -> void:
 	var portrait := vs.y > vs.x
 	var focus := player.global_position
 	var tgt := _nearest(focus, 7.0)
+	var zoom := 1.0
 	if tgt:
-		focus = focus.lerp(tgt.global_position, 0.35)
-	var off := Vector3(0, 3.6, 6.0) if not portrait else Vector3(0, 5.4, 4.3)
+		# narrow screens: centre the pair and pull back when they spread wider than the frame
+		focus = focus.lerp(tgt.global_position, 0.5 if portrait else 0.35)
+		if portrait:
+			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 3.6, 1.0, 1.35)
+	var off := Vector3(0, 3.6, 6.0) if not portrait else Vector3(0, 5.4, 4.3) * zoom
 	cam.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
 	cam.fov = 50.0 if portrait else 40.0
 	var want := focus + off
