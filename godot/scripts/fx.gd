@@ -237,6 +237,18 @@ func _process(delta: float) -> void:
 				sr.modulate.a = 0.95 * clampf(1.5 - kr * 1.5, 0.0, 1.0)
 				if kr >= 1.0 or not is_instance_valid(n):
 					n.queue_free(); continue
+			"shed":
+				var fs = it["f"]
+				if not is_instance_valid(fs) or it["t"] > it["dur"]:
+					n.queue_free(); continue
+				if it["t"] >= it["next"]:
+					it["next"] += randf_range(0.06, 0.13)
+					var d := _billboard(specks[randi() % 3] if randf() < 0.6 else blots[3 + randi() % 3], randf_range(0.0025, 0.0055))
+					if randf() < 0.3:
+						d.modulate = Color(0.72, 0.1, 0.09)
+					add_child(d)
+					d.global_position = fs.tip_world() + Vector3(randf_range(-0.12, 0.12), randf_range(-0.1, 0.05), 0.02)
+					items.append({"node": d, "kind": "drop", "t": 0.0, "vel": Vector3(randf_range(-0.4, 0.4), randf_range(-0.6, 0.3), randf_range(-0.2, 0.2))})
 			"ghost":
 				var k3: float = it["t"] / it["dur"]
 				(n as Sprite3D).modulate.a = 0.55 * (1.0 - k3)
@@ -356,3 +368,9 @@ func thrust(pos: Vector3, dir: float) -> void:
 		add_child(d)
 		d.global_position = pos + Vector3(dir * 4.0, 0, 0)
 		items.append({"node": d, "kind": "drop", "t": 0.0, "vel": Vector3(dir * randf_range(1.0, 3.0), randf_range(0.5, 2.5), randf_range(-0.5, 0.5))})
+
+## C27 blade feel: after a kill the blade sheds ink - drops fall from the sword tip for a moment and stain the grass
+func blade_drip(f: Node3D, dur := 0.8) -> void:
+	var holder := Node3D.new()
+	add_child(holder)
+	items.append({"node": holder, "kind": "shed", "t": 0.0, "dur": dur, "next": 0.08, "f": f})
