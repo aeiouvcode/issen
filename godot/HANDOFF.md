@@ -1,6 +1,7 @@
 # Handoff
 
 ## Resume here
+Cycle 26: foe variants baked (ronin_armor, ronin_spear, boss sheets; `python3 bake_sprites.py <kind>` in tools/). Next: C27 Android adaptive icon from store/icon-512 + blade-feel polish; store screenshots predate the new foe art and should be re-captured before submission.
 Cycle 25: per-chapter field palettes (--autoplay-palettes) + camera kick on heavy cuts. Next: C26 sprite bake (armored plates, yari spear rig, distinct boss rig), C27 Android adaptive icon + blade-feel polish.
 Cycle 24: store assets drafted in godot/store (listing.md, icon, feature graphic, 8 screenshots; regenerate with tools/bake_store.py + Movie Maker). Roadmap items 1-6 all have a first pass. Next: per-chapter field palettes, owed sprite bake (plates, yari, boss rig), Android adaptive icon from icon-512, blade-feel polish. Large binaries: the push bridge is a data: URL, keep each page under ~1.5 MB (one screenshot set per page).
 Cycle 23: chapter map + three blade stances with save data (--autoplay-map). Chapters have names on the map but the field art does not change per chapter yet. Next: C24 store assets (icon, feature graphic, screenshots, listing copy), then per-chapter ground/grass palettes and the owed sprite bake.
