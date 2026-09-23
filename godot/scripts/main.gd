@@ -60,6 +60,13 @@ var banner: Label
 var spawned := 0
 var armor_test := false
 var spear_test := false
+## C22 boss: one per chapter (every 8 kills)
+const CHAPTER_KILLS := 8
+var boss: Fighter = null
+var boss_phase := 0
+var chapters := 0
+var boss_bar: Control
+var boss_test_hp := 0.0
 var strike_zdir := 0.0
 var strike_dz := 0.0
 
@@ -136,6 +143,12 @@ func _ready() -> void:
 			auto_steps = [[4.3, "down", true], [4.6, "down", false]]
 		else:
 			auto_steps = [[2.4, "attack"], [3.4, "attack"], [4.2, "down", true], [4.5, "down", false], [4.55, "attack"], [5.1, "attack"], [5.5, "attack"]]
+	if "--autoplay-boss" in OS.get_cmdline_user_args():
+		# QA: straight to the chapter boss (150 HP so both phases fit a capture), parry bot plays
+		autoplay = true; auto_parry = true; auto_steps = []
+		boss_test_hp = 150.0
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		kills = CHAPTER_KILLS; spawn_t = 0.3
 	if "--autoplay-die" in OS.get_cmdline_user_args():
 		# QA: player starts nearly spent and never acts, so the death banner and rise hint are captured
 		autoplay = true; auto_steps = []
@@ -254,7 +267,13 @@ func _physics_process(delta: float) -> void:
 	var living: int = enemies.filter(func(x): return x.alive()).size()
 	if slow_t > 0.0:
 		spawn_t = maxf(spawn_t, 1.6)   # let a finisher breathe before the next foe walks in
-	if living < mini(1 + kills / 2, 3):
+	if boss == null and kills >= CHAPTER_KILLS * (chapters + 1):
+		# chapter's end: the field clears, then the boss walks in alone
+		if living == 0:
+			spawn_t -= delta
+			if spawn_t <= 0.0:
+				_spawn_boss(player.global_position + Vector3(9.0, 0, -0.5))
+	elif boss == null and living < mini(1 + kills / 2, 3):
 		spawn_t -= delta
 		if spawn_t <= 0.0:
 			# enter from the screen sides, never straight up or down the depth line through the player
@@ -453,8 +472,12 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 		return
 	if riposte:
 		dmg *= float(e.get_meta("riposte_k", 2.0)); heavy = true
+	elif e == boss:
+		dmg *= 0.6
 	clean_hits += 1
 	e.hp = maxf(0.0, e.hp - dmg)
+	if e == boss and boss_phase == 1 and e.hp > 0.0 and e.hp <= e.max_hp * 0.5:
+		_boss_phase2(e)
 	if autoplay and (armor_test or spear_test):
 		print("QA flesh hit hp=%d" % e.hp)
 	e.posture = maxf(0.0, e.posture - dmg * 1.6)
@@ -484,11 +507,20 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 		var finisher := riposte or clean_hits >= FINISH_STREAK
 		get_tree().create_timer(0.14).timeout.connect(sfx.play.bind("patter", 0.08))
 		fx.kill_splash(e.global_position, dir if hv == "" else signf(e.vel.x), 1.5 if finisher else 1.0)
+		if e == boss:
+			finisher = true
+			chapters += 1
+			boss = null; boss_phase = 0
+			boss_bar.visible = false
+			_flash_banner("Chapter %d cleared.  Kageyama falls" % chapters, 3.0)
+			spawn_t = 3.5
 		if finisher:
 			_finisher(e, dir)
 		kills += 1
 	else:
 		var hv := _face_view(e, player)
+		if e == boss and not riposte:
+			return  # the boss doesn't flinch from plain cuts
 		e.state = "hit"; e.state_t = 0.0; e.play("hit" + hv, true)
 		e.vel = _knock(hv, dir, 4.0 if heavy else 2.2)
 
@@ -571,6 +603,10 @@ func _enemy(e: Fighter, delta: float) -> void:
 			e.vel = e.vel.lerp(Vector3.ZERO, 8.0 * delta)
 			if e.anim_done and e.state_t > 0.5:
 				e.state = "approach"; e.set_meta("cool", randf_range(0.8, 1.8))
+				if e == boss:
+					e.set_meta("cool", randf_range(0.35, 0.8) if boss_phase == 2 else randf_range(0.5, 1.1))
+					if boss_phase == 2:
+						e.set_meta("spear", randf() < 0.5)
 				if randf() < 0.5 and not e.get_meta("spear", false):
 					e.set_meta("lane", _pick_lane())
 		"stagger":
@@ -668,11 +704,48 @@ func _armor_hit(e: Fighter, dir: float, strong: bool) -> void:
 	elif e.state != "stagger":
 		e.vel = _knock(_face_view(e, player), dir, 1.2)
 
+## C22: the chapter boss - a big dark ronin with a long bar at the top of the screen. Phase 1:
+## naginata sweeps with short gaps and no flinch from plain cuts (riposte is the way in).
+## Phase 2 at half health: a burst of ink and slow motion, then it mixes spear thrusts (with the
+## frontal guard) into its sweeps and recovers faster.
+func _spawn_boss(pos: Vector3) -> void:
+	_spawn(pos)
+	var e: Fighter = enemies.back()
+	e.remove_meta("armor"); e.set_meta("spear", false)
+	e.set_meta("boss", true); e.set_meta("lane", 0)
+	e.max_hp = boss_test_hp if boss_test_hp > 0.0 else 300.0
+	e.hp = e.max_hp
+	e.tint = Color(0.42, 0.4, 0.42)
+	e.sprite.scale = Vector3(1.18, 1.18, 1.0)
+	e.set_meta("cool", 1.4)
+	boss = e; boss_phase = 1
+	boss_bar.visible = true
+	(boss_bar.get_node("N") as Label).text = "Kageyama, chapter %d" % (chapters + 1)
+	_flash_banner("Kageyama steps out of the grass", 2.2)
+	sfx.target = 1.0
+
+func _boss_phase2(e: Fighter) -> void:
+	boss_phase = 2
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), 1.0, 2.2, 0.2)
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), -1.0, 2.2, 0.2)
+	_slowmo(0.8, 0.3, 0.7)
+	shake = 0.3
+	sfx.play("finisher", 0.0)
+	e.set_meta("stag_len", 0.4)
+	_flash_banner("Kageyama draws a second breath", 2.0)
+
+func _flash_banner(text: String, secs: float) -> void:
+	banner.text = text
+	banner.visible = true
+	get_tree().create_timer(secs, true, false, true).timeout.connect(func():
+		if player.alive() and banner.text == text:
+			banner.visible = false)
+
 func _parry(e: Fighter, perfect := false) -> void:
 	var p := player
 	var mid := (e.global_position + p.global_position) * 0.5 + Vector3(0, 1.5, 0.3)
 	e.state = "stagger"; e.state_t = 0.0
-	e.set_meta("stag_len", 1.3 if perfect else 0.75)
+	e.set_meta("stag_len", (1.3 if perfect else 0.75) * (0.7 if e == boss and boss_phase == 2 else 1.0))
 	e.set_meta("riposte_k", 2.5 if perfect else 1.5)
 	e.play("hit" + _face_view(e, p), true)
 	e.posture = 0.0
@@ -720,6 +793,7 @@ func _restart() -> void:
 	player.hp = 100.0; player.state = "idle"; player.play("idle", true)
 	player.global_position = Vector3.ZERO
 	elapsed = 0.0; kills = 0; spawn_t = 1.0; spawned = 0
+	boss = null; boss_phase = 0; chapters = 0; boss_bar.visible = false
 	banner.visible = false
 
 func _nearest(pos: Vector3, r: float) -> Fighter:
@@ -879,6 +953,18 @@ func _hud() -> void:
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	banner.visible = false
 	hud.add_child(banner)
+	boss_bar = Control.new()
+	boss_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_bar.visible = false
+	var bn := Label.new(); bn.name = "N"
+	bn.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
+	bn.add_theme_font_size_override("font_size", 22)
+	bn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	bn.size = Vector2(360, 28); bn.position = Vector2(0, -56)
+	boss_bar.add_child(bn)
+	var bb := _bar_pair(360.0); bb.name = "B"
+	boss_bar.add_child(bb)
+	hud.add_child(boss_bar)
 
 func pb_scale() -> Vector2:
 	var vs := get_viewport().get_visible_rect().size
@@ -895,6 +981,10 @@ func _layout() -> void:
 	plaque.scale = Vector2(k, k)
 	plaque.position = Vector2(0, clampf(vs.y * 0.2, 50, 110))
 
+	if boss_bar:
+		var bk := minf(k, (vs.x - 20.0) / 360.0)
+		boss_bar.scale = Vector2(bk, bk)
+		boss_bar.position = Vector2(vs.x * 0.5 - 180.0 * bk, 40.0 * k + 44.0)
 	banner.size = Vector2(minf(400.0, vs.x / k - 20.0), 96)
 	banner.scale = Vector2(k, k)
 	banner.position = Vector2(vs.x * 0.5 - banner.size.x * k * 0.5, vs.y * (0.24 if vs.y > vs.x else 0.3))
@@ -928,6 +1018,10 @@ func _music_target() -> float:
 
 func _hud_update() -> void:
 	sfx.target = _music_target()
+	if boss and boss_bar.visible:
+		var bf: ColorRect = boss_bar.get_node("B/F")
+		bf.size.x = bf.get_meta("w") * boss.hp / boss.max_hp
+		(boss_bar.get_node("B/L") as Label).text = "%d/%d" % [int(ceil(boss.hp)), int(boss.max_hp)]
 	var m := int(elapsed / 60.0); var s := fmod(elapsed, 60.0)
 	time_label.text = "%02d:%05.2f" % [m, s]
 	php_fill.size.x = php_fill.get_meta("w") * player.hp / player.max_hp
@@ -936,7 +1030,7 @@ func _hud_update() -> void:
 		var e: Fighter = enemies[i]
 		var b: Control = ebars[i]
 		var wp: Vector3 = e.global_position + Vector3(0, 3.1, 0)
-		b.visible = e.alive() and not cam.is_position_behind(wp)
+		b.visible = e.alive() and e != boss and not cam.is_position_behind(wp)
 		if b.visible:
 			var sp := cam.unproject_position(wp)
 			b.scale = pb_scale()
