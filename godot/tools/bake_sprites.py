@@ -63,6 +63,10 @@ def player_anims():
     for v in ('_f', '_b'):
         for a in ('atk1', 'atk2', 'atk3'):
             A[a + v] = [dict(p) for p in A[a]]
+    # turned hit / death for blows that land along depth (F-19)
+    for v in ('_f', '_b'):
+        for a in ('hit', 'die'):
+            A[a + v] = [dict(p) for p in A[a]]
     return A
 
 R_IDLE = dict(lean=10, fa_sh=40, fa_el=40, pole=-20, ba_sh=20, ba_el=50, fl_hip=24, fl_knee=-18, bl_hip=-18, bl_knee=-12)
@@ -101,6 +105,10 @@ def ronin_anims():
     for v in ('_f', '_b'):
         for a in ('windup', 'swing', 'recover'):
             A[a + v] = [dict(p) for p in A[a]]
+    # turned hit / death (F-19)
+    for v in ('_f', '_b'):
+        for a in ('hit', 'die'):
+            A[a + v] = [dict(p) for p in A[a]]
     return A
 
 def bake(name, anims, dims, drawer, seed0, cols=8, only=None, per_row=1):
@@ -133,7 +141,7 @@ if __name__ == '__main__':
     if which == 'player':
         s, m = bake('player', player_anims(), F.PDIM, F.draw_player, 1000, only=only, per_row=2)
     else:
-        s, m = bake('ronin', ronin_anims(), F.RDIM, F.draw_ronin, 5000, only=only)
+        s, m = bake('ronin', ronin_anims(), F.RDIM, F.draw_ronin, 5000, only=only, per_row=2)
     # palette PNG: ink + red need few colours; keeps the repo and the Pages download small
     s.quantize(colors=128, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(f'{out}/{which}.png', optimize=True)
     json.dump(m, open(f'{out}/{which}.json', 'w'))
