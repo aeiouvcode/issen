@@ -29,6 +29,9 @@ var pst_fill: Control
 var ebars: Array = []
 var post_mat: ShaderMaterial
 var touch_ui: Control
+var chips: HBoxContainer
+var mute_btn: Button
+var credits: Control
 var joy_id := -1
 var joy_origin := Vector2.ZERO
 var joy_vec := Vector2.ZERO
@@ -82,6 +85,7 @@ func _ready() -> void:
 	player.setup(player_tex, "res://art/player.json")
 	_hud()
 	_touch_ui()
+	_menu_chips()
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_spawn(Vector3(5.5, 0, -2.0))
@@ -679,6 +683,12 @@ func _layout() -> void:
 
 	banner.position = Vector2(vs.x * 0.5 - 200, vs.y * 0.4)
 	banner.size = Vector2(400, 40)
+	if chips:
+		chips.size = chips.get_combined_minimum_size()
+		chips.scale = Vector2(k, k)
+		chips.position = Vector2(vs.x - chips.size.x * k - 10, 10)
+	if credits:
+		credits.size = vs
 	if touch_ui:
 		touch_ui.size = vs
 		var a: Control = touch_ui.get_node("Atk"); var d: Control = touch_ui.get_node("Dodge")
@@ -743,9 +753,13 @@ func _input(ev: InputEvent) -> void:
 			atk_buf = 0.3
 		elif ev.is_action_pressed("dodge", false):
 			dodge_buf = 0.3
+		if ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_M:
+			_toggle_mute()
 	if ev is InputEventScreenTouch:
 		touch_ui.visible = true
 		var vs := get_viewport().get_visible_rect().size
+		if ev.pressed and chips and chips.visible and chips.get_global_rect().has_point(ev.position):
+			return
 		if ev.pressed:
 			if ev.position.x < vs.x * 0.45 and joy_id == -1:
 				joy_id = ev.index; joy_origin = ev.position
@@ -778,3 +792,89 @@ func _autoplay(delta: float) -> void:
 			Input.action_press(st[1])
 		else:
 			Input.action_release(st[1])
+
+## F-27 + mute: two small ink chips top-right. "sound" mutes the master bus (also the M key),
+## "credits" opens the licenses the export has to carry (engine, font, Android libraries).
+func _menu_chips() -> void:
+	chips = HBoxContainer.new()
+	chips.add_theme_constant_override("separation", 8)
+	chips.process_mode = Node.PROCESS_MODE_ALWAYS
+	var top := CanvasLayer.new(); top.layer = 3; top.name = "Top"
+	add_child(top)
+	top.add_child(chips)
+	mute_btn = _chip("sound: on")
+	mute_btn.pressed.connect(_toggle_mute)
+	chips.add_child(mute_btn)
+	var cb := _chip("credits")
+	cb.pressed.connect(_show_credits.bind(true))
+	chips.add_child(cb)
+	chips.size = chips.get_combined_minimum_size()
+
+func _chip(text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, 30)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.93, 0.88, 0.78, 0.82)
+	sb.border_color = Color(0.12, 0.1, 0.08, 0.85)
+	sb.set_border_width_all(2); sb.set_corner_radius_all(4)
+	sb.content_margin_left = 10; sb.content_margin_right = 10
+	for st in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(st, sb)
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(c, Color(0.12, 0.1, 0.08))
+	b.add_theme_font_size_override("font_size", 16)
+	return b
+
+func _toggle_mute() -> void:
+	var m := not AudioServer.is_bus_mute(0)
+	AudioServer.set_bus_mute(0, m)
+	mute_btn.text = "sound: off" if m else "sound: on"
+
+func _show_credits(on: bool) -> void:
+	if credits == null:
+		credits = Control.new()
+		credits.process_mode = Node.PROCESS_MODE_ALWAYS
+		var bg := ColorRect.new(); bg.color = Color(0.93, 0.89, 0.8, 0.97)
+		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		credits.add_child(bg)
+		var box := VBoxContainer.new()
+		box.set_anchors_preset(Control.PRESET_FULL_RECT)
+		box.offset_left = 16; box.offset_right = -16; box.offset_top = 16; box.offset_bottom = -16
+		credits.add_child(box)
+		var close := _chip("close")
+		close.size_flags_horizontal = Control.SIZE_SHRINK_END
+		close.pressed.connect(_show_credits.bind(false))
+		box.add_child(close)
+		var txt := RichTextLabel.new()
+		txt.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		txt.scroll_active = true
+		txt.selection_enabled = false
+		txt.add_theme_font_override("normal_font", ThemeDB.fallback_font)
+		txt.add_theme_font_size_override("normal_font_size", 13)
+		txt.add_theme_color_override("default_color", Color(0.12, 0.1, 0.08))
+		txt.text = _credits_text()
+		box.add_child(txt)
+		get_node("Top").add_child(credits)
+		credits.size = get_viewport().get_visible_rect().size
+	credits.visible = on
+	chips.visible = not on
+	get_tree().paused = on
+
+func _credits_text() -> String:
+	var t := "ISSEN - Godot take. Sound is synthesized in code; art is original.\n\n"
+	t += "== Godot Engine ==\n" + Engine.get_license_text() + "\n"
+	for part in Engine.get_copyright_info():
+		t += "- " + str(part["name"]) + "\n"
+	t += "\n== Caveat Brush font (SIL Open Font License 1.1) ==\n"
+	var f := FileAccess.open("res://licenses/CaveatBrush-OFL.txt", FileAccess.READ)
+	if f:
+		t += f.get_as_text()
+	t += "\n== Third-party components bundled by the engine ==\n"
+	var lic := Engine.get_license_info()
+	for k in lic:
+		t += "\n-- " + str(k) + " --\n" + str(lic[k]) + "\n"
+	if OS.get_name() == "Android":
+		t += "\n== Android ==\nAndroidX core, startup and profileinstaller (Apache License 2.0), LLVM libc++ (Apache License 2.0 with LLVM exceptions). Full text: https://www.apache.org/licenses/LICENSE-2.0\n"
+	return t
