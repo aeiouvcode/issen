@@ -1,27 +1,23 @@
-# CURRENT_TASK — ISSEN rebuild (M79 shipped)
+# CURRENT_TASK — ISSEN rebuild (M80 shipped)
 
-## Milestone: M79 — finishers (blade feel leads)
-Shipped Sep 23, 2026 ~10:04 PM IST. Live md5 5d76e68152696d57749dfd1cffcd74f3. Instinct File gen 40.
+## Milestone: M80 — blade-feel trio closed (graded parry + universal ink trails)
+Shipped Sep 24, 2026 ~12:32 AM IST. Live md5 44ced7d52727e232a484e94ad7f537fc. Instinct File gen 41.
 
 ### Built
-- Reeling-kill finisher: killing a guard-broken (reeling) minion/lancer escalates - slow beat (.55), camera push-in (G.camPush, low and close), wide finishing stroke, ink splat trail along the cut (3 groundSplats) + deep pool (1.5x), 断 kanji (severed clean)
-- 5-clean-cut streak beat: consecutive landed cuts (G.cleanStreak) - the 5th triggers slowmo .5 + camera push + soft tink; taking a hit resets the streak
-- cleanCutLanded() shared helper; camera push hook in updateCamera (dist -16%, height dip while camPush>0)
-- Boss kill keeps its own endgame cinematic (斬) - reel-finisher applies to minion/lancer
-- Parry window kept at .22s (verified; tuning from feel noted honestly)
+- Graded parry: perfect read (eta <=.12s) = full clash (crossed strokes, ink spray, 捌 kanji, hitstop .14 + slowmo .3, counterT .8 steadied riposte); late catch (.12-.22s) = deflect + reel with smaller FX (single stroke, hitstop .09, NO slowmo)
+- Ink-splash kills for ALL kills: normal minion/lancer kills now leave a 2-splat ink trail along the cut + the standing pool; finisher keeps the deep 3-trail + 1.5x pool version
+- doCutParry(f, eta) signature; strikeEta unchanged
 
-### Verified on live (numeric, QA.step, decay-neutralized)
-- Reeling kill: parried -> dead, camPush .58 fired, 5 new decals (trail+pool)
-- 5th clean cut: streak 4 -> 0, camPush fired, hit landed
-- Hit taken: streak 3 -> 0 reset
-- File preview exercised: full parry -> reeling kill -> camPush sequence fires in File build
-- Frames: desktop finisher (断 over wide stroke), 390px clash with camera push
+### Verified on live (numeric, QA.step, one-call staging + calm)
+- early (eta .5): no parry / perfect (eta .10): reel + slowmo .3 + counterT .8 + 2 arcs / late (eta .18): reel + slowmo 0 + 1 arc / feint: no parry
+- normal kill: dead + 3 new decals (pool + 2 trail)
+- File preview exercised: perfect and late grades both reproduce in the File build
 
 ### Security (delta scan): PASS
 No secrets, zero outbound calls in file, CDN pinned three@0.160.0 (importmap), no new HTML sinks.
 
-## Next (M80 candidates)
-- Ink-splash kill effects for non-reeling kills (currently only finishers get trail+pool)
-- Parry window/clash FX tuning from feel
-- Improvement cycle: robe mid-tone pooling, arc wash center alpha, balance pass, sound tuning
-- User bar (9:35 PM): beat the reference, and accelerate
+## Roadmap (user 10:19 PM: all features in parallel, blade feel leads)
+1. Blade feel: CLOSED trio M78-M80 (parry, finishers, grading). Tuning from feel remains.
+2. NEXT M81: enemy variety - armored foe needing two cuts + spear variant forcing different slash angles
+3. M82: sound pass - SFX tune + sparse shamisen/taiko-style reactive loop
+4. M83+: progression (chapter map + unlockable stances), then store-ready assets
