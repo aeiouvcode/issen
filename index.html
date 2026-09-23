@@ -8,6 +8,7 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23ece1c2'/%3E%3Ctext x='32' y='42' font-size='30' text-anchor='middle' fill='%231a150e' font-family='serif'%3E%E4%B8%80%E9%96%83%3C/text%3E%3Ccircle cx='50' cy='50' r='6' fill='%23a92e22'/%3E%3C/svg%3E">
 <title>ISSEN - 一閃</title>
 <style>
   :root{
@@ -1908,8 +1909,8 @@ function tryHitBoss(a){
   inkBurst(hitPos, 40, 6.5, 2, .7); inkBurst(hitPos, 10, 4, 0, .5);
     if(Math.random()<.5) groundSplat(boss.pos.x+(Math.random()-.5), boss.pos.z+(Math.random()-.5), .9, 9, true);
   groundSplat(boss.pos.x+(Math.random()-.5), boss.pos.z+(Math.random()-.5), 1.2);
-  G.hitstop = .075;
-  G.camShake = .12;
+  G.hitstop = .1;
+  G.camShake = .2; G.camNudge = .22;
   sfx.hit();
   if(boss.hp<=0 && boss.alive){
     boss.alive=false; boss.state='dead'; boss.stateT=0;
@@ -1983,7 +1984,7 @@ function tryHitMinion(a){
   const hitPos = minion.pos.clone(); hitPos.y = 1.4;
   inkBurst(hitPos, 30, 5.5, 2, .6); inkBurst(hitPos, 8, 4, 0, .5);
   if(Math.random()<.5) groundSplat(minion.pos.x+(Math.random()-.5), minion.pos.z+(Math.random()-.5), .8, 8, true);
-  G.hitstop = Math.max(G.hitstop, .06); G.camShake = Math.max(G.camShake||0, .1);
+  G.hitstop = Math.max(G.hitstop, .09); G.camShake = Math.max(G.camShake||0, .18); G.camNudge = Math.max(G.camNudge||0, .22);
   sfx.hit();
   if(minion.hp<=0 && minion.alive){
     const wasReeling = minion.state==='reel';
@@ -2050,7 +2051,7 @@ function tryHitLancer(a){
     if(Math.random()<.5) groundSplat(lancer.pos.x+(Math.random()-.5), lancer.pos.z+(Math.random()-.5), .8, 8, true);
     sfx.hit();
   }
-  G.hitstop = Math.max(G.hitstop, .06); G.camShake = Math.max(G.camShake||0, .1);
+  G.hitstop = Math.max(G.hitstop, .09); G.camShake = Math.max(G.camShake||0, .18); G.camNudge = Math.max(G.camNudge||0, .22);
   if(lancer.hp<=0 && lancer.alive){
     const wasReeling = lancer.state==='reel';
     lancer.alive=false; lancer.state='dead'; lancer.stateT=0;
@@ -3446,7 +3447,7 @@ el('endscreen').addEventListener('click', startOrRetry);
 function resetFight(){
   player.pos.set(0,0,3.5); player.yaw=Math.PI; player.hp=100; player.stam=100; player.pips=4;
   player.state='idle'; player.stateT=0; player.vel.set(0,0,0); player.iframe=0; player._lastAtkEnd=0; player.queuedAtk=false;
-  player.atkLog=[]; G.cleanStreak=0; G.camPush=0; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; player.counterT=0; boss._parryCD=0; boss._counterHit=false; boss._bowed=false; boss._engaged=false; boss.phase=1; boss._wspeed=1; boss._iaiChain=false; boss.J.eyes.visible=false;
+  player.atkLog=[]; G.cleanStreak=0; G.camPush=0; G.camNudge=0; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; player.counterT=0; boss._parryCD=0; boss._counterHit=false; boss._bowed=false; boss._engaged=false; boss.phase=1; boss._wspeed=1; boss._iaiChain=false; boss.J.eyes.visible=false;
   boss.pos.set(0,0,-7); boss.maxhp = G.chapter===1?140:185; boss.hp=boss.maxhp; boss.posture=130; boss.alive=true;
   boss._wspeed = G.chapter===2?1.15:1; boss._phaseLock = G.chapter===1; // the chapters flavor him: shorter first, faster second
   minion.pos.set(3.4,0,-8.6); minion.hp=70; minion.posture=50; minion.alive=true; minion._hit=false;
@@ -3564,6 +3565,7 @@ function updateCamera(dt){
   }
   let dist = (document.body.classList.contains('coarse')?10.6:9.0), h = 1.2 + Math.sin(G.camPitch)*8.0;
   if(G.camPush>0){ G.camPush-=dt; const pk=Math.min(1,G.camPush*2.2); dist*=(1-.16*pk); h-=1.2*pk; } // finisher: the camera leans in low
+  if(G.camNudge>0){ G.camNudge-=dt*3.2; const nk=Math.min(1,Math.max(0,G.camNudge*4.5)); dist*=(1-.055*nk); } // connect: the camera settles into the cut
   const cx = player.pos.x - Math.sin(G.camYaw)*dist*Math.cos(G.camPitch);
   const cz = player.pos.z - Math.cos(G.camYaw)*dist*Math.cos(G.camPitch);
   let shakeX=0, shakeY=0;
