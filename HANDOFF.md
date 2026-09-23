@@ -2,7 +2,7 @@
 
 ## Resume here
 
-Next cycle (M69): fresh audit first, then G-04 as the top priority - push figures toward the reference's graphic contrast (pale paper robes, bold black accent shapes at hem/cuffs/collar, fewer mid-tone gradients; tune uBias/uBand thresholds harder and consider reshaping robe ink color stops). Then: arc edges still smoother than reference (G-03 residual), camera height/framing vs reference's slightly higher follow cam, enemy variety vs single boss. M68 shipped wet-ink tonal pools + dry-brush streaks on hair/dark/wrap/robe and ragged arc edges (live md5 aa1363f87d0fd9053a7ff663ffeb7e00, File gen 29). Re-run the 390px + desktop side-by-side (re-extract reference frames if /tmp/refframes is gone: cdn.syndication.twimg.com tweet-result?id=2100371695727198244 + ffmpeg).
+Next cycle (M70): fresh audit first (390px-forced + desktop vs reference frames). M69 shipped graphic-contrast figures, higher camera, torn arc edges, warmer ground (live md5 c1215e8125ddf7cb284daa3f0b5f439f, File gen 30). Candidates in priority order: G-06 enemy variety (reference fields multiple foes with own health bars - structural, design first); boss readability when the kasa occludes the body from the raised camera at close range; F-07 kasa close-range dominance (related); vignette strength vs reference's darker mottled edges after ground warm-down. Re-extract reference frames if /tmp/refframes is gone (cdn.syndication.twimg.com tweet-result?id=2100371695727198244 + ffmpeg).
 
 ## Blocked
 
@@ -32,3 +32,4 @@ Next cycle (M69): fresh audit first, then G-04 as the top priority - push figure
 - Instinct File preview wraps the game in an iframe: execute-js needs list-frames + --frame-id to reach the canvas; top-level querySelector('canvas') returns null.
 - screenshot --save --json returns the PNG path under .path (jq -r '.path'); save=false returns an inline JPEG for reasoning only.
 - inkMat positional args are getting long (11 params) - if more shader knobs are needed, switch to an options object before it gets error-prone.
+- files.instinct.com viewer page CSP blocks cross-origin fetch: the GitHub PAT bridge must run from an aeiouvcode.github.io tab, not from the File preview tab.
