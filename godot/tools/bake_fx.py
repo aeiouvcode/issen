@@ -124,6 +124,21 @@ def icon_ring():
     c.stroke(pts, w=5, dry=0.4, taper=(0.05, 0.3))
     c.render().save(f'{OUT}/ring.png', optimize=True)
 
+def skill_icons():
+    """Inked glyphs for the skill rings / touch buttons: cut, evade, burst."""
+    c = Canvas(96, 2, seed=900)                       # cut: one diagonal stroke with a dry tail
+    c.stroke([(22, 74), (46, 50), (76, 20)], w=7, dry=0.5, taper=(0.1, 0.8))
+    c.dab(24, 72, 4.5, ink=0.95)
+    c.render().save(f'{OUT}/icon_cut.png', optimize=True)
+    c = Canvas(96, 2, seed=901)                       # evade: a comma swirl
+    pts = [(48 + (30 - t * 3.2) * math.cos(t * 1.1 - 1.0), 48 + (30 - t * 3.2) * math.sin(t * 1.1 - 1.0)) for t in np.linspace(0, 6.2, 28)]
+    c.stroke(pts, w=6, dry=0.55, taper=(0.05, 0.9))
+    c.render().save(f'{OUT}/icon_evade.png', optimize=True)
+    c = Canvas(96, 2, seed=902)                       # burst: blot with splatter
+    c.dab(48, 48, 19, ink=0.95, rag=0.45)
+    c.splatter(48, 48, 22, 18, 5)
+    c.render().save(f'{OUT}/icon_burst.png', optimize=True)
+
 def barstroke():
     c = Canvas(512, 2, seed=700)
     c.stroke([(10, 256), (180, 253), (340, 257), (502, 255)], w=16, dry=0.35, taper=(0.03, 0.08))
@@ -132,5 +147,5 @@ def barstroke():
 if __name__ == '__main__':
     import os; os.makedirs(OUT, exist_ok=True)
     slash(f'{OUT}/slash0.png', 1); slash(f'{OUT}/slash1.png', 2)
-    blots(); drips(); grass(); footprint(); plaque(); icon_ring(); barstroke()
+    blots(); drips(); grass(); footprint(); plaque(); icon_ring(); skill_icons(); barstroke()
     print('fx ok')

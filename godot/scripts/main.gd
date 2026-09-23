@@ -464,7 +464,7 @@ func _bar_pair(w: float) -> Control:
 	lab.add_theme_color_override("font_color", Color(0.93, 0.9, 0.84))
 	lab.add_theme_color_override("font_outline_color", Color(0.12, 0.1, 0.08))
 	lab.add_theme_constant_override("outline_size", 4)
-	lab.add_theme_font_size_override("font_size", 11)
+	lab.add_theme_font_size_override("font_size", 14)
 	lab.position = Vector2(w * 0.5 - 20, -16)
 	root.add_child(lab)
 	var bg := TextureRect.new()
@@ -508,12 +508,12 @@ func _hud() -> void:
 	t1.position = Vector2(12, 4)
 	for l in [t1]:
 		l.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
-		l.add_theme_font_size_override("font_size", 13)
+		l.add_theme_font_size_override("font_size", 17)
 	plaque.add_child(t1)
 	time_label = Label.new()
-	time_label.position = Vector2(10, 21)
+	time_label.position = Vector2(10, 19)
 	time_label.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
-	time_label.add_theme_font_size_override("font_size", 18)
+	time_label.add_theme_font_size_override("font_size", 23)
 	plaque.add_child(time_label)
 	var pb := Control.new(); pb.name = "PlayerBars"
 	pb.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -526,10 +526,11 @@ func _hud() -> void:
 		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		r.name = "R%d" % i
 		pb.add_child(r)
-		var glyph := Label.new(); glyph.text = ""
-		glyph.add_theme_color_override("font_color", Color(0.15, 0.12, 0.1))
-		glyph.add_theme_font_size_override("font_size", 11)
-		glyph.position = Vector2(6, 3)
+		var glyph := TextureRect.new()
+		glyph.texture = load("res://art/icon_%s.png" % ["cut", "evade", "burst"][i])
+		glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		glyph.size = Vector2(16, 16); glyph.position = Vector2(4, 4)
+		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		r.add_child(glyph)
 	var bars := _bar_pair(150.0)
 	bars.position = Vector2(0, 34)
@@ -537,7 +538,7 @@ func _hud() -> void:
 	php_fill = bars.get_node("F"); php_label = bars.get_node("L")
 	banner = Label.new()
 	banner.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
-	banner.add_theme_font_size_override("font_size", 26)
+	banner.add_theme_font_size_override("font_size", 34)
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner.set_anchors_preset(Control.PRESET_CENTER)
 	banner.visible = false
@@ -584,11 +585,12 @@ func _ring(sz: float, glyph: String) -> TextureRect:
 	r.modulate = Color(1, 1, 1, 0.8)
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if glyph != "":
-		var l := Label.new(); l.text = glyph
-		l.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08, 0.85))
-		l.add_theme_font_size_override("font_size", int(sz * 0.36))
-		l.position = Vector2(sz * 0.3, sz * 0.24)
-		r.add_child(l)
+		var g := TextureRect.new()
+		g.texture = load("res://art/icon_%s.png" % glyph)
+		g.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		g.size = Vector2(sz * 0.6, sz * 0.6); g.position = Vector2(sz * 0.2, sz * 0.2)
+		g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		r.add_child(g)
 	return r
 
 func _touch_ui() -> void:
@@ -596,8 +598,8 @@ func _touch_ui() -> void:
 	touch_ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	touch_ui.visible = DisplayServer.is_touchscreen_available()
 	hud.add_child(touch_ui)
-	var a := _ring(84, ""); a.name = "Atk"; touch_ui.add_child(a)
-	var d := _ring(60, ""); d.name = "Dodge"; touch_ui.add_child(d)
+	var a := _ring(84, "cut"); a.name = "Atk"; touch_ui.add_child(a)
+	var d := _ring(60, "evade"); d.name = "Dodge"; touch_ui.add_child(d)
 	joy_base = _ring(120, ""); joy_base.modulate.a = 0.35; touch_ui.add_child(joy_base)
 	joy_knob = TextureRect.new()
 	joy_knob.texture = load("res://art/blot0.png")
