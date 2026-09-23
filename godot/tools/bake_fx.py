@@ -22,17 +22,20 @@ def slash(path, seed, W=1024, H=512):
     band = np.clip((r - r0) / (r1 - r0), 0, 1)
     inb = (r > r0) & (r < r1) & (t > 0) & (t < 1)
     # fibers: vary across radius, smooth along arc
-    prof = np.repeat(r_.random(96), 1).astype(np.float32)
-    prof = np.convolve(prof, np.ones(2) / 2, 'same')
-    idx = np.clip((band * 95).astype(int), 0, 95)
-    fib = prof[idx] * 0.7 + 0.3 * _fbm(H, W, r_, 3, 10)
+    # broad bristle bands (few, smooth) rather than many thin rings: reads as one wide
+    # dry-brush sweep with a grey body, like the reference curtain
+    knots = r_.random(22).astype(np.float32)
+    prof = np.interp(band, np.linspace(0, 1, 22), knots).astype(np.float32)
+    fine = np.interp(band, np.linspace(0, 1, 70), r_.random(70)).astype(np.float32)
+    fib = prof * 0.55 + fine * 0.15 + 0.3 * _fbm(H, W, r_, 3, 10)
     # break fibers along the arc too
     along = _fbm(H, W, r_, 3, 5)
     fib = fib * (0.65 + 0.7 * along)
     # trailing dry-out: fibers drop out progressively toward the tail
     dry = np.clip((t - 0.02) / 0.55, 0, 1)
     thresh = 0.85 - dry * 0.75
-    dens = np.clip((fib - thresh) * 2.2, 0, 1) * 0.62 + 0.12 * (1 - dry) * inb
+    tail = np.clip(t / 0.3, 0, 1) ** 1.5
+    dens = np.clip((fib - thresh) * 1.8, 0, 1) * 0.6 + 0.2 * (1 - dry) * inb * tail * (0.6 + 0.4 * along)
     # outer edge dark wet rim, inner edge soft
     rim = np.exp(-((band - 0.93) / 0.05) ** 2) * 0.9 * np.clip(t * 1.6, 0, 1)
     inner = np.clip(band / 0.25, 0, 1)
