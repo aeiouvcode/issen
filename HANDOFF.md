@@ -2,7 +2,7 @@
 
 ## Resume here
 
-Next cycle (M72): fresh audit first (390px-forced + desktop vs /tmp/refframes). M71 shipped dense washi ground, true-black shade, ink shade arcs (live md5 7fd316f6b8640c7efb78d9b5b5d21590, File gen 32). Candidates in priority order: G-06 stage 2 - true enemy variety (ref-4.5 shield-spear bearer: round shield w/ spikes + long upright spear silhouette, thrust attack w/ longer reach, maybe a block state; design first, NOT a boss clone); shade balance pass (hp70/dmg8/think3.2 untuned); F-07 kasa close-range dominance; G-01 residual mid-tone on BOSS darks (shade solved in M71; boss robe stays pale by design per ref-2.5). The shade's slash arc itself was NOT frame-captured (rAF throttle defeats timed captures - verify arcs via scene state, not wall-clock sleeps). Re-extract reference frames if /tmp/refframes is gone.
+Next cycle (M73): fresh audit first (390px-forced + desktop vs /tmp/refframes; re-extract via api.fxtwitter.com/sensonoken/status/2100371695727198244 variants - the old syndication endpoint went dead; ffmpeg frames). M72 shipped the lancer wave + kasa ink tone (live md5 25dd6a420b64b64f80a13a34a9823e83, File gen 33). Candidates in priority order: G-10 vanish/spawn ink-triangle shards (ref-6.5/ref-8.5 show small triangle glyphs orbiting clouds and figures - signature detail, cheap); lancer idle spear pose reads horizontal from some angles (ref holds it upright); balance pass on shade+lancer numbers; F-07 residual kasa size/tilt; boss dark accents one step deeper (G-01 residual). Note: only ONE wave-2 bar shows at a time by design (shade then lancer); reference stacks two - deliberate divergence, crown-tracking wins on phone.
 
 ## Blocked
 
@@ -20,6 +20,7 @@ Next cycle (M72): fresh audit first (390px-forced + desktop vs /tmp/refframes). 
 | Parking the boss for minion QA by setting pos far + state='idle' | Boss AI re-engages on its next think tick and walks back; only G.over or dead actually holds it | 2026-09-23 |
 | Continuing a minion kill loop after the player died in QA | updateMinion early-returns when G.over; mhp freezes mid-fight. Retry (resetFight) restores the shade to hp70 | 2026-09-23 |
 | Wall-clock sleep + screenshot to catch a .18s slash arc in a cloud tab | rAF throttling makes page stateT lag wall time badly (stateT froze at .52 over a 350ms sleep); per browser-automation notes, verify via scene state or freeze with hitstop timed off stateT, not sleeps | 2026-09-23 |
+| Shield guard angle test as |wrap(toL - yaw)| < 1.0 | Backwards: toL (player->foe) and the foe's facing (foe->player) are opposite directions, so a face-to-face duel reads ~PI, not ~0. Guard is facing > PI-1.0. Verified live: frontal halved, flank full | 2026-09-23 |
 
 ## Discoveries
 
