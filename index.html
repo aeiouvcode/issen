@@ -1925,6 +1925,7 @@ function tryHitMinion(a){
     if(!lancer.alive && !isFinite(lancer._spawnT)) lancer._spawnT=4.0; // wave two takes the field
     inkBurst(minion.pos.clone().setY(1.3), 50, 7, 2, .9); inkBurst(minion.pos.clone().setY(1.3), 16, 5, 0, .7);
     groundSplat(minion.pos.x, minion.pos.z, 2.6, 18);
+    for(let i=1;i<=2;i++){ const tt=i/3; groundSplat(player.pos.x+(minion.pos.x-player.pos.x)*tt+(Math.random()-.5)*.5, player.pos.z+(minion.pos.z-player.pos.z)*tt+(Math.random()-.5)*.5, .7, 6, true); } // the cut's ink trail
     inkCloud(minion.pos, 16);
     G.slowmo = Math.max(G.slowmo, .35); G.camShake = Math.max(G.camShake||0, .4);
     kanjiFlash('\u5f71', .7); // 影 - the shade is cut down
@@ -1989,6 +1990,7 @@ function tryHitLancer(a){
     lancer.alive=false; lancer.state='dead'; lancer.stateT=0;
     inkBurst(lancer.pos.clone().setY(1.3), 50, 7, 2, .9); inkBurst(lancer.pos.clone().setY(1.3), 16, 5, 0, .7);
     groundSplat(lancer.pos.x, lancer.pos.z, 2.6, 18);
+    for(let i=1;i<=2;i++){ const tt=i/3; groundSplat(player.pos.x+(lancer.pos.x-player.pos.x)*tt+(Math.random()-.5)*.5, player.pos.z+(lancer.pos.z-player.pos.z)*tt+(Math.random()-.5)*.5, .7, 6, true); } // the cut's ink trail
     inkCloud(lancer.pos, 16);
     G.slowmo = Math.max(G.slowmo, .35); G.camShake = Math.max(G.camShake||0, .4);
     kanjiFlash('\u76fe', .7); // 盾 - the shield-bearer falls
@@ -2197,7 +2199,7 @@ function doAttack(){
       const e=strikeEta(f);
       if(e>0 && e<=pe && dist2D(p.pos, f.pos)<4.2){ pf=f; pe=e; }
     }
-    if(pf) doCutParry(pf);
+    if(pf) doCutParry(pf, pe);
   }
   // chain: pick next in combo based on timing
   p.atkIdx = (p._lastAtkEnd && performance.now()-p._lastAtkEnd<900) ? (p.atkIdx+1)%3 : 0;
@@ -2235,16 +2237,24 @@ function strikeEta(f){
   if(s==='thrust') return .12-t;
   return Infinity;
 }
-function doCutParry(f){
+function doCutParry(f, eta){
   // the strike dies on the blade: cancel its pending hit and break the guard
   f._hit=true; f._spinHit=true; f._twinHit=true; f._burstHit=true; f._iaiHit=true; f._counterHit=true;
   if(f===boss) bossSetState('reel'); else { f.state='reel'; f.stateT=0; }
+  const perfect = eta<=.12; // read to the last breath vs caught on the edge
   const dp=player.pos.clone(); dp.y=1.4;
-  inkBurst(dp, 26, 5.5, 0, .55);                                  // clash spray
-  slashArc(dp, player.yaw+Math.PI/2+.55, 2.4, 1.5, .3, true, 0, .3); // crossed strokes
-  slashArc(dp, player.yaw+Math.PI/2-.55, 2.4, 1.5, .3, true, 0, .3);
-  kanjiFlash('\u6368', .42); // 捌 - the parry: the cut turned aside
-  G.hitstop = Math.max(G.hitstop, .14); G.slowmo = Math.max(G.slowmo, .3);
+  if(perfect){
+    inkBurst(dp, 26, 5.5, 0, .55);                                  // clash spray
+    slashArc(dp, player.yaw+Math.PI/2+.55, 2.4, 1.5, .3, true, 0, .3); // crossed strokes
+    slashArc(dp, player.yaw+Math.PI/2-.55, 2.4, 1.5, .3, true, 0, .3);
+    kanjiFlash('\u6368', .42); // 捌 - the parry: the cut turned aside
+    G.hitstop = Math.max(G.hitstop, .14); G.slowmo = Math.max(G.slowmo, .3);
+    player.counterT = Math.max(player.counterT||0, .8); // a perfect read steadies the riposte
+  } else {
+    inkBurst(dp, 14, 4.5, 0, .4);                                   // edge catch: smaller spray
+    slashArc(dp, player.yaw+Math.PI/2, 2.2, 1.2, .25, true, 0, .2);
+    G.hitstop = Math.max(G.hitstop, .09);                           // no slowmo on a late read
+  }
   sfx.parry();
 }
 function doDodge(){
