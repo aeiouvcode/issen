@@ -23,6 +23,7 @@ var posture := 100.0
 var state := "idle"
 var state_t := 0.0
 var flash := 0.0
+var tint := Color(1, 1, 1)  # C19: armored foes wear a darker lacquer tint until the armor breaks
 var anim_done := false
 
 ## Sheets are split into <=2048 px pages (F-21); textures are shared across fighters by the caller.
@@ -85,7 +86,7 @@ func tick_anim(delta: float) -> void:
 	_apply()
 	if flash > 0.0:
 		flash = maxf(0.0, flash - delta * 4.0)
-	sprite.modulate = Color(1.0, 1.0 - flash * 0.55, 1.0 - flash * 0.6, 1.0)
+	sprite.modulate = Color(1.0, 1.0 - flash * 0.55, 1.0 - flash * 0.6, 1.0) * tint
 
 func alive() -> bool:
 	return hp > 0.0

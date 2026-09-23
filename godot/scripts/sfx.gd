@@ -22,6 +22,8 @@ func _ready() -> void:
 	sounds["parry_perfect"] = _wav(_ring(0.7), -12.5)
 	sounds["finisher"] = _wav(_finish(), -8.0)
 	sounds["patter"] = _wav(_patter(), -19.0)
+	sounds["armor"] = _wav(_clack(0.16, 420.0), -14.0)
+	sounds["armor_break"] = _wav(_clack(0.34, 300.0), -11.0)
 	sounds["dodge"] = _wav(_sweep(0.26, 1400.0, 500.0, 0.0), -16.0)
 	var wind := AudioStreamPlayer.new()
 	wind.stream = _wav(_wind(6.0), -24.0, true)
@@ -45,6 +47,20 @@ func play(name: String, pitch_jitter := 0.06) -> void:
 	a.play()
 
 # --- synthesis -------------------------------------------------------------
+
+## C19: blade on lacquered armor - a dull wooden clack (body resonance + short damped noise),
+## no metallic ring and nothing above the 3.2 kHz roll-off.
+func _clack(dur: float, f0: float) -> PackedFloat32Array:
+	var n := int(dur * RATE)
+	var out := PackedFloat32Array(); out.resize(n)
+	var y := 0.0
+	var k := 1.0 - exp(-TAU * 1800.0 / RATE)
+	for i in n:
+		var t := float(i) / RATE
+		y += k * (rng.randf_range(-1.0, 1.0) - y)
+		var body := sin(TAU * f0 * t) * 0.8 + sin(TAU * f0 * 1.52 * t) * 0.35
+		out[i] = (body * exp(-t * 22.0) + y * exp(-t * 60.0) * 1.4) * 0.9
+	return out
 
 ## C17: wet ink landing - a loose run of soft, dull ticks (1.2 kHz low-pass, no clicks) that
 ## thin out, matching the flung kill trail hitting the ground.

@@ -57,6 +57,8 @@ var autoplay := false
 var auto_t := 0.0
 var auto_steps := [[0.3, "right", true], [0.9, "right", false], [1.0, "attack"], [1.25, "attack"], [1.5, "attack"], [2.6, "dodge"], [3.3, "attack"], [3.55, "attack"], [3.8, "attack"], [5.0, "attack"], [5.25, "attack"], [5.5, "attack"]]
 var banner: Label
+var spawned := 0
+var armor_test := false
 
 func _ready() -> void:
 	autoplay = "--autoplay" in OS.get_cmdline_user_args() or "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args()
@@ -107,6 +109,17 @@ func _ready() -> void:
 		enemies[0].set_meta("lane", -1)
 		enemies[0].hp = 52.0  # dies inside the second combo, so the turned death row is captured
 
+	if "--autoplay-armor" in OS.get_cmdline_user_args():
+		# QA: every spawn is armored; the parry bot plays so plate breaks, the break stagger and kills are captured
+		armor_test = true; spawned = 2; auto_parry = true; autoplay = true; auto_steps = []
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		_spawn(Vector3(5.5, 0, -2.0))
+		if "--cuts" in OS.get_cmdline_user_args():
+			# single spaced cuts, no parries: two plain cuts must break the armor before flesh
+			auto_parry = false
+			enemies[0].set_meta("cool", 99.0)  # foe holds back so only plain cuts land
+			for i in 10:
+				auto_steps.append([2.2 + i * 0.7, "attack"])
 	if "--autoplay-die" in OS.get_cmdline_user_args():
 		# QA: player starts nearly spent and never acts, so the death banner and rise hint are captured
 		autoplay = true; auto_steps = []
@@ -187,6 +200,13 @@ func _spawn(pos: Vector3) -> void:
 	e.set_meta("cool", randf_range(0.6, 1.2))
 	e.set_meta("lane", _pick_lane())
 	e.set_meta("vw", "")
+	# C19 enemy variety: from the third foe on, every other one wears armor that takes two cuts
+	# (or one riposte / third-combo cut) to break before the blade reaches the body
+	spawned += 1
+	if spawned >= 3 and (spawned % 2 == 1 or armor_test):
+		e.set_meta("armor", 2)
+		e.tint = Color(0.62, 0.64, 0.7)
+		e.sprite.scale = Vector3(1.06, 1.06, 1.0)
 	enemies.append(e)
 	var bar := _bar_pair(90.0)
 	hud.add_child(bar)
@@ -395,10 +415,15 @@ func _knock(view: String, dir: float, amt: float) -> Vector3:
 
 func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	var riposte := e.state == "stagger"
+	if int(e.get_meta("armor", 0)) > 0:
+		_armor_hit(e, dir, riposte or heavy)
+		return
 	if riposte:
 		dmg *= float(e.get_meta("riposte_k", 2.0)); heavy = true
 	clean_hits += 1
 	e.hp = maxf(0.0, e.hp - dmg)
+	if autoplay and armor_test:
+		print("QA flesh hit hp=%d" % e.hp)
 	e.posture = maxf(0.0, e.posture - dmg * 1.6)
 	e.flash = 1.0
 	e.facing = -dir
@@ -574,6 +599,32 @@ func _parry_target() -> Fighter:
 	return null
 
 ## perfect (last PERFECT_WIN s): long stagger, 2.5x riposte, deeper slow. Late: short stagger, 1.5x.
+## C19: a cut on armor chips a plate instead of flesh: grey lacquer shards, a dull clack, a short
+## rock back. A riposte or the heavy third cut splits both plates at once. Bare foes after that.
+func _armor_hit(e: Fighter, dir: float, strong: bool) -> void:
+	var left := 0 if strong else int(e.get_meta("armor")) - 1
+	if autoplay:
+		print("QA armor hit hp=%d " % e.hp, " strong=%s left=%d" % [strong, left])
+	e.set_meta("armor", left)
+	e.flash = 0.5
+	e.facing = -dir
+	var at := e.global_position + Vector3(0, 1.5, 0.3)
+	fx.shards(at, dir, 1.6 if left == 0 else 1.0)
+	sfx.play("armor_break" if left == 0 else "armor", 0.04)
+	hitstop = 0.09 if left == 0 else 0.05
+	shake = 0.12 if left == 0 else 0.06
+	clean_hits += 1
+	if left == 0:
+		e.tint = Color(1, 1, 1)
+		e.sprite.scale = Vector3.ONE
+		# the break leaves the foe open, like a late parry
+		e.state = "stagger"; e.state_t = 0.0
+		e.set_meta("stag_len", 0.6); e.set_meta("riposte_k", 1.5)
+		e.play("hit" + _face_view(e, player), true)
+		e.vel = _knock(_face_view(e, player), dir, 2.5)
+	elif e.state != "stagger":
+		e.vel = _knock(_face_view(e, player), dir, 1.2)
+
 func _parry(e: Fighter, perfect := false) -> void:
 	var p := player
 	var mid := (e.global_position + p.global_position) * 0.5 + Vector3(0, 1.5, 0.3)
@@ -625,7 +676,7 @@ func _restart() -> void:
 	enemies.clear(); ebars.clear()
 	player.hp = 100.0; player.state = "idle"; player.play("idle", true)
 	player.global_position = Vector3.ZERO
-	elapsed = 0.0; kills = 0; spawn_t = 1.0
+	elapsed = 0.0; kills = 0; spawn_t = 1.0; spawned = 0
 	banner.visible = false
 
 func _nearest(pos: Vector3, r: float) -> Fighter:
@@ -835,7 +886,8 @@ func _hud_update() -> void:
 				b.position.y = chips.get_global_rect().end.y + 8.0
 			var f: ColorRect = b.get_node("F")
 			f.size.x = f.get_meta("w") * e.hp / e.max_hp
-			(b.get_node("L") as Label).text = "%d/100" % int(ceil(e.hp))
+			var ar := int(e.get_meta("armor", 0))
+			(b.get_node("L") as Label).text = ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
 
 # ------------------------------------------------------------------ touch
 func _ring(sz: float, glyph: String) -> TextureRect:

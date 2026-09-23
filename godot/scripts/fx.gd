@@ -320,3 +320,17 @@ func riposte_cue(f: Node3D, big := false, at := Vector3(0, 2.1, 0.35)) -> void:
 	f.add_child(s)
 	s.position = at
 	items.append({"node": s, "kind": "cue", "t": 0.0, "f": f, "s0": s.pixel_size})
+
+## C19 armor: lacquer shards - flat grey-black flakes that tumble off and land as small stains.
+func shards(pos: Vector3, dir: float, power := 1.0) -> void:
+	for i in int(14 * power):
+		var sp := _billboard(blots[randi() % 6], randf_range(0.0022, 0.004))
+		sp.modulate = Color(0.34, 0.35, 0.39)
+		sp.scale = Vector3(1.0, randf_range(0.35, 0.6), 1.0)
+		sp.rotation.z = randf() * TAU
+		add_child(sp)
+		sp.global_position = pos + Vector3(randf_range(-0.2, 0.2), randf_range(-0.3, 0.3), 0.15)
+		var v := Vector3(dir * randf_range(1.0, 4.0), randf_range(1.5, 4.5), randf_range(-0.8, 0.8))
+		items.append({"node": sp, "kind": "drop", "t": 0.0, "vel": v})
+	for k in 2:
+		slash(pos + Vector3(0, -0.5, 0), dir if k == 0 else -dir, 0.45 * power, 0.18, 0.0, k)
