@@ -42,6 +42,7 @@ var touch_dodge := false
 var hitstop := 0.0
 ## Blade feel (C15): parry window, clean-streak finisher, ink-splash kills
 const PARRY_WIN := 0.22        # seconds before a foe's blade lands in which a cut deflects it
+const PERFECT_WIN := 0.08     # the last slice of the window: a perfect parry
 const FINISH_STREAK := 5       # clean hits in a row (no damage taken) that earn a slow-mo finisher
 var atk_press_t := -9.0        # elapsed time of the last attack press
 var clean_hits := 0
@@ -234,7 +235,7 @@ func _player(delta: float) -> void:
 	if want_atk and atk_press_t >= elapsed - delta * 1.5 and p.alive() and p.state in ["idle", "run", "attack"]:
 		var pe := _parry_target()
 		if pe:
-			_parry(pe)
+			_parry(pe, _ttc(pe) <= PERFECT_WIN)
 	var want_dodge := dodge_buf > 0.0
 	match p.state:
 		"idle", "run":
@@ -384,7 +385,7 @@ func _knock(view: String, dir: float, amt: float) -> Vector3:
 func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	var riposte := e.state == "stagger"
 	if riposte:
-		dmg *= 2.0; heavy = true
+		dmg *= float(e.get_meta("riposte_k", 2.0)); heavy = true
 	clean_hits += 1
 	e.hp = maxf(0.0, e.hp - dmg)
 	e.posture = maxf(0.0, e.posture - dmg * 1.6)
@@ -495,7 +496,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 		"stagger":
 			# deflected: reeling and open, cuts land double (C15 parry)
 			e.vel = e.vel.lerp(Vector3.ZERO, 5.0 * delta)
-			if e.state_t > 0.95:
+			if e.state_t > float(e.get_meta("stag_len", 0.95)):
 				e.state = "approach"; e.set_meta("cool", randf_range(0.6, 1.2))
 		"hit":
 			e.vel = e.vel.lerp(Vector3.ZERO, 7.0 * delta)
@@ -539,16 +540,20 @@ func _player_hurt(dmg: float, dir: float, by: Fighter) -> void:
 		p.state = "hit"; p.state_t = 0.0; p.play("hit" + hv, true)
 		p.vel = _knock(hv, dir, 3.0)
 
+## seconds until a foe's blade lands (9 when it isn't swinging at us)
+func _ttc(e: Fighter) -> float:
+	if e.state == "windup":
+		return (0.62 - e.state_t) + 2.0 / 18.0
+	if e.state == "swing" and not e.get_meta("struck"):
+		return maxf(0.0, 2.0 / 18.0 - e.state_t)
+	return 9.0
+
 func _parry_target() -> Fighter:
 	var p := player
 	for e in enemies:
 		if not e.alive():
 			continue
-		var ttc := 9.0
-		if e.state == "windup":
-			ttc = (0.62 - e.state_t) + 2.0 / 18.0
-		elif e.state == "swing" and not e.get_meta("struck"):
-			ttc = maxf(0.0, 2.0 / 18.0 - e.state_t)
+		var ttc := _ttc(e)
 		if ttc > PARRY_WIN:
 			continue
 		var d: Vector3 = e.global_position - p.global_position
@@ -556,18 +561,21 @@ func _parry_target() -> Fighter:
 			return e
 	return null
 
-func _parry(e: Fighter) -> void:
+## perfect (last PERFECT_WIN s): long stagger, 2.5x riposte, deeper slow. Late: short stagger, 1.5x.
+func _parry(e: Fighter, perfect := false) -> void:
 	var p := player
 	var mid := (e.global_position + p.global_position) * 0.5 + Vector3(0, 1.5, 0.3)
 	e.state = "stagger"; e.state_t = 0.0
+	e.set_meta("stag_len", 1.3 if perfect else 0.75)
+	e.set_meta("riposte_k", 2.5 if perfect else 1.5)
 	e.play("hit" + _face_view(e, p), true)
 	e.posture = 0.0
 	e.vel = _knock(_face_view(e, p), p.facing, 3.0)
-	fx.clash(mid, p.facing)
-	sfx.play("parry", 0.03)
-	hitstop = 0.14; shake = 0.12
+	fx.clash(mid, p.facing, 1.6 if perfect else 1.0)
+	sfx.play("parry_perfect" if perfect else "parry", 0.02)
+	hitstop = 0.16 if perfect else 0.1; shake = 0.14 if perfect else 0.08
 	clean_hits += 1
-	_slowmo(0.28, 0.35, 0.0)
+	_slowmo(0.32 if perfect else 0.2, 0.3 if perfect else 0.5, 0.0)
 
 func _finisher(e: Fighter, dir: float) -> void:
 	sfx.play("finisher", 0.0)
@@ -877,7 +885,7 @@ func _autoplay(delta: float) -> void:
 	if auto_parry:
 		# QA bot: cut 0.1 s before every foe blade lands, then keep cutting the staggered foe
 		for e in enemies:
-			if e.alive() and ((e.state == "windup" and absf(e.state_t - 0.6) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.12) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.4) < delta * 0.6)):
+			if e.alive() and ((int(elapsed / 4.0) % 2 == 1 and e.state == "windup" and absf(e.state_t - 0.56) < delta * 0.6) or (int(elapsed / 4.0) % 2 == 0 and e.state == "swing" and not e.get_meta("struck") and absf(e.state_t - 0.04) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.12) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.4) < delta * 0.6)):
 				atk_buf = 0.3; atk_press_t = elapsed
 	while auto_steps.size() > 0 and auto_t >= float(auto_steps[0][0]):
 		var st: Array = auto_steps.pop_front()

@@ -231,8 +231,8 @@ func _process(delta: float) -> void:
 			sp.modulate.a = st["a"] * clampf(1.0 - (st["t"] - 9.0) / 6.0, 0.0, 1.0)
 
 ## C15 parry: a pale flash of crossed steel - a tight spray of fine specks and two thin strokes.
-func clash(pos: Vector3, dir: float) -> void:
-	for i in 40:
+func clash(pos: Vector3, dir: float, power := 1.0) -> void:
+	for i in int(40 * power):
 		var sp := _billboard(specks[randi() % 3], randf_range(0.002, 0.005))
 		sp.modulate = Color(0.2, 0.18, 0.16)
 		add_child(sp)
@@ -240,8 +240,8 @@ func clash(pos: Vector3, dir: float) -> void:
 		var a := randf() * TAU
 		var v := Vector3(cos(a), sin(a) * 0.9 + 0.4, 0) * randf_range(2.0, 6.0)
 		items.append({"node": sp, "kind": "drop", "t": 0.0, "vel": v})
-	slash(pos + Vector3(0, -0.6, 0), dir, 0.7, 0.22, 0.0, 0)
-	slash(pos + Vector3(0, -0.6, 0), -dir, 0.6, 0.22, 0.0, 1)
+	slash(pos + Vector3(0, -0.6, 0), dir, 0.7 * power, 0.22, 0.0, 0)
+	slash(pos + Vector3(0, -0.6, 0), -dir, 0.6 * power, 0.22, 0.0, 1)
 
 ## C15 kill: ink thrown along the cut - a trail of ground splats that thins out with distance,
 ## plus a heavy pool under the body.
