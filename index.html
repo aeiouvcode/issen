@@ -89,6 +89,11 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
       radial-gradient(ellipse at 50% 40%, rgba(238,228,198,.80) 0%, rgba(222,208,168,.87) 55%, rgba(190,172,126,.93) 100%);
     transition:opacity .5s;}
   .screen.hidden{opacity:0;pointer-events:none;}
+  .chaprow{display:flex;gap:18px;justify-content:center;margin-top:14px;}
+  .chapseal{width:44px;height:44px;border:1.5px solid #3a3226;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:#3a3226;cursor:pointer;user-select:none;transition:all .18s;}
+  .chapseal.sel{background:#2a2318;color:#e8e1ca;box-shadow:0 0 0 3px rgba(42,35,24,.18);}
+  .chapseal.locked{opacity:.28;cursor:default;border-style:dashed;}
+  .chapline{text-align:center;margin-top:8px;font-size:11px;letter-spacing:.14em;opacity:.7;}
   #endscreen{justify-content:flex-start;padding-top:9vh;}
   #endscreen .kanji-big{flex:none;}
   #endscreen .prompt{margin-top:auto;margin-bottom:8vh;}
@@ -216,6 +221,10 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
     <div class="thint"><b>斬</b> strike &nbsp; <b>避</b> dodge &nbsp; <b>気</b> heal</div>
     <div class="thint flat" style="opacity:.75;margin-top:6px">a last-breath dodge <b>reads</b> a strike - no ring means the strike is a lie</div>
   </div>
+  <div class="chaprow stag" id="chaprow" style="--o:.85;animation-delay:1.7s">
+    <span class="chapseal" data-ch="1">影</span><span class="chapseal" data-ch="2">槍</span><span class="chapseal" data-ch="3">砕</span>
+  </div>
+  <div class="chapline stag" id="chapline" style="--o:.6;animation-delay:1.85s"></div>
   <div class="prompt" id="startprompt">- click to begin -</div>
   <div class="qtoggle stag" id="qtoggle" style="--o:.55;animation-delay:2.2s">brush: <b id="qcur">濃 rich</b> &nbsp;·&nbsp; tap to change (reloads)</div>
 </div>
@@ -1471,8 +1480,23 @@ function updateGhosts(dt){
 }
 
 /* ================= game state ================= */
+/* ---------------- chapters & progress (M83) ---------------- */
+const PROGRESS = (()=>{
+  const d={beaten:{}, iai:false, sel:1};
+  try{ const j=JSON.parse(localStorage.getItem('issen-progress')||'{}'); if(j&&typeof j==='object'){ if(j.beaten) d.beaten=j.beaten; if(j.iai) d.iai=!!j.iai; if(j.sel) d.sel=j.sel; } }catch(e){}
+  d.save=()=>{ try{ localStorage.setItem('issen-progress', JSON.stringify({beaten:d.beaten, iai:d.iai, sel:d.sel})); }catch(e){} };
+  return d;
+})();
+const CHAPTERS = [ null,
+  {kanji:'\u5f71', name:'SHADE', lancer:false, armored:false, line:'chapter one - the shade walks alone'},
+  {kanji:'\u69cd', name:'SPEAR', lancer:true,  armored:false, line:'chapter two - the lancer takes the field'},
+  {kanji:'\u7815', name:'IRON',  lancer:true,  armored:true,  line:'chapter three - iron over ink'},
+];
+const chUnlocked = c => c===1 || !!PROGRESS.beaten[c-1];
+if(!chUnlocked(PROGRESS.sel)) PROGRESS.sel=1;
+
 const G = {
-  running:false, over:false, time:0, timeScale:1, hitstop:0, slowmo:0, intro:0,
+  running:false, over:false, time:0, timeScale:1, hitstop:0, slowmo:0, intro:0, chapter:PROGRESS.sel,
   camYaw:Math.PI, camPitch:.8, camDrag:0,
 };
 const player = {
@@ -1950,7 +1974,7 @@ function tryHitMinion(a){
   if(minion.hp<=0 && minion.alive){
     const wasReeling = minion.state==='reel';
     minion.alive=false; minion.state='dead'; minion.stateT=0;
-    if(!lancer.alive && !isFinite(lancer._spawnT)) lancer._spawnT=4.0; // wave two takes the field
+    if(CHAPTERS[G.chapter].lancer && !lancer.alive && !isFinite(lancer._spawnT)) lancer._spawnT=4.0; // wave two takes the field
     inkBurst(minion.pos.clone().setY(1.3), 50, 7, 2, .9); inkBurst(minion.pos.clone().setY(1.3), 16, 5, 0, .7);
     groundSplat(minion.pos.x, minion.pos.z, 2.6, 18);
     for(let i=1;i<=2;i++){ const tt=i/3; groundSplat(player.pos.x+(minion.pos.x-player.pos.x)*tt+(Math.random()-.5)*.5, player.pos.z+(minion.pos.z-player.pos.z)*tt+(Math.random()-.5)*.5, .7, 6, true); } // the cut's ink trail
@@ -2016,7 +2040,7 @@ function tryHitLancer(a){
   if(lancer.hp<=0 && lancer.alive){
     const wasReeling = lancer.state==='reel';
     lancer.alive=false; lancer.state='dead'; lancer.stateT=0;
-    if(!minion.alive && !isFinite(minion._spawnT)) minion._spawnT=4.5; // wave three: the armored shade
+    if(CHAPTERS[G.chapter].armored && !minion.alive && !isFinite(minion._spawnT)) minion._spawnT=4.5; // wave three: the armored shade
     inkBurst(lancer.pos.clone().setY(1.3), 50, 7, 2, .9); inkBurst(lancer.pos.clone().setY(1.3), 16, 5, 0, .7);
     groundSplat(lancer.pos.x, lancer.pos.z, 2.6, 18);
     for(let i=1;i<=2;i++){ const tt=i/3; groundSplat(player.pos.x+(lancer.pos.x-player.pos.x)*tt+(Math.random()-.5)*.5, player.pos.z+(lancer.pos.z-player.pos.z)*tt+(Math.random()-.5)*.5, .7, 6, true); } // the cut's ink trail
@@ -2233,6 +2257,8 @@ function doAttack(){
   // chain: pick next in combo based on timing
   p.atkIdx = (p._lastAtkEnd && performance.now()-p._lastAtkEnd<900) ? (p.atkIdx+1)%3 : 0;
   p.state = 'atk'+(p.atkIdx+1); p.stateT=0; p.atkHitDone=false; p._landed=false;
+  // iai stance (earned: chapter one) - the first cut after stillness starts already drawn
+  if(PROGRESS.iai && p.atkIdx===0 && performance.now()-(p._lastAtkEnd||0)>2500) p.stateT=ATK[0].dur*.16;
   p.stam -= 16; p.regenDelay = .5;
   p.atkLog.push(G.time); while(p.atkLog.length>6) p.atkLog.shift();
   p._lastAtkEnd = performance.now() + ATK[p.atkIdx].dur*1000;
@@ -3361,6 +3387,26 @@ muteBtn.addEventListener('touchstart', e=>{ e.stopPropagation(); e.preventDefaul
 addEventListener('keydown', e=>{ if(e.code==='KeyM' && !e.repeat){ sfx.setMuted(!sfx.isMuted()); reflectMute(); } });
 reflectMute();
 el('startscreen').addEventListener('click', startOrRetry);
+// chapter seals: tap to choose, sealed chapters wait for the cut that earns them
+function renderChapters(){
+  const line=el('chapline');
+  document.querySelectorAll('.chapseal').forEach(seal=>{
+    const c=+seal.dataset.ch;
+    seal.classList.toggle('sel', c===PROGRESS.sel);
+    seal.classList.toggle('locked', !chUnlocked(c));
+  });
+  const cd=CHAPTERS[PROGRESS.sel];
+  line.textContent = cd.line + (PROGRESS.iai ? ' · stance 居合 iai' : '');
+}
+document.querySelectorAll('.chapseal').forEach(seal=>{
+  seal.addEventListener('click', e=>{
+    e.stopPropagation();
+    const c=+seal.dataset.ch;
+    if(!chUnlocked(c)){ const line=el('chapline'); line.textContent='sealed - cut down the chapter before it'; return; }
+    PROGRESS.sel=c; PROGRESS.save(); renderChapters();
+  });
+});
+renderChapters();
 el('endscreen').addEventListener('click', startOrRetry);
 
 /* ================= flow ================= */
@@ -3382,7 +3428,10 @@ function startOrRetry(){
   document.body.classList.remove('endui');
   el('startscreen').classList.add('hidden');
   el('endscreen').classList.add('hidden');
+  if(G._lastWin){ const nx=Math.min(3, (G.chapter||1)+1); if(nx!==G.chapter && chUnlocked(nx)) PROGRESS.sel=nx; G._lastWin=false; PROGRESS.save(); }
+  G.chapter=PROGRESS.sel;
   resetFight();
+  kanjiFlash(CHAPTERS[G.chapter].kanji, .9); // the chapter's seal opens the duel
   G.running=true;
   G.intro=2.4; boss.thinkT=2.4; // duel-intro camera sweep; boss holds the standoff
   sfx.heal(); // unlock audio on gesture
@@ -3432,7 +3481,18 @@ function endGame(win){
   const eIv = setInterval(()=>{ if(++ef>eStrokes){ clearInterval(eIv); return; } ek.style.backgroundImage='url('+strokeKanji(eCh, eCol, ef)+')'; }, 150);
   el('endtitle').textContent = win ? 'VICTORY' : 'FALLEN';
   const t=G.time, mm=String(Math.floor(t/60)).padStart(2,'0'), ss=(t%60).toFixed(2).padStart(5,'0');
-  el('endtime').textContent = win ? `Time ${mm}:${ss}` : '';
+  let note='';
+  if(win){
+    G._lastWin=true;
+    if(!PROGRESS.beaten[G.chapter]){
+      PROGRESS.beaten[G.chapter]=true;
+      if(G.chapter===1 && !PROGRESS.iai){ PROGRESS.iai=true; note=' · stance 居合 iai'; }
+      const nx=G.chapter+1;
+      if(nx<=3 && chUnlocked(nx)) note=' · chapter '+CHAPTERS[nx].name.toLowerCase()+' unlocked';
+    }
+    PROGRESS.save();
+  }
+  el('endtime').textContent = win ? `Time ${mm}:${ss}${note}` : '';
   ['endtitle','endtime'].forEach((id,i)=>{const e=el(id); e.classList.remove('estag'); void e.offsetHeight; e.style.animationDelay=(.9+i*.3)+'s'; e.classList.add('estag');});
   setTimeout(()=>el('endscreen').classList.remove('hidden'), 600);
 }
