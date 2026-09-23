@@ -32,3 +32,4 @@
 - 2026-09-23 C10: F-21 sprite pages: sheets baked one animation per row and split into pages of at most 2048 x 2048 (player_p0-2, ronin_p0-2), the WebGL2 guaranteed minimum texture size, so older phones can load them. Fighter swaps the page texture when an animation lives on another page; main loads pages from the json `pages` count. Frame seeds unchanged.
 - 2026-09-23 C10: F-23 `-- --autoplay-foe` starts the depth foe at 52 HP so the second combo kills it along depth and the turned death row is captured.
 - 2026-09-23 C11: F-24 depth kills: lighter burst (1.1 vs 1.8) sprayed from behind the body, and the body drifts sideways (2.4 m/s away from the player's line) so the turned fall lands beside the player instead of behind them. `--autoplay-foe` now seeds the RNG so captures repeat.
+- 2026-09-23 C11: F-26 portrait camera keeps a fresh kill (dead < 1.6 s, within 8 m) framed when no living foe is near, so the fallen body no longer slides to the screen edge.
