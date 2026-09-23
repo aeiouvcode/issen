@@ -94,6 +94,10 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   .chapseal.sel{background:#2a2318;color:#e8e1ca;box-shadow:0 0 0 3px rgba(42,35,24,.18);}
   .chapseal.locked{opacity:.28;cursor:default;border-style:dashed;}
   .chapline{text-align:center;margin-top:8px;font-size:11px;letter-spacing:.14em;opacity:.7;}
+  .stancerow{display:flex;gap:14px;justify-content:center;margin-top:10px;}
+  .stanceseal{width:34px;height:34px;border:1.5px solid #3a3226;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:#3a3226;cursor:pointer;user-select:none;transition:all .18s;}
+  .stanceseal.sel{background:#2a2318;color:#e8e1ca;box-shadow:0 0 0 3px rgba(42,35,24,.15);}
+  .stanceseal.locked{opacity:.28;cursor:default;border-style:dashed;}
   #endscreen{justify-content:flex-start;padding-top:9vh;}
   #endscreen .kanji-big{flex:none;}
   #endscreen .prompt{margin-top:auto;margin-bottom:8vh;}
@@ -223,6 +227,9 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   </div>
   <div class="chaprow stag" id="chaprow" style="--o:.85;animation-delay:1.7s">
     <span class="chapseal" data-ch="1">影</span><span class="chapseal" data-ch="2">槍</span><span class="chapseal" data-ch="3">砕</span>
+  </div>
+  <div class="stancerow stag" id="stancerow" style="--o:.8;animation-delay:1.8s">
+    <span class="stanceseal" data-st="none">無</span><span class="stanceseal" data-st="iai">居</span><span class="stanceseal" data-st="tetsu">鉄</span>
   </div>
   <div class="chapline stag" id="chapline" style="--o:.6;animation-delay:1.85s"></div>
   <div class="prompt" id="startprompt">- click to begin -</div>
@@ -1482,9 +1489,9 @@ function updateGhosts(dt){
 /* ================= game state ================= */
 /* ---------------- chapters & progress (M83) ---------------- */
 const PROGRESS = (()=>{
-  const d={beaten:{}, iai:false, sel:1};
-  try{ const j=JSON.parse(localStorage.getItem('issen-progress')||'{}'); if(j&&typeof j==='object'){ if(j.beaten) d.beaten=j.beaten; if(j.iai) d.iai=!!j.iai; if(j.sel) d.sel=j.sel; } }catch(e){}
-  d.save=()=>{ try{ localStorage.setItem('issen-progress', JSON.stringify({beaten:d.beaten, iai:d.iai, sel:d.sel})); }catch(e){} };
+  const d={beaten:{}, iai:false, tetsu:false, sel:1, stance:'none'};
+  try{ const j=JSON.parse(localStorage.getItem('issen-progress')||'{}'); if(j&&typeof j==='object'){ if(j.beaten) d.beaten=j.beaten; if(j.iai) d.iai=!!j.iai; if(j.tetsu) d.tetsu=!!j.tetsu; if(j.sel) d.sel=j.sel; if(j.stance) d.stance=j.stance; } }catch(e){}
+  d.save=()=>{ try{ localStorage.setItem('issen-progress', JSON.stringify({beaten:d.beaten, iai:d.iai, tetsu:d.tetsu, sel:d.sel, stance:d.stance})); }catch(e){} };
   return d;
 })();
 const CHAPTERS = [ null,
@@ -1494,6 +1501,13 @@ const CHAPTERS = [ null,
 ];
 const chUnlocked = c => c===1 || !!PROGRESS.beaten[c-1];
 if(!chUnlocked(PROGRESS.sel)) PROGRESS.sel=1;
+const STANCES = {
+  none:  {seal:'\u7121', line:'no stance - the plain cut'},
+  iai:   {seal:'\u5c45', line:'iai - the first cut after stillness comes drawn'},
+  tetsu: {seal:'\u9244', line:'tetsu - heavier on posture, slower on the swing'},
+};
+const stUnlocked = st => st==='none' || (st==='iai'&&!!PROGRESS.iai) || (st==='tetsu'&&!!PROGRESS.tetsu);
+if(!stUnlocked(PROGRESS.stance)) PROGRESS.stance='none';
 
 const G = {
   running:false, over:false, time:0, timeScale:1, hitstop:0, slowmo:0, intro:0, chapter:PROGRESS.sel,
@@ -1889,7 +1903,7 @@ function tryHitBoss(a){
   }
   boss.hp = Math.max(0, boss.hp - dmg);
   cleanCutLanded();
-  boss.posture = Math.max(0, boss.posture - a.post);
+  boss.posture = Math.max(0, boss.posture - a.post*(player._postMul||1));
   const hitPos = boss.pos.clone(); hitPos.y = 1.6;
   inkBurst(hitPos, 40, 6.5, 2, .7); inkBurst(hitPos, 10, 4, 0, .5);
     if(Math.random()<.5) groundSplat(boss.pos.x+(Math.random()-.5), boss.pos.z+(Math.random()-.5), .9, 9, true);
@@ -1921,8 +1935,8 @@ function tryHitBoss(a){
     kanjiFlash('\u7834', .55);
   }
   // awakening: at half health the duel changes - the ink remembers its wounds
-  if(boss.alive && boss.phase===1 && boss.hp<=boss.maxhp/2){
-    boss.phase=2; boss._wspeed=1.22;
+  if(boss.alive && boss.phase===1 && !boss._phaseLock && boss.hp<=boss.maxhp/2){
+    boss.phase=2; boss._wspeed=1.22*(G.chapter===2?1.15:1);
     boss.J.eyes.visible=true;
     boss.state='awaken'; boss.stateT=0;
     kanjiFlash('\u6012', .8); // 怒 - rage: the duel turns
@@ -1965,7 +1979,7 @@ function tryHitMinion(a){
   }
   minion.hp = Math.max(0, minion.hp - dmg);
   cleanCutLanded();
-  minion.posture = Math.max(0, minion.posture - a.post);
+  minion.posture = Math.max(0, minion.posture - a.post*(player._postMul||1));
   const hitPos = minion.pos.clone(); hitPos.y = 1.4;
   inkBurst(hitPos, 30, 5.5, 2, .6); inkBurst(hitPos, 8, 4, 0, .5);
   if(Math.random()<.5) groundSplat(minion.pos.x+(Math.random()-.5), minion.pos.z+(Math.random()-.5), .8, 8, true);
@@ -2026,7 +2040,7 @@ function tryHitLancer(a){
   }
   lancer.hp = Math.max(0, lancer.hp - dmg);
   if(dmg>0) cleanCutLanded(); // a turned cut is no cut
-  lancer.posture = Math.max(0, lancer.posture - (guarded ? a.post*.5 : a.post));
+  lancer.posture = Math.max(0, lancer.posture - (guarded ? a.post*.5 : a.post)*(player._postMul||1));
   const hitPos = lancer.pos.clone(); hitPos.y = 1.4;
   if(guarded){
     inkBurst(hitPos, 12, 4, 0, .45); inkBurst(hitPos, 5, 3, 2, .3);
@@ -2110,7 +2124,7 @@ function hurtPlayer(dmg, fromPos, src){ src = src||boss;
 const input = {x:0, z:0, atk:false, dodge:false, heal:false};
 function updatePlayer(dt){
   const p = player;
-  p.stateT += dt;
+  p.stateT += dt * (p.state.startsWith('atk') ? (p._atkSpd||1) : 1);
   if(p.iframe>0) p.iframe -= dt;
   if(p.counterT>0){
     p.counterT -= dt;
@@ -2256,6 +2270,8 @@ function doAttack(){
   }
   // chain: pick next in combo based on timing
   p.atkIdx = (p._lastAtkEnd && performance.now()-p._lastAtkEnd<900) ? (p.atkIdx+1)%3 : 0;
+  p._postMul = PROGRESS.stance==='tetsu'?1.5:1;
+  p._atkSpd = PROGRESS.stance==='tetsu'?.87:1;
   p.state = 'atk'+(p.atkIdx+1); p.stateT=0; p.atkHitDone=false; p._landed=false;
   // iai stance (earned: chapter one) - the first cut after stillness starts already drawn
   if(PROGRESS.iai && p.atkIdx===0 && performance.now()-(p._lastAtkEnd||0)>2500) p.stateT=ATK[0].dur*.16;
@@ -2507,7 +2523,7 @@ function updateLancer(dt){
 function updateBoss(dt){
   const b = boss;
   const WINDUPS = {windup_spin:.7, windup_slam:.55, windup_iai:.75, windup_wave:.6, windup_twin:.5, windup_twin2:.34};
-  b.stateT += dt * ((b.phase===2 && WINDUPS[b.state]) ? b._wspeed : 1);
+  b.stateT += dt * (WINDUPS[b.state] ? b._wspeed : 1);
   if(b._parryCD>0) b._parryCD -= dt;
   // timing ring: contracts over the final beat of a windup; a feint makes it vanish
   const T = WINDUPS[b.state];
@@ -3396,7 +3412,7 @@ function renderChapters(){
     seal.classList.toggle('locked', !chUnlocked(c));
   });
   const cd=CHAPTERS[PROGRESS.sel];
-  line.textContent = cd.line + (PROGRESS.iai ? ' · stance 居合 iai' : '');
+  line.textContent = cd.line + (PROGRESS.stance!=='none' ? ' · '+STANCES[PROGRESS.stance].line : '');
 }
 document.querySelectorAll('.chapseal').forEach(seal=>{
   seal.addEventListener('click', e=>{
@@ -3406,7 +3422,24 @@ document.querySelectorAll('.chapseal').forEach(seal=>{
     PROGRESS.sel=c; PROGRESS.save(); renderChapters();
   });
 });
-renderChapters();
+function renderStances(){
+  document.querySelectorAll('.stanceseal').forEach(seal=>{
+    const st=seal.dataset.st;
+    seal.classList.toggle('sel', st===PROGRESS.stance);
+    seal.classList.toggle('locked', !stUnlocked(st));
+  });
+}
+document.querySelectorAll('.stanceseal').forEach(seal=>{
+  seal.addEventListener('click', e=>{
+    e.stopPropagation();
+    const st=seal.dataset.st;
+    const line=el('chapline');
+    if(!stUnlocked(st)){ line.textContent='sealed - the chapter that teaches it waits'; return; }
+    PROGRESS.stance=st; PROGRESS.save(); renderStances();
+    line.textContent = CHAPTERS[PROGRESS.sel].line+' · '+STANCES[st].line;
+  });
+}
+renderChapters(); renderStances();
 el('endscreen').addEventListener('click', startOrRetry);
 
 /* ================= flow ================= */
@@ -3414,7 +3447,8 @@ function resetFight(){
   player.pos.set(0,0,3.5); player.yaw=Math.PI; player.hp=100; player.stam=100; player.pips=4;
   player.state='idle'; player.stateT=0; player.vel.set(0,0,0); player.iframe=0; player._lastAtkEnd=0; player.queuedAtk=false;
   player.atkLog=[]; G.cleanStreak=0; G.camPush=0; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; player.counterT=0; boss._parryCD=0; boss._counterHit=false; boss._bowed=false; boss._engaged=false; boss.phase=1; boss._wspeed=1; boss._iaiChain=false; boss.J.eyes.visible=false;
-  boss.pos.set(0,0,-7); boss.hp=185; boss.posture=130; boss.alive=true;
+  boss.pos.set(0,0,-7); boss.maxhp = G.chapter===1?140:185; boss.hp=boss.maxhp; boss.posture=130; boss.alive=true;
+  boss._wspeed = G.chapter===2?1.15:1; boss._phaseLock = G.chapter===1; // the chapters flavor him: shorter first, faster second
   minion.pos.set(3.4,0,-8.6); minion.hp=70; minion.posture=50; minion.alive=true; minion._hit=false;
   minion.root.visible=true; minion.state='idle'; minion.stateT=0; minion.thinkT=3.2;
   lancer.pos.set(-9.5,0,-9.5); lancer.hp=90; lancer.posture=70; lancer.alive=false; lancer._hit=false; lancer._spawnT=Infinity;
@@ -3484,12 +3518,15 @@ function endGame(win){
   let note='';
   if(win){
     G._lastWin=true;
+    const notes=[];
     if(!PROGRESS.beaten[G.chapter]){
       PROGRESS.beaten[G.chapter]=true;
-      if(G.chapter===1 && !PROGRESS.iai){ PROGRESS.iai=true; note=' · stance 居合 iai'; }
+      if(G.chapter===1 && !PROGRESS.iai){ PROGRESS.iai=true; notes.push('stance 居合 iai'); }
+      if(G.chapter===2 && !PROGRESS.tetsu){ PROGRESS.tetsu=true; notes.push('stance 鉄 tetsu'); }
       const nx=G.chapter+1;
-      if(nx<=3 && chUnlocked(nx)) note=' · chapter '+CHAPTERS[nx].name.toLowerCase()+' unlocked';
+      if(nx<=3 && chUnlocked(nx)) notes.push('chapter '+CHAPTERS[nx].name.toLowerCase()+' unlocked');
     }
+    if(notes.length) note=' · '+notes.join(' · ');
     PROGRESS.save();
   }
   el('endtime').textContent = win ? `Time ${mm}:${ss}${note}` : '';
