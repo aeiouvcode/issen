@@ -2,7 +2,7 @@
 
 ## Resume here
 
-Next cycle (M70): fresh audit first (390px-forced + desktop vs reference frames). M69 shipped graphic-contrast figures, higher camera, torn arc edges, warmer ground (live md5 c1215e8125ddf7cb284daa3f0b5f439f, File gen 30). Candidates in priority order: G-06 enemy variety (reference fields multiple foes with own health bars - structural, design first); boss readability when the kasa occludes the body from the raised camera at close range; F-07 kasa close-range dominance (related); vignette strength vs reference's darker mottled edges after ground warm-down. Re-extract reference frames if /tmp/refframes is gone (cdn.syndication.twimg.com tweet-result?id=2100371695727198244 + ffmpeg).
+Next cycle (M71): fresh audit first (390px-forced + desktop vs reference frames). M70 shipped the shade second duelist w/ own bar + AI, near-overhead duel camera, heavier vignette (live md5 1e5e2a40384aaccda5db45e5ff1b52df, File gen 31). Candidates in priority order: G-06 stage 2 - true enemy variety (ref-4.5 shield-spear bearer: distinct silhouette w/ shield + long spear, not a boss clone; design first); shade balance pass (hp70/dmg8/think3.2 are first-cut numbers, untuned vs real play); F-07 kasa close-range dominance; G-01 residual mid-tone weight vs reference's graphic contrast. Re-extract reference frames if /tmp/refframes is gone (cdn.syndication.twimg.com tweet-result?id=2100371695727198244 + ffmpeg).
 
 ## Blocked
 
@@ -16,6 +16,9 @@ Next cycle (M70): fresh audit first (390px-forced + desktop vs reference frames)
 | Lone bamboo stalk planes 8-11 units tall at r 13-19 | Read as thin pole artifacts against the sky, not bamboo | 2026-09-23 |
 | Treating Play Store "Ronin: The Last Samurai" as the reference | Wrong reference; the true one is sensonoken's X post (recovered from original brief) | 2026-09-23 |
 | Curtain spawn at y=0.95 with default recenter translate | Band center landed at ankle height (.58); per-swing compensation y=1.65/1.0/1.65 fixes it | 2026-09-23 |
+| QA-driving attacks via key:'j' keyboard events | The handler reads e.code, not e.key - 'j' never fires; use code:'KeyJ' | 2026-09-23 |
+| Parking the boss for minion QA by setting pos far + state='idle' | Boss AI re-engages on its next think tick and walks back; only G.over or dead actually holds it | 2026-09-23 |
+| Continuing a minion kill loop after the player died in QA | updateMinion early-returns when G.over; mhp freezes mid-fight. Retry (resetFight) restores the shade to hp70 | 2026-09-23 |
 
 ## Discoveries
 
