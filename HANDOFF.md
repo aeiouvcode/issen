@@ -10,6 +10,8 @@ Next cycle (M73): fresh audit first (390px-forced + desktop vs /tmp/refframes; r
 
 ## Failed approaches
 
+- M73: G.hitstop freeze for shard capture - puffs/shards run on raw render dt, not game time; they keep animating. Screenshot immediately after spawning instead.
+
 | Approach | Why it failed | Date |
 | --- | --- | --- |
 | Flat ground-plane slash arcs (faceCam=false) for player attacks | Foreshortened to thin ellipses from the phone camera; nothing like the reference's towering wash | 2026-09-23 |
