@@ -81,7 +81,8 @@ func _ready() -> void:
 	_spawn(Vector3(5.5, 0, -2.0))
 	if "--autoplay-foe" in OS.get_cmdline_user_args():
 		# QA: first foe squares up behind the player to exercise the turned attack rows
-		autoplay = true; auto_steps = []
+		# then cuts back at it so the turned hit/death rows play too
+		autoplay = true; auto_steps = [[3.0, "attack"], [3.25, "attack"], [3.5, "attack"], [4.6, "attack"], [4.85, "attack"], [5.1, "attack"]]
 		enemies[0].set_meta("lane", -1)
 
 func _input_map() -> void:
@@ -332,6 +333,19 @@ func _start_dodge(mv: Vector2) -> void:
 	ghost_t = 0.0
 	fx.puff(p.global_position)
 
+# 3/4 view for a figure struck from mostly in front of / behind it (F-19)
+func _face_view(victim: Fighter, attacker: Fighter) -> String:
+	var d := attacker.global_position - victim.global_position
+	if absf(d.z) > absf(d.x) * 1.2:
+		return "_f" if d.z > 0.0 else "_b"
+	return ""
+
+# knockback away from the attacker, along z for turned hits
+func _knock(view: String, dir: float, amt: float) -> Vector3:
+	if view == "":
+		return Vector3(dir * amt, 0, 0)
+	return Vector3(0, 0, (-amt if view == "_f" else amt) * 0.8)
+
 func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	e.hp = maxf(0.0, e.hp - dmg)
 	e.posture = maxf(0.0, e.posture - dmg * 1.6)
@@ -344,14 +358,16 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	hitstop = 0.06 if not heavy else 0.1
 	shake = 0.18 if heavy else 0.1
 	if e.hp <= 0.0:
-		e.state = "dead"; e.state_t = 0.0; e.play("die", true)
-		e.vel = Vector3(dir * 3.0, 0, 0)
+		var hv := _face_view(e, player)
+		e.state = "dead"; e.state_t = 0.0; e.play("die" + hv, true)
+		e.vel = _knock(hv, dir, 3.0)
 		fx.burst(hitpos, dir, 1.8, 0.5)
 		fx.slash(e.global_position + Vector3(0, 0.2, 0.1), dir, 0.8, 0.4, 0.8, 1)
 		kills += 1
 	else:
-		e.state = "hit"; e.state_t = 0.0; e.play("hit", true)
-		e.vel = Vector3(dir * (4.0 if heavy else 2.2), 0, 0)
+		var hv := _face_view(e, player)
+		e.state = "hit"; e.state_t = 0.0; e.play("hit" + hv, true)
+		e.vel = _knock(hv, dir, 4.0 if heavy else 2.2)
 
 func _enemy(e: Fighter, delta: float) -> void:
 	e.state_t += delta
@@ -410,7 +426,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 					fx.slash(e.global_position + Vector3(e.facing * 0.4, 0.1, zd * 1.0 + 0.12), e.facing, 1.05, 0.34, 0.0, 1)
 					hit_ok = absf(dd.x) < 2.1 and dd.z * zd > -0.5 and absf(dd.z) < 3.4
 				if p.alive() and p.state != "dodge" and hit_ok:
-					_player_hurt(18.0, e.facing)
+					_player_hurt(18.0, e.facing, e)
 			if e.anim_done:
 				e.state = "recover"; e.state_t = 0.0; e.play("recover" + str(e.get_meta("vw")), true)
 		"recover":
@@ -441,7 +457,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 	e.posture = minf(100.0, e.posture + 8.0 * delta)
 	e.tick_anim(delta)
 
-func _player_hurt(dmg: float, dir: float) -> void:
+func _player_hurt(dmg: float, dir: float, by: Fighter) -> void:
 	var p := player
 	p.hp = maxf(0.0, p.hp - dmg)
 	p.flash = 1.0
@@ -451,12 +467,13 @@ func _player_hurt(dmg: float, dir: float) -> void:
 	shake = 0.2; hitstop = 0.08
 	post_mat.set_shader_parameter("hurt", 1.0)
 	if p.hp <= 0.0:
-		p.state = "dead"; p.state_t = 0.0; p.play("die", true)
+		p.state = "dead"; p.state_t = 0.0; p.play("die" + _face_view(p, by), true)
 		banner.text = "Fallen.   %d cut down" % kills
 		banner.visible = true
 	else:
-		p.state = "hit"; p.state_t = 0.0; p.play("hit", true)
-		p.vel = Vector3(dir * 3.0, 0, 0)
+		var hv := _face_view(p, by)
+		p.state = "hit"; p.state_t = 0.0; p.play("hit" + hv, true)
+		p.vel = _knock(hv, dir, 3.0)
 
 func _restart() -> void:
 	for e in enemies:
