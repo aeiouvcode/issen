@@ -3,7 +3,8 @@ extends Node3D
 ## A brush-animated combatant: a Y-billboard Sprite3D stepping through baked sheet frames.
 
 const PIXEL := 0.0158
-var sheet: Texture2D
+var pages: Array[Texture2D] = []
+var cur_page := -1
 var meta: Dictionary
 var sprite: Sprite3D
 var shadow: Sprite3D
@@ -24,8 +25,9 @@ var state_t := 0.0
 var flash := 0.0
 var anim_done := false
 
-func setup(tex: Texture2D, meta_path: String) -> void:
-	sheet = tex
+## Sheets are split into <=2048 px pages (F-21); textures are shared across fighters by the caller.
+func setup(tex_pages: Array[Texture2D], meta_path: String) -> void:
+	pages = tex_pages
 	meta = JSON.parse_string(FileAccess.get_file_as_string(meta_path))
 	shadow = Sprite3D.new()
 	shadow.texture = load("res://art/dab.png")
@@ -37,9 +39,7 @@ func setup(tex: Texture2D, meta_path: String) -> void:
 	shadow.shaded = false
 	add_child(shadow)
 	sprite = Sprite3D.new()
-	sprite.texture = sheet
 	sprite.hframes = int(meta["cols"])
-	sprite.vframes = int(sheet.get_height() / float(meta["frame"]))
 	sprite.pixel_size = PIXEL
 	sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	sprite.shaded = false
@@ -63,6 +63,11 @@ func frame_count() -> int:
 
 func _apply() -> void:
 	var info: Dictionary = meta["anims"][anim]
+	var pg := int(info.get("page", 0))
+	if pg != cur_page:
+		cur_page = pg
+		sprite.texture = pages[pg]
+		sprite.vframes = int(pages[pg].get_height() / float(meta["frame"]))
 	sprite.frame = int(info["row"]) * int(meta["cols"]) + int(info.get("col0", 0)) + frame
 	sprite.flip_h = facing < 0.0
 	sprite.offset.x = 10.0 * facing
