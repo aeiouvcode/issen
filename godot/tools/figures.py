@@ -35,11 +35,48 @@ def fk(pose, dims):
         J[side + '_shin_a'] = l2
     return J
 
+SIDE_W = {'arm': 12.0, 'leg': 9.0}
+
+def turn(J, yaw, elev=0.32):
+    """Rotate a side-view skeleton about the vertical axis. yaw>0 turns the figure toward
+    the camera (3/4 front), yaw<0 away (3/4 back). f_* limbs sit on the near side, b_* on
+    the far side; forward motion foreshortens by cos(yaw) and drops/rises by elev."""
+    if abs(yaw) < 1e-3:
+        J = dict(J)
+        for s in ('f', 'b'):
+            J[s + '_sh'] = J['sh']; J[s + '_hip'] = J['hip']
+        return J
+    cy, sy = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+    hip0 = J['hip'].copy()
+    def pr(v, z):
+        x = v[0] - hip0[0]
+        return np.array([hip0[0] + x * cy - z * sy, v[1] + x * sy * elev])
+    out = {}
+    for k, v in J.items():
+        if not isinstance(v, np.ndarray):
+            out[k] = v; continue
+        z = 0.0
+        if k[:2] in ('f_', 'b_'):
+            z = (1 if k[0] == 'f' else -1) * (SIDE_W['arm'] if ('el' in k or 'hand' in k) else SIDE_W['leg'])
+        out[k] = pr(v, z)
+    for s, sg in (('f', 1), ('b', -1)):
+        out[s + '_sh'] = pr(J['sh'], sg * SIDE_W['arm'])
+        out[s + '_hip'] = pr(J['hip'], sg * SIDE_W['leg'])
+    out['_yaw'] = yaw
+    return out
+
+def pvec(J, v):
+    """Project a side-plane direction vector with the figure's current yaw."""
+    yaw = J.get('_yaw', 0.0)
+    if not yaw: return v
+    cy, sy = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+    return np.array([v[0] * cy, v[1] + v[0] * sy * 0.32])
+
 def place(J, pose, cx, ground):
     pts = [J[k] for k in ('f_foot', 'b_foot', 'f_knee', 'b_knee', 'head', 'f_hand', 'b_hand', 'hip')]
     low = max(p[1] for p in pts)
     off = np.array([cx, ground - low - pose.get('dy', 0)])
-    return {k: (v + off if isinstance(v, np.ndarray) else v) for k, v in J.items()}
+    return {k: (v + off if isinstance(v, np.ndarray) and v.shape == (2,) else v) for k, v in J.items()}
 
 def perp(a, b):
     d = b - a; n = np.array([-d[1], d[0]]); return n / (np.linalg.norm(n) + 1e-6)
@@ -58,59 +95,91 @@ PDIM = dict(thigh=40, shin=40, torso=54, neck=6, head=16, uarm=28, farm=26, swor
 def draw_player(c, J, pose):
     rng = c.rng
     sword_a = J['f_farm_a'] + pose.get('sword', 0)
+    yaw = J.get('_yaw', 0.0); ay = abs(math.sin(math.radians(yaw)))
+    cyaw = math.cos(math.radians(yaw)); back = yaw < -1
     # back sleeve + arm
-    draw_sleeve(c, J['sh'], J['b_el'], J['b_hand'], 0.5)
+    draw_sleeve(c, J['b_sh'], J['b_el'], J['b_hand'], 0.5)
     # back leg hakama
-    draw_hakama_leg(c, J['hip'], J['b_knee'], J['b_foot'], shade=0.7)
+    draw_hakama_leg(c, J['b_hip'], J['b_knee'], J['b_foot'], shade=0.7)
     # torso kimono
     n = perp(J['hip'], J['neck'])
-    hipL = J['hip'] + n * 15; hipR = J['hip'] - n * 15
-    shL = J['sh'] + n * 13; shR = J['sh'] - n * 13
+    tw = 1.0 + 0.35 * ay
+    hipL = J['hip'] + n * 15 * tw; hipR = J['hip'] - n * 15 * tw
+    shL = J['sh'] + n * 13 * tw; shR = J['sh'] - n * 13 * tw
     body = [tuple(shL), tuple(J['neck'] + n * 4), tuple(shR), tuple(hipR + (hipR - shR) * 0.1), tuple(hipL + (hipL - shL) * 0.1)]
     c.wash(body, dens=0.2, edge=0.6, layer='fill', rag=1.2)
     c.wash([tuple(shR), tuple(lerp(shR, hipR, 0.9)), tuple(lerp(J['hip'], hipR, 0.3)), tuple(lerp(J['sh'], shR, 0.4))], dens=0.35, edge=0.2, rag=2, texture=0.6, streak_dir=1)
     c.stroke([tuple(shL), tuple(lerp(shL, hipL, 0.5) + n * 1.5), tuple(hipL)], w=3.6, dry=0.6)
     c.stroke([tuple(shR), tuple(lerp(shR, hipR, 0.5) - n * 1.5), tuple(hipR)], w=3.2, dry=0.7)
-    # kimono collar cross
-    c.stroke([tuple(J['neck'] + n * 5), tuple(lerp(J['neck'], J['hip'], 0.45) - n * 5)], w=3.2, dry=0.5)
-    c.stroke([tuple(J['neck'] - n * 4), tuple(lerp(J['neck'], J['hip'], 0.3) + n * 3)], w=2.2, dry=0.7)
+    if not back:
+        # kimono collar cross (centred more as the figure turns to camera)
+        cx0 = -n * 3 * ay
+        c.stroke([tuple(J['neck'] + n * 5 + cx0), tuple(lerp(J['neck'], J['hip'], 0.45) - n * 5 + cx0)], w=3.2, dry=0.5)
+        c.stroke([tuple(J['neck'] - n * 4 + cx0), tuple(lerp(J['neck'], J['hip'], 0.3) + n * 3 + cx0)], w=2.2, dry=0.7)
+    else:
+        # spine seam down the back of the kimono
+        c.stroke([tuple(J['neck']), tuple(lerp(J['neck'], J['hip'], 0.8))], w=2.0, dry=0.8, ink=0.7)
     # red obi
     o1 = lerp(J['hip'], J['neck'], 0.12); o2 = lerp(J['hip'], J['neck'], 0.3)
     c.wash([tuple(o1 + n * 16), tuple(o2 + n * 15), tuple(o2 - n * 15), tuple(o1 - n * 16)], dens=0.9, edge=0.3, layer='red', rag=1.0)
     c.stroke([tuple(o1 + n * 14), tuple(o1 - n * 14)], w=2.2, dry=0.4, ink=0.8)
+    if back:
+        # obi bow knot on the back, trailing red tails
+        ob = lerp(o1, o2, 0.5)
+        c.wash([tuple(ob + n * 9 + np.array([0, -4])), tuple(ob - n * 9 + np.array([0, -4])), tuple(ob - n * 6 + np.array([0, 6])), tuple(ob + n * 6 + np.array([0, 6]))], dens=0.95, edge=0.3, layer='red', rag=1.2)
+        c.stroke([tuple(ob), tuple(ob + np.array([-3, 20]))], w=4.0, dry=0.5, ink=0.8, taper=(0.1, 0.6))
     # front leg
-    draw_hakama_leg(c, J['hip'], J['f_knee'], J['f_foot'], shade=0.45)
-    # head: big black bob with a small pale face showing at the front
+    draw_hakama_leg(c, J['f_hip'], J['f_knee'], J['f_foot'], shade=0.45)
+    # head: big black bob. Side: pale face at the front. 3/4 front: face turns toward
+    # camera. Back: solid hair mass with ragged ends, no face.
     h = J['head']; lean = pose.get('lean', 0) + pose.get('head', 0)
-    fwd = np.array([math.cos(math.radians(lean)), math.sin(math.radians(lean))])
-    up = np.array([math.sin(math.radians(lean)), -math.cos(math.radians(lean))])
+    fwd = np.array([math.cos(math.radians(lean)), math.sin(math.radians(lean))]) * cyaw
+    up = np.array([math.sin(math.radians(lean)) * cyaw, -math.cos(math.radians(lean))])
+    up = up / (np.linalg.norm(up) + 1e-6)
+    side = np.array([-1.0, 0.0]) * ay     # screen direction the face swings to when turned
     hc = h - fwd * 3 + up * 2
-    hair = [tuple(hc + np.array([math.cos(t), math.sin(t)]) * (20 + rng.normal(0, 1.0))) for t in np.linspace(0, 2 * math.pi, 18, endpoint=False)]
-    hair += []
+    hair = [tuple(hc + np.array([math.cos(t) * (1 + 0.08 * ay), math.sin(t)]) * (20 + rng.normal(0, 1.0))) for t in np.linspace(0, 2 * math.pi, 18, endpoint=False)]
     c.wash(hair, dens=0.97, edge=0.1, rag=1.8, texture=0.2)
-    # bob hangs to the jaw at the back
-    c.wash([tuple(hc - fwd * 19), tuple(hc - fwd * 20 - up * 18), tuple(hc - fwd * 2 - up * 21), tuple(hc + fwd * 4 - up * 6)], dens=0.95, edge=0.1, rag=2.0, texture=0.2)
-    face = [tuple(h + fwd * 7 - up * 5 + np.array([math.cos(t) * 8.5, math.sin(t) * 10])) for t in np.linspace(0, 2 * math.pi, 12, endpoint=False)]
-    c.wash(face, dens=0.03, edge=0.2, layer='fill', rag=0.7)
-    # fringe over the brow
-    for k in range(4):
-        b0 = h + up * 12 + fwd * (2 + k * 4)
-        c.stroke([tuple(b0), tuple(b0 - up * (13 - k * 1.5) + fwd * 1.5)], w=3.6, dry=0.6, taper=(0.05, 0.7))
-    # ragged strands at the bob ends
-    for k in range(8):
-        base = hc - fwd * (4 + k * 2.2) - up * (14 + rng.normal(0, 2))
-        c.stroke([tuple(base), tuple(base - up * (9 + rng.normal(0, 3)) - fwd * rng.normal(1, 1.5))], w=3.4, dry=0.8, taper=(0.05, 0.6))
-    c.dab(*(h + fwd * 10 - up * 5), 1.4, ink=0.9)
+    if back:
+        # bob seen from behind: hangs to the jaw all round, a wider dark mass
+        c.wash([tuple(hc + np.array([-21, -2])), tuple(hc + np.array([21, -2])), tuple(hc + np.array([23, 22])), tuple(hc + np.array([-23, 22]))], dens=0.96, edge=0.1, rag=2.0, texture=0.2)
+        for k in range(11):
+            base = hc + np.array([-21 + k * 4.2, 19 + rng.normal(0, 2)])
+            c.stroke([tuple(base), tuple(base + np.array([rng.normal(0, 1.5), 9 + rng.normal(0, 3)]))], w=3.4, dry=0.8, taper=(0.05, 0.6))
+        # crown sheen: one dry pale stroke across the hair
+        c.stroke([tuple(hc + np.array([-10, -12])), tuple(hc + np.array([2, -15])), tuple(hc + np.array([12, -11]))], w=2.2, dry=0.9, ink=0.35)
+    else:
+        if ay < 0.3:
+            c.wash([tuple(hc - fwd * 19), tuple(hc - fwd * 20 - up * 18), tuple(hc - fwd * 2 - up * 21), tuple(hc + fwd * 4 - up * 6)], dens=0.95, edge=0.1, rag=2.0, texture=0.2)
+        else:
+            # turned toward camera: the bob frames both cheeks instead of hanging behind
+            fc0 = h + fwd * 7 - up * 5 + side * 5
+            for sg, wd in ((1, 9), (-1, 6)):
+                o = np.array([sg * (10 + 2.5 * ay), 0])
+                c.wash([tuple(fc0 + o + np.array([-sg * 2, -12])), tuple(fc0 + o + np.array([sg * wd, -10])), tuple(fc0 + o + np.array([sg * (wd + 1), 12])), tuple(fc0 + o + np.array([-sg * 1, 9]))], dens=0.95, edge=0.1, rag=1.6, texture=0.2)
+        fc = h + fwd * 7 - up * 5 + side * 5
+        fw_ = 8.5 + 2.5 * ay
+        face = [tuple(fc + np.array([math.cos(t) * fw_, math.sin(t) * 10])) for t in np.linspace(0, 2 * math.pi, 12, endpoint=False)]
+        c.wash(face, dens=0.03, edge=0.2, layer='fill', rag=0.7)
+        for k in range(4 + int(2 * ay)):
+            b0 = h + up * 12 + fwd * (2 + k * 4) + side * (8 - k * 4) * (1 if ay > 0.1 else 0)
+            c.stroke([tuple(b0), tuple(b0 - up * (13 - k * 1.5) + fwd * 1.5)], w=3.6, dry=0.6, taper=(0.05, 0.7))
+        for k in range(8):
+            base = hc - fwd * (4 + k * 2.2) - up * (14 + rng.normal(0, 2)) if ay < 0.3 else fc0 + np.array([(-1 if k % 2 else 1) * (13 + 2.5 * ay + (k // 2)), 9 + rng.normal(0, 2)])
+            c.stroke([tuple(base), tuple(base - up * (9 + rng.normal(0, 3)) - fwd * rng.normal(1, 1.5))], w=3.4, dry=0.8, taper=(0.05, 0.6))
+        c.dab(*(fc + fwd * 3 + side * 2 + np.array([2.5 * ay, -2 * ay])), 1.4, ink=0.9)
+        if ay > 0.3:
+            c.dab(*(fc - np.array([4.5, 2]) + fwd * 1), 1.3, ink=0.9)
     # front arm sleeve
-    draw_sleeve(c, J['sh'], J['f_el'], J['f_hand'], 0.24)
+    draw_sleeve(c, J['f_sh'], J['f_el'], J['f_hand'], 0.24)
     # hand
     c.dab(*J['f_hand'], 3.2, ink=0.25)
     # wet-ink spatter clinging to the silhouette (reference figures are splashed, not clean)
     c.splatter(*(lerp(J['hip'], J['b_foot'], 0.7)), 10, 7, 2.2, ink=0.9)
     c.splatter(*(lerp(J['sh'], J['b_el'], 0.6)), 8, 5, 1.8, ink=0.9)
     # katana
-    tip = J['f_hand'] + V(sword_a, PDIM['sword'])
-    hilt = J['f_hand'] - V(sword_a, 16)
+    tip = J['f_hand'] + pvec(J, V(sword_a, PDIM['sword']))
+    hilt = J['f_hand'] - pvec(J, V(sword_a, 16))
     c.stroke([tuple(hilt), tuple(J['f_hand'])], w=4.2, dry=0.2, taper=(0, 0))
     c.stroke([tuple(J['f_hand'] + perp(hilt, tip) * 5), tuple(J['f_hand'] - perp(hilt, tip) * 5)], w=3.0, dry=0.1, taper=(0, 0))
     mid = lerp(J['f_hand'], tip, 0.5) + perp(J['f_hand'], tip) * 3

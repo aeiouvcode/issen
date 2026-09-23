@@ -5,6 +5,7 @@ from brush import Canvas
 import figures as F
 
 FR = 256; GROUND = 238; CX = 118
+YAW = {'_f': 55.0, '_b': -55.0}
 
 def sin(x): return math.sin(x)
 
@@ -53,6 +54,11 @@ def player_anims():
                     dict(lean=-10, head=10, fa_sh=20, fa_el=30, sword=40, ba_sh=10, ba_el=20, fl_hip=60, fl_knee=-120, bl_hip=40, bl_knee=-110),
                     dict(lean=-60, head=20, fa_sh=-10, fa_el=10, sword=30, ba_sh=-20, ba_el=10, fl_hip=80, fl_knee=-60, bl_hip=70, bl_knee=-50),
                     dict(lean=-86, head=10, fa_sh=-80, fa_el=10, sword=10, ba_sh=-100, ba_el=20, fl_hip=95, fl_knee=-20, bl_hip=85, bl_knee=-10)], 6)
+    # 3/4 front (running toward camera) and 3/4 back (running away) views; yaw from suffix
+    A['idle_f'] = [dict(p) for p in A['idle']]
+    A['run_f'] = [dict(p) for p in A['run']]
+    A['idle_b'] = [dict(p) for p in A['idle']]
+    A['run_b'] = [dict(p) for p in A['run']]
     return A
 
 R_IDLE = dict(lean=10, fa_sh=40, fa_el=40, pole=-20, ba_sh=20, ba_el=50, fl_hip=24, fl_knee=-18, bl_hip=-18, bl_knee=-12)
@@ -98,7 +104,8 @@ def bake(name, anims, dims, drawer, seed0, cols=8, only=None):
         meta['anims'][an] = {'row': r, 'count': len(frames)}
         for i, pose in enumerate(frames):
             c = Canvas(FR, 2, seed=seed0 + r * 100 + i)
-            J = F.place(F.fk(pose, dims), pose, CX, GROUND)
+            yaw = YAW.get(an[-2:], 0.0)
+            J = F.place(F.turn(F.fk(pose, dims), yaw), pose, CX, GROUND)
             tip = drawer(c, J, pose)
             sheet.paste(c.render(), (i * FR, r * FR))
             tips.setdefault(an, []).append([round(float(tip[0]), 1), round(float(tip[1]), 1)] if tip is not None else None)

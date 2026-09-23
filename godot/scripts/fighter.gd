@@ -10,8 +10,10 @@ var shadow: Sprite3D
 var anim := "idle"
 var frame_t := 0.0
 var frame := 0
-var fps := {"idle": 8.0, "run": 15.0, "walk": 10.0, "atk1": 20.0, "atk2": 20.0, "atk3": 18.0, "dodge": 18.0, "hit": 14.0, "die": 9.0, "windup": 9.0, "swing": 18.0, "recover": 10.0}
-var loops := {"idle": true, "run": true, "walk": true}
+var fps := {"idle": 8.0, "run": 15.0, "idle_f": 8.0, "run_f": 15.0, "idle_b": 8.0, "run_b": 15.0, "walk": 10.0, "atk1": 20.0, "atk2": 20.0, "atk3": 18.0, "dodge": 18.0, "hit": 14.0, "die": 9.0, "windup": 9.0, "swing": 18.0, "recover": 10.0}
+var loops := {"idle": true, "run": true, "walk": true, "idle_f": true, "run_f": true, "idle_b": true, "run_b": true}
+## View suffix for locomotion rows: "" side, "_f" 3/4 toward camera, "_b" 3/4 away.
+var view := ""
 var facing := 1.0
 var vel := Vector3.ZERO
 var hp := 100.0

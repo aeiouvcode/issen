@@ -43,7 +43,10 @@ var auto_steps := [[0.3, "right", true], [0.9, "right", false], [1.0, "attack"],
 var banner: Label
 
 func _ready() -> void:
-	autoplay = "--autoplay" in OS.get_cmdline_user_args()
+	autoplay = "--autoplay" in OS.get_cmdline_user_args() or "--autoplay-views" in OS.get_cmdline_user_args()
+	if "--autoplay-views" in OS.get_cmdline_user_args():
+		# locomotion views: toward camera, away, then sideways
+		auto_steps = [[0.3, "down", true], [1.4, "down", false], [1.8, "up", true], [3.0, "up", false], [3.2, "left", true], [3.8, "left", false]]
 	if autoplay:
 		seed(7)
 	else:
@@ -204,7 +207,15 @@ func _player(delta: float) -> void:
 				combo = 0
 				_start_attack()
 			elif mv.length() > 0.1:
-				p.state = "run"; p.play("run")
+				p.state = "run"
+				# pick the view from travel direction (screen-down = toward camera)
+				if mv.y > 0.45 and mv.y > absf(mv.x) * 0.6:
+					p.view = "_f"
+				elif mv.y < -0.45 and -mv.y > absf(mv.x) * 0.6:
+					p.view = "_b"
+				elif absf(mv.x) > absf(mv.y):
+					p.view = ""
+				p.play("run" + p.view)
 				p.vel = Vector3(mv.x, 0, mv.y) * 5.6
 				if absf(mv.x) > 0.15:
 					p.facing = signf(mv.x)
@@ -214,7 +225,7 @@ func _player(delta: float) -> void:
 					if randf() < 0.5:
 						fx.footprint(p.global_position + Vector3(randf_range(-0.2, 0.2), 0, randf_range(-0.1, 0.1)))
 			else:
-				p.state = "idle"; p.play("idle")
+				p.state = "idle"; p.play("idle" + p.view)
 				p.vel = p.vel.lerp(Vector3.ZERO, 12.0 * delta)
 		"attack":
 			p.vel = p.vel.lerp(Vector3.ZERO, 9.0 * delta)
@@ -260,6 +271,7 @@ func _start_attack() -> void:
 	if tgt:
 		p.facing = signf(tgt.global_position.x - p.global_position.x) if absf(tgt.global_position.x - p.global_position.x) > 0.1 else p.facing
 	p.state = "attack"; p.state_t = 0.0
+	p.view = ""
 	p.play(["atk1", "atk2", "atk3"][combo], true)
 	queued = false; hit_done = false
 	var mv := _move_input()
@@ -284,6 +296,7 @@ func _start_dodge(mv: Vector2) -> void:
 	var d := mv if mv.length() > 0.1 else Vector2(-p.facing, 0)
 	if absf(d.x) > 0.15:
 		p.facing = signf(d.x)
+	p.view = ""
 	p.state = "dodge"; p.state_t = 0.0; p.play("dodge", true)
 	p.vel = Vector3(d.x, 0, d.y).normalized() * 11.0
 	dodge_cd = 0.45
