@@ -340,10 +340,14 @@ func _enemy(e: Fighter, delta: float) -> void:
 			if not p.alive():
 				e.play("idle"); e.vel = e.vel.lerp(Vector3.ZERO, 6.0 * delta)
 			elif dist > 3.0:
-				e.play("walk")
 				var goal := p.global_position - Vector3(e.facing * 2.9, 0, 0)
 				var dir := (goal - e.global_position); dir.y = 0
 				e.vel = dir.normalized() * 2.6
+				# closing mostly in depth: show the kasa from the front or the back
+				var vw := ""
+				if absf(dir.z) > absf(dir.x) * 1.2:
+					vw = "_f" if dir.z > 0.0 else "_b"
+				e.play("walk" + vw)
 			else:
 				e.play("idle")
 				e.vel = e.vel.lerp(Vector3.ZERO, 8.0 * delta)

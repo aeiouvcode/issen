@@ -222,16 +222,16 @@ def draw_ronin(c, J, pose):
     # naginata behind body when held back
     def naginata():
         hnd = J['f_hand']
-        back = hnd - V(pole_a, 60); tip = hnd + V(pole_a, RDIM['pole'] - 60)
+        back = hnd - pvec(J, V(pole_a, 60)); tip = hnd + pvec(J, V(pole_a, RDIM['pole'] - 60))
         c.stroke([tuple(back), tuple(hnd), tuple(tip)], w=3.8, dry=0.3, taper=(0.05, 0.05))
-        bl = tip + V(pole_a, 34) + perp(hnd, tip) * 6
+        bl = tip + pvec(J, V(pole_a, 34)) + perp(hnd, tip) * 6
         c.wash([tuple(tip + perp(hnd, tip) * 3), tuple(lerp(tip, bl, 0.5) + perp(hnd, tip) * 9), tuple(bl), tuple(tip - perp(hnd, tip) * 2)], dens=0.85, edge=0.3, rag=0.8)
         c.stroke([tuple(tip), tuple(lerp(tip, bl, 0.5) + perp(hnd, tip) * 8), tuple(bl)], w=2.4, dry=0.3)
         return bl
-    draw_sleeve_dark(c, J['sh'], J['b_el'], J['b_hand'], 0.55)
+    draw_sleeve_dark(c, J['b_sh'], J['b_el'], J['b_hand'], 0.55)
     tipb = None
     if pose.get('pole_behind', 0) > 0.5: tipb = naginata()
-    draw_leg_dark(c, J['hip'], J['b_knee'], J['b_foot'], 0.6)
+    draw_leg_dark(c, J['b_hip'], J['b_knee'], J['b_foot'], 0.6)
     n = perp(J['hip'], J['neck'])
     hipL = J['hip'] + n * 19; hipR = J['hip'] - n * 19
     shL = J['sh'] + n * 17; shR = J['sh'] - n * 17
@@ -242,7 +242,7 @@ def draw_ronin(c, J, pose):
         p0 = lerp(hipL, hipR, k / 5) + np.array([0, 6])
         c.stroke([tuple(p0), tuple(p0 + np.array([rng.normal(-3, 2), 12 + rng.normal(0, 4)]))], w=4, dry=0.7, taper=(0.05, 0.7))
     c.stroke([tuple(shL), tuple(hipL + np.array([0, 10]))], w=4.4, dry=0.5)
-    draw_leg_dark(c, J['hip'], J['f_knee'], J['f_foot'], 0.4)
+    draw_leg_dark(c, J['f_hip'], J['f_knee'], J['f_foot'], 0.4)
     # kasa hat: wide low cone over head
     h = J['head']; lean = pose.get('lean', 0)
     fw = np.array([math.cos(math.radians(lean * 0.5)), math.sin(math.radians(lean * 0.5))])
@@ -257,9 +257,14 @@ def draw_ronin(c, J, pose):
         b = lerp(brimL, brimR, t) + up * (-3 * math.sin(t * math.pi))
         c.stroke([tuple(top), tuple(b)], w=1.6, dry=0.6, ink=0.8, taper=(0.1, 0.3))
     c.stroke([tuple(brimL), tuple(h - up * 11), tuple(brimR)], w=5.5, dry=0.35, taper=(0.1, 0.2))
+    yaw = J.get('_yaw', 0.0)
+    if yaw > 1:
+        # turned toward camera: the brim's underside shows as a dark shadowed ellipse over the face
+        c.wash([tuple(h + np.array([math.cos(t) * 34, 4 + math.sin(t) * 6])) for t in np.linspace(0, 2 * math.pi, 14, endpoint=False)], dens=0.8, edge=0.3, rag=1.2, texture=0.4)
+        c.dab(*(h + np.array([0, 12])), 5, ink=0.9)
     c.splatter(*(lerp(J['hip'], J['f_foot'], 0.8)), 14, 10, 2.6, ink=0.9)
     c.splatter(*J['chest'], 12, 6, 2.2, ink=0.9)
-    draw_sleeve_dark(c, J['sh'], J['f_el'], J['f_hand'], 0.75)
+    draw_sleeve_dark(c, J['f_sh'], J['f_el'], J['f_hand'], 0.75)
     tip = tipb
     if pose.get('pole_behind', 0) <= 0.5: tip = naginata()
     c.dab(*J['f_hand'], 4, ink=0.9)

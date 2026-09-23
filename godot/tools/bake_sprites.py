@@ -90,6 +90,9 @@ def ronin_anims():
                     dict(lean=5, fa_sh=10, fa_el=20, pole=10, fl_hip=60, fl_knee=-120, bl_hip=40, bl_knee=-110, pole_behind=1),
                     dict(lean=40, fa_sh=30, fa_el=10, pole=20, fl_hip=70, fl_knee=-130, bl_hip=60, bl_knee=-120, pole_behind=1),
                     dict(lean=80, head=10, fa_sh=90, fa_el=10, pole=0, fl_hip=90, fl_knee=-100, bl_hip=80, bl_knee=-100, pole_behind=1)], 6)
+    # 3/4 views for foes that close in depth; appended so existing rows keep their seeds
+    A['walk_f'] = [dict(p) for p in A['walk']]
+    A['walk_b'] = [dict(p) for p in A['walk']]
     return A
 
 def bake(name, anims, dims, drawer, seed0, cols=8, only=None):
