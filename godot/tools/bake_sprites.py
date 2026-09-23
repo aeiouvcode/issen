@@ -111,37 +111,43 @@ def ronin_anims():
             A[a + v] = [dict(p) for p in A[a]]
     return A
 
-def bake(name, anims, dims, drawer, seed0, cols=8, only=None, per_row=1):
-    """per_row > 1 packs several animations side by side in one sheet row (cols*per_row
-    frames wide) so tall sheets stay under the 4096 px texture limit on phones."""
+PAGE_ROWS = 8  # 8 x 256 px: every page is at most 2048 px, the WebGL2 guaranteed minimum (F-21)
+
+def bake(name, anims, dims, drawer, seed0, cols=8, only=None):
+    """One animation per row, split across pages of PAGE_ROWS rows so no texture exceeds
+    2048 px. Frame seeds depend only on animation order, so appended rows keep old frames."""
     order = list(anims.keys())
-    rows = (len(order) + per_row - 1) // per_row
-    sheet = Image.new('RGBA', (cols * per_row * FR, rows * FR), (0, 0, 0, 0))
-    meta = {'frame': FR, 'cols': cols * per_row, 'anims': {}}
+    npages = (len(order) + PAGE_ROWS - 1) // PAGE_ROWS
+    pages = []
+    for k in range(npages):
+        rows = min(PAGE_ROWS, len(order) - k * PAGE_ROWS)
+        pages.append(Image.new('RGBA', (cols * FR, rows * FR), (0, 0, 0, 0)))
+    meta = {'frame': FR, 'cols': cols, 'pages': npages, 'anims': {}}
     tips = {}
     for r, an in enumerate(order):
-        if only and an not in only: continue
         frames = anims[an]
-        row, col0 = r // per_row, (r % per_row) * cols
-        meta['anims'][an] = {'row': row, 'col0': col0, 'count': len(frames)}
+        page, row = r // PAGE_ROWS, r % PAGE_ROWS
+        meta['anims'][an] = {'page': page, 'row': row, 'col0': 0, 'count': len(frames)}
+        if only and an not in only: continue
         for i, pose in enumerate(frames):
             c = Canvas(FR, 2, seed=seed0 + r * 100 + i)
             yaw = YAW.get(an[-2:], 0.0)
             J = F.place(F.turn(F.fk(pose, dims), yaw), pose, CX, GROUND)
             tip = drawer(c, J, pose)
-            sheet.paste(c.render(), ((col0 + i) * FR, row * FR))
+            pages[page].paste(c.render(), (i * FR, row * FR))
             tips.setdefault(an, []).append([round(float(tip[0]), 1), round(float(tip[1]), 1)] if tip is not None else None)
         print(name, an, len(frames), flush=True)
     meta['tips'] = tips
-    return sheet, meta
+    return pages, meta
 
 if __name__ == '__main__':
     which = sys.argv[1]; only = sys.argv[2].split(',') if len(sys.argv) > 2 else None
     out = sys.argv[3] if len(sys.argv) > 3 else '../art'
     if which == 'player':
-        s, m = bake('player', player_anims(), F.PDIM, F.draw_player, 1000, only=only, per_row=2)
+        s, m = bake('player', player_anims(), F.PDIM, F.draw_player, 1000, only=only)
     else:
-        s, m = bake('ronin', ronin_anims(), F.RDIM, F.draw_ronin, 5000, only=only, per_row=2)
+        s, m = bake('ronin', ronin_anims(), F.RDIM, F.draw_ronin, 5000, only=only)
     # palette PNG: ink + red need few colours; keeps the repo and the Pages download small
-    s.quantize(colors=128, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(f'{out}/{which}.png', optimize=True)
+    for k, pg in enumerate(s):
+        pg.quantize(colors=128, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(f'{out}/{which}_p{k}.png', optimize=True)
     json.dump(m, open(f'{out}/{which}.json', 'w'))
