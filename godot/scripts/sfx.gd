@@ -7,6 +7,15 @@ const RATE := 44100
 var sounds := {}
 var pool: Array[AudioStreamPlayer] = []
 var next := 0
+var mpool: Array[AudioStreamPlayer] = []
+var mnext := 0
+## C20: combat intensity 0..1 set by main; the music reads it every step
+var intensity := 0.0
+var target := 0.0
+var step_t := 0.0
+var step := 0
+var music_on := true
+const STEP := 60.0 / 80.0 / 2.0  # eighth notes at 80 bpm
 var rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
@@ -25,6 +34,18 @@ func _ready() -> void:
 	sounds["armor"] = _wav(_clack(0.16, 420.0), -14.0)
 	sounds["armor_break"] = _wav(_clack(0.34, 300.0), -11.0)
 	sounds["dodge"] = _wav(_sweep(0.26, 1400.0, 500.0, 0.0), -16.0)
+	# C20 music: a sparse taiko + shamisen part, synthesized like everything else
+	sounds["taiko"] = _wav(_impact(0.7, 58.0, 0.12), -13.0)
+	sounds["taiko_soft"] = _wav(_impact(0.5, 66.0, 0.08), -18.0)
+	sounds["ka"] = _wav(_clack(0.07, 820.0), -22.0)
+	# miyako-bushi on D: D Eb G A Bb D'
+	var scale := [146.8, 155.6, 196.0, 220.0, 233.1, 293.7]
+	for i in scale.size():
+		sounds["sham%d" % i] = _wav(_pluck(1.1, scale[i]), -19.0)
+	for i in 4:
+		var m := AudioStreamPlayer.new()
+		add_child(m)
+		mpool.append(m)
 	var wind := AudioStreamPlayer.new()
 	wind.stream = _wav(_wind(6.0), -24.0, true)
 	wind.volume_db = -24.0
@@ -46,7 +67,67 @@ func play(name: String, pitch_jitter := 0.06) -> void:
 	a.pitch_scale = 1.0 + rng.randf_range(-pitch_jitter, pitch_jitter)
 	a.play()
 
+func play_music(name: String, db_off := 0.0) -> void:
+	if not sounds.has(name):
+		return
+	var a := mpool[mnext]
+	mnext = (mnext + 1) % mpool.size()
+	var s: Array = sounds[name]
+	a.stream = s[0]
+	a.volume_db = s[1] + db_off
+	a.pitch_scale = 1.0 + rng.randf_range(-0.01, 0.01)
+	a.play()
+
+## C20 reactive loop. Calm field: a lone shamisen note now and then over the wind. Foes near:
+## a soft taiko on the bar line and a few plucks. Blades out (wind-up, swing, stagger): full
+## taiko pattern with rim "ka" and a busier shamisen line. Intensity glides, so it swells and
+## settles instead of switching.
+func _process(delta: float) -> void:
+	if not music_on:
+		return
+	intensity = move_toward(intensity, target, delta * (0.8 if target > intensity else 0.25))
+	step_t += delta
+	if step_t < STEP:
+		return
+	step_t -= STEP
+	var b := step % 16
+	step += 1
+	var k := intensity
+	var lvl := lerpf(-6.0, 0.0, k)
+	if k > 0.25 and b % 8 == 0:
+		play_music("taiko" if k > 0.6 else "taiko_soft", lvl)
+	if k > 0.6 and (b == 6 or b == 14 or (k > 0.85 and b == 11)):
+		play_music("taiko_soft", lvl - 2.0)
+	if k > 0.6 and (b == 3 or b == 7 or b == 12):
+		play_music("ka", lvl)
+	var p := 0.05 + k * 0.3
+	if b % 2 == 0 and rng.randf() < p:
+		var hi := 3 if k < 0.5 else 5
+		play_music("sham%d" % rng.randi_range(0, hi), lvl - (4.0 if k < 0.2 else 0.0))
+
 # --- synthesis -------------------------------------------------------------
+
+## C20 shamisen: Karplus-Strong string with a bright-ish pluck and a quick "sawari" buzz, then
+## the usual roll-off. Short sustain so notes stay sparse.
+func _pluck(dur: float, f: float) -> PackedFloat32Array:
+	var n := int(dur * RATE)
+	var out := PackedFloat32Array(); out.resize(n)
+	var L := int(RATE / f)
+	var buf := PackedFloat32Array(); buf.resize(L)
+	for i in L:
+		buf[i] = rng.randf_range(-1.0, 1.0)
+	var idx := 0
+	for i in n:
+		var a := buf[idx]
+		var b2 := buf[(idx + 1) % L]
+		var v := (a + b2) * 0.5 * 0.994
+		buf[idx] = v
+		idx = (idx + 1) % L
+		var t := float(i) / RATE
+		var buzz := 1.0 + 0.25 * exp(-t * 12.0) * signf(a)
+		out[i] = a * buzz * exp(-t * 2.6) * 0.8
+	return out
+
 
 ## C19: blade on lacquered armor - a dull wooden clack (body resonance + short damped noise),
 ## no metallic ring and nothing above the 3.2 kHz roll-off.

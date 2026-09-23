@@ -868,7 +868,23 @@ func _layout() -> void:
 		d.position = Vector2(vs.x - 170, vs.y - 90)
 		joy_base.position = Vector2(40, vs.y - 170)
 
+## C20: how heated the field is, for the music
+func _music_target() -> float:
+	var t := 0.0
+	for e in enemies:
+		if not e.alive():
+			continue
+		var d: float = e.global_position.distance_to(player.global_position)
+		if d < 12.0:
+			t = maxf(t, 0.45)
+		if d < 7.0 and e.state in ["windup", "swing", "stagger"]:
+			t = 1.0
+	if not player.alive():
+		t = 0.0
+	return t
+
 func _hud_update() -> void:
+	sfx.target = _music_target()
 	var m := int(elapsed / 60.0); var s := fmod(elapsed, 60.0)
 	time_label.text = "%02d:%05.2f" % [m, s]
 	php_fill.size.x = php_fill.get_meta("w") * player.hp / player.max_hp
