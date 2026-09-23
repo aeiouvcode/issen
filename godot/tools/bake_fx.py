@@ -5,11 +5,13 @@ from brush import Canvas, _fbm
 OUT = '../art'
 rng = np.random.default_rng(7)
 
-def save_ink(a, path, rgb=(20, 17, 15)):
+def save_ink(a, path, rgb=(20, 17, 15), colors=128):
+    """Single ink colour, so only alpha carries information: save as grey+alpha (LA) to keep
+    all 256 alpha levels (RGBA octree quantizing collapsed them to ~8 bands)."""
     a = np.clip(a, 0, 1)
-    im = np.zeros(a.shape + (4,), np.uint8); im[..., 0], im[..., 1], im[..., 2] = rgb
-    im[..., 3] = (a * 255).astype(np.uint8)
-    Image.fromarray(im, 'RGBA').quantize(colors=128, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(path, optimize=True)
+    im = np.zeros(a.shape + (2,), np.uint8); im[..., 0] = int(sum(rgb) / 3)
+    im[..., 1] = (a * 255).astype(np.uint8)
+    Image.fromarray(im, 'LA').save(path, optimize=True)
 
 def slash(path, seed, W=1024, H=512):
     r_ = np.random.default_rng(seed)
