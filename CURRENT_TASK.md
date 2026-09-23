@@ -32,6 +32,9 @@ Single-file three.js sumi-e duel that reads like sensonoken's "Thousands Layered
 | F-05 | Hit sparks read as red butterflies; reference uses dark ink splatter | medium | fixed in M66+M67 |
 | F-06 | Lone bamboo stalk planes (8-11 tall) read as pole artifacts | high | fixed in M65 |
 | F-07 | Boss kasa still dominates frame at close range | low | open |
+| G-01 | Figures read as smooth shaded 3D, not wet-ink mass with dry-brush | high | improved in M68 (uBand/uDry pools+streaks); still mid-tone heavy vs reference's graphic black-on-pale contrast - open |
+| G-03 | Slash arc band edges too clean; reference edges are ragged/wispy | medium | improved in M68 (edgeN ragged edges); still smoother than reference - open |
+| G-04 | Reference robes are pale paper with bold black accent shapes; ours are mid-tan gradients | high | open - next cycle |
 
 ## Definition of done
 
