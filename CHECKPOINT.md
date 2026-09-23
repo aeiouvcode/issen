@@ -13,3 +13,4 @@ Completed atomic steps, newest last. Do not redo anything listed here.
 | 2026-09-23 | M65: F-01 fixed - player slash arcs are vertical camera-facing curtains (3 swing rolls), bolder ink (pale .48-.55), per-swing spawn height | live md5 ce413959c76e44a2c82891f3c5264153 |
 | 2026-09-23 | M65: F-06 fixed - bamboo stalks 4.2-6 tall, paired clumps at r 15-21 | same commit |
 | 2026-09-23 | M65: verified at 390px + 1280px on deployed build (in-page canvas capture via rAF arc hunter) | /tmp/arc-atk1b.png, /tmp/arc-desktop.png |
+| 2026-09-23 | M66: F-02 scroll-plaque timer (stitched tan scroll, rolled spiral end, now on phones too), F-03 mottled vignette, F-05 ink-dark blood, arc dry-brush gaps | live md5 94a04ad19f8ef302ce352a9e199873d1, File gen 27 |
