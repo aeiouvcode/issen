@@ -3,6 +3,7 @@ extends Node3D
 
 var cam: Camera3D
 var fx: InkFX
+var sfx: Sfx
 var player: Fighter
 var enemies: Array = []
 var player_tex: Array[Texture2D] = []
@@ -69,6 +70,8 @@ func _ready() -> void:
 	ground.material_override = gm
 	add_child(ground)
 	_grass()
+	sfx = Sfx.new()
+	add_child(sfx)
 	fx = InkFX.new()
 	add_child(fx)
 	player = Fighter.new()
@@ -300,6 +303,7 @@ func _start_attack() -> void:
 		if absf(td.z) > absf(td.x) * 1.1:
 			p.view = "_f" if td.z > 0.0 else "_b"
 	p.play(["atk1", "atk2", "atk3"][combo] + p.view, true)
+	sfx.play("swing_heavy" if combo == 2 else "swing")
 	queued = false; hit_done = false
 	var mv := _move_input()
 	p.vel = Vector3(p.facing * 3.2, 0, mv.y * 1.5) if p.view == "" else Vector3(p.facing * 1.0, 0, (3.2 if p.view == "_f" else -3.2))
@@ -329,6 +333,7 @@ func _start_dodge(mv: Vector2) -> void:
 		p.facing = signf(d.x)
 	p.view = ""
 	p.state = "dodge"; p.state_t = 0.0; p.play("dodge", true)
+	sfx.play("dodge")
 	p.vel = Vector3(d.x, 0, d.y).normalized() * 11.0
 	dodge_cd = 0.45
 	ghost_t = 0.0
@@ -365,6 +370,7 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	fx.stain(e.global_position + Vector3(dir * 0.6, 0, 0), 0.008, null, Color(1, 1, 1, 0.7))
 	hitstop = 0.06 if not heavy else 0.1
 	shake = 0.18 if heavy else 0.1
+	sfx.play("kill" if e.hp <= 0.0 else ("hit_heavy" if heavy else "hit"))
 	if e.hp <= 0.0:
 		var hv := _face_view(e, player)
 		e.state = "dead"; e.state_t = 0.0; e.play("die" + hv, true)
@@ -420,6 +426,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 			e.vel = e.vel.lerp(Vector3.ZERO, 10.0 * delta)
 			if e.state_t > 0.62:
 				e.state = "swing"; e.state_t = 0.0; e.play("swing" + str(e.get_meta("vw")), true)
+				sfx.play("foe_swing")
 				e.set_meta("struck", false)
 		"swing":
 			var ew: String = e.get_meta("vw")
@@ -481,6 +488,7 @@ func _player_hurt(dmg: float, dir: float, by: Fighter) -> void:
 	fx.burst(p.global_position + Vector3(0, 1.1, 0.2), dir, 1.0, 0.6)
 	fx.red_mark(p, 1.4)
 	shake = 0.2; hitstop = 0.08
+	sfx.play("hurt")
 	post_mat.set_shader_parameter("hurt", 1.0)
 	if p.hp <= 0.0:
 		p.state = "dead"; p.state_t = 0.0; p.play("die" + _face_view(p, by), true)
