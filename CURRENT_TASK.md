@@ -32,7 +32,7 @@ Single-file three.js sumi-e duel that reads like sensonoken's "Thousands Layered
 | F-05 | Hit sparks read as red butterflies; reference uses dark ink splatter | medium | fixed in M66+M67 |
 | F-06 | Lone bamboo stalk planes (8-11 tall) read as pole artifacts | high | fixed in M65 |
 | F-07 | Boss kasa still dominates frame at close range | low | improved in M72 (kasa paper 0xd9d2bd, bias 1.58, floor .30 - reads as brushed ink w/ pale streaks, not a tan mushroom); size/tilt still open |
-| G-01 | Figures read as smooth shaded 3D, not wet-ink mass with dry-brush | high | improved M68 (pools/streaks) + M74 (graphic accents: black obi sash at waist + 4 hakama brush dabs on the skirt slope - boss now reads black-band + pale panel + black hem masses like ref-8.5); residual: robe mid-tones still smoother than ref |
+| G-01 | Figures read as smooth shaded 3D, not wet-ink mass with dry-brush | high | improved M68 (pools/streaks) + M74 (boss: obi sash + 4 hakama dabs) + M75 (player: 3 hakama brush dabs - the black-on-pale read now reaches every figure); residual: robe mid-tones still smoother than ref |
 | G-03 | Slash arc band edges too clean; reference edges are ragged/wispy | medium | improved M68+M69 (2-octave edgeN torn edges); close to reference now - watch, low residual |
 | G-04 | Reference robes are pale paper with bold black accent shapes; ours are mid-tan gradients | high | fixed in M69 (pale robe + black hem read verified on deployed build) |
 | G-05 | Camera sits lower than reference's high top-down follow cam; ground not the canvas | medium | fixed M69 (.40->.55) + M70 (pitch floor .85, dist 9.0/10.6 - near-overhead duel framing like ref-4.5) |
