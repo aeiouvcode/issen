@@ -43,6 +43,8 @@ Single-file three.js sumi-e duel that reads like sensonoken's "Thousands Layered
 | S-01 | No sound control for the player; two voices (hit, crack) had harsh highs | medium | fixed M73 (master gain + mute toggle 音/黙 in HUD + M key, persists in localStorage; hit 2200->1600Hz, crack 3400->2100Hz square->triangle) |
 | G-12 | Ground blotch field reads busy/muddy vs reference's even fine stipple | low | improved M73 (blotch amp .13->.09, edge .4->.3) |
 | G-13 | Grass swaths thinner than reference's bold stroke combs | low | improved M74 (dabs 60+, alpha .42+, width 3.2+) |
+| G-14 | Slash arcs thin single-band ribbons; ref-0.5 arcs are wide multi-band dry-brush gray washes | high | fixed M76 (band .40->.16R wide, multiplicative tonal wash bands, second offset ribbon per player slash, hold-then-fade) |
+| G-15 | Health bars clean rounded rectangles without values; ref bars are ragged ink strokes with numerics (63/109) | medium | fixed M76 (anisotropic rag filter + live hp/posture numerics on boss + wave-2 minibars) |
 | G-09 | Shade read gray-mud, not the reference's bold black ink mass; its slash arc was muddy brown-red, off the sumi palette | high | fixed in M71 (uPaper lerp .82 toward 0x0d0a06; slash arc red 0 = ink; telegraph ring .55->.42) |
 
 ## Definition of done
