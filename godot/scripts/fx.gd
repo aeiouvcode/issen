@@ -49,20 +49,20 @@ func _billboard(tex: Texture2D, px: float) -> Sprite3D:
 
 func burst(pos: Vector3, dir: float, power := 1.0, red := 0.25) -> void:
 	# central bloom: a few big blots that swell and dry out
-	for i in int(6 + 4 * power):
+	for i in int(10 + 8 * power):
 		var s := _billboard(blots[randi() % 6], 0.009 * power * randf_range(0.6, 1.3))
 		add_child(s)
-		s.global_position = pos + Vector3(randf_range(-0.6, 0.6), randf_range(-0.5, 0.6), 0.1)
+		s.global_position = pos + Vector3(randf_range(-1.0, 1.0), randf_range(-0.8, 0.9), 0.1)
 		s.rotation.z = randf() * TAU
 		items.append({"node": s, "kind": "bloom", "t": 0.0, "dur": randf_range(0.35, 0.6), "s0": s.pixel_size})
 	# flying droplets that land as stains
-	for i in int(34 * power):
+	for i in int(80 * power):
 		var tex := blots[3 + randi() % 3] if randf() < 0.6 else blots[randi() % 3]
 		var s := _billboard(tex, randf_range(0.0012, 0.0045) * (1.0 + power * 0.3))
 		if randf() < red:
 			s.modulate = Color(0.75, 0.1, 0.1)
 		add_child(s)
-		s.global_position = pos + Vector3(0, randf_range(-0.2, 0.3), 0)
+		s.global_position = pos + Vector3(randf_range(-0.5, 0.5), randf_range(-0.5, 0.6), 0)
 		var v := Vector3(dir * randf_range(0.5, 6.0) + randf_range(-2.0, 2.0), randf_range(0.5, 5.0), randf_range(-2.5, 2.5))
 		items.append({"node": s, "kind": "drop", "t": 0.0, "vel": v})
 

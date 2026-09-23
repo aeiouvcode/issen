@@ -2,7 +2,7 @@ class_name Fighter
 extends Node3D
 ## A brush-animated combatant: a Y-billboard Sprite3D stepping through baked sheet frames.
 
-const PIXEL := 0.0118
+const PIXEL := 0.0158
 var sheet: Texture2D
 var meta: Dictionary
 var sprite: Sprite3D
@@ -28,7 +28,7 @@ func setup(tex: Texture2D, meta_path: String) -> void:
 	shadow = Sprite3D.new()
 	shadow.texture = load("res://art/dab.png")
 	shadow.axis = Vector3.AXIS_Y
-	shadow.pixel_size = 0.03
+	shadow.pixel_size = 0.04
 	shadow.modulate = Color(1, 1, 1, 0.35)
 	shadow.position.y = 0.01
 	shadow.scale = Vector3(1.6, 1, 0.8)

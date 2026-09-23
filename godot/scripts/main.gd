@@ -249,15 +249,15 @@ func _start_attack() -> void:
 func _player_strike() -> void:
 	var p := player
 	var dmg: float = [12.0, 14.0, 24.0][combo]
-	var yoff: float = [0.15, 0.35, 0.0][combo]
-	var anchor := p.global_position + Vector3(p.facing * 0.9, yoff, 0.15)
-	var sk: float = [1.0, 0.95, 1.25][combo]
-	fx.slash(anchor, p.facing, sk, 0.3, 0.0, combo)
+	var yoff: float = [0.1, 0.3, -0.1][combo]
+	var anchor := p.global_position + Vector3(p.facing * 1.1, yoff, 0.2)
+	var sk: float = [1.45, 1.35, 1.8][combo]
+	fx.slash(anchor, p.facing, sk, 0.42, 0.0, combo)
 	for e in enemies:
 		if not e.alive():
 			continue
 		var d: Vector3 = e.global_position - p.global_position
-		if absf(d.z) < 1.3 and d.x * p.facing > -0.4 and absf(d.x) < 2.9:
+		if absf(d.z) < 1.3 and d.x * p.facing > -0.4 and absf(d.x) < 3.4:
 			_hurt(e, dmg, p.facing, combo == 2)
 
 func _start_dodge(mv: Vector2) -> void:
@@ -275,7 +275,7 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	e.posture = maxf(0.0, e.posture - dmg * 1.6)
 	e.flash = 1.0
 	e.facing = -dir
-	var hitpos := e.global_position + Vector3(0, 1.1, 0.2)
+	var hitpos := e.global_position + Vector3(0, 1.4, 0.3)
 	fx.burst(hitpos, dir, 1.3 if heavy else 0.9, 0.35)
 	fx.stain(e.global_position + Vector3(dir * 0.6, 0, 0), 0.008, null, Color(1, 1, 1, 0.7))
 	hitstop = 0.06 if not heavy else 0.1
@@ -303,9 +303,9 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.facing = signf(d.x)
 			if not p.alive():
 				e.play("idle"); e.vel = e.vel.lerp(Vector3.ZERO, 6.0 * delta)
-			elif dist > 2.5:
+			elif dist > 2.9:
 				e.play("walk")
-				var goal := p.global_position - Vector3(e.facing * 2.1, 0, 0)
+				var goal := p.global_position - Vector3(e.facing * 2.5, 0, 0)
 				var dir := (goal - e.global_position); dir.y = 0
 				e.vel = dir.normalized() * 2.6
 			else:
@@ -324,7 +324,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.set_meta("struck", true)
 				fx.slash(e.global_position + Vector3(e.facing * 1.0, 0.1, 0.12), e.facing, 1.15, 0.3, 0.0, 1)
 				var dd: Vector3 = p.global_position - e.global_position
-				if p.alive() and p.state != "dodge" and absf(dd.z) < 1.3 and dd.x * e.facing > -0.5 and absf(dd.x) < 3.3:
+				if p.alive() and p.state != "dodge" and absf(dd.z) < 1.3 and dd.x * e.facing > -0.5 and absf(dd.x) < 3.7:
 					_player_hurt(18.0, e.facing)
 			if e.anim_done:
 				e.state = "recover"; e.state_t = 0.0; e.play("recover", true)
@@ -348,8 +348,8 @@ func _enemy(e: Fighter, delta: float) -> void:
 		var sp: Vector3 = e.global_position - p.global_position
 		sp.y = 0.0
 		var sl := Vector2(sp.x, sp.z * 1.6).length()
-		if sl < 1.25 and sl > 0.001:
-			e.global_position += sp.normalized() * (1.25 - sl)
+		if sl < 1.5 and sl > 0.001:
+			e.global_position += sp.normalized() * (1.5 - sl)
 	e.global_position += e.vel * delta
 	e.posture = minf(100.0, e.posture + 8.0 * delta)
 	e.tick_anim(delta)
@@ -398,12 +398,12 @@ func _camera(delta: float) -> void:
 	var tgt := _nearest(focus, 7.0)
 	if tgt:
 		focus = focus.lerp(tgt.global_position, 0.35)
-	var off := Vector3(0, 3.9, 6.4) if not portrait else Vector3(0, 5.4, 5.6)
+	var off := Vector3(0, 3.6, 6.0) if not portrait else Vector3(0, 4.4, 4.9)
 	cam.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
-	cam.fov = 52.0 if portrait else 38.0
+	cam.fov = 50.0 if portrait else 40.0
 	var want := focus + off
 	cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-5.0 * delta)) if cam.global_position.length() > 0.1 else want
-	cam.look_at(cam.global_position - off + Vector3(0, 0.9, 0), Vector3.UP)
+	cam.look_at(cam.global_position - off + Vector3(0, 1.2, 0), Vector3.UP)
 	if shake > 0.0:
 		shake = maxf(0.0, shake - delta)
 		cam.h_offset = randf_range(-1, 1) * shake * 0.5
@@ -524,11 +524,11 @@ func _hud_update() -> void:
 	for i in enemies.size():
 		var e: Fighter = enemies[i]
 		var b: Control = ebars[i]
-		var wp: Vector3 = e.global_position + Vector3(0, 2.75, 0)
+		var wp: Vector3 = e.global_position + Vector3(0, 3.1, 0)
 		b.visible = e.alive() and not cam.is_position_behind(wp)
 		if b.visible:
 			var sp := cam.unproject_position(wp)
-			b.position = sp - Vector2(45, 0)
+			b.position = Vector2(sp.x - 45.0, maxf(sp.y, 24.0))
 			var f: ColorRect = b.get_node("F")
 			f.size.x = f.get_meta("w") * e.hp / e.max_hp
 			(b.get_node("L") as Label).text = "%d/100" % int(ceil(e.hp))

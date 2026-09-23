@@ -1,6 +1,9 @@
 # Handoff
 
 ## Resume here
+Cycle 2 is mid-way: the F-01/F-02/F-03/F-07 changes are committed but NOT yet verified. Next: capture the player's combo curtain and a hit burst at 1280x720 and 390x844 (Playwright capture timing is flaky; hook a capture on the slash spawn instead of fixed sleeps), check the player attack still lands at the new ranges, run the side-by-side, then re-grade.
+
+Cycle 1 audit list:
 Cycle 2 audit, priority order (from the M1 side-by-side vs reference frame 03:18.90):
 1. F-01 Figures too small and too clean vs reference. Reference figures fill ~50-60% of frame height and are heavy wet ink with splashed texture. Bring camera closer / scale sprites, add heavier wash and splatter on the silhouettes.
 2. F-02 Hit bursts too sparse. Reference impact is a dense cloud of hundreds of droplets engulfing both fighters plus red accents. Needs a baked burst sheet (animated) rather than a few blot sprites.

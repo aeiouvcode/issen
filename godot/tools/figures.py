@@ -61,7 +61,7 @@ def draw_player(c, J, pose):
     # back sleeve + arm
     draw_sleeve(c, J['sh'], J['b_el'], J['b_hand'], 0.5)
     # back leg hakama
-    draw_hakama_leg(c, J['hip'], J['b_knee'], J['b_foot'], shade=0.62)
+    draw_hakama_leg(c, J['hip'], J['b_knee'], J['b_foot'], shade=0.7)
     # torso kimono
     n = perp(J['hip'], J['neck'])
     hipL = J['hip'] + n * 15; hipR = J['hip'] - n * 15
@@ -79,7 +79,7 @@ def draw_player(c, J, pose):
     c.wash([tuple(o1 + n * 16), tuple(o2 + n * 15), tuple(o2 - n * 15), tuple(o1 - n * 16)], dens=0.9, edge=0.3, layer='red', rag=1.0)
     c.stroke([tuple(o1 + n * 14), tuple(o1 - n * 14)], w=2.2, dry=0.4, ink=0.8)
     # front leg
-    draw_hakama_leg(c, J['hip'], J['f_knee'], J['f_foot'], shade=0.36)
+    draw_hakama_leg(c, J['hip'], J['f_knee'], J['f_foot'], shade=0.45)
     # head: big black bob with a small pale face showing at the front
     h = J['head']; lean = pose.get('lean', 0) + pose.get('head', 0)
     fwd = np.array([math.cos(math.radians(lean)), math.sin(math.radians(lean))])
@@ -105,6 +105,9 @@ def draw_player(c, J, pose):
     draw_sleeve(c, J['sh'], J['f_el'], J['f_hand'], 0.24)
     # hand
     c.dab(*J['f_hand'], 3.2, ink=0.25)
+    # wet-ink spatter clinging to the silhouette (reference figures are splashed, not clean)
+    c.splatter(*(lerp(J['hip'], J['b_foot'], 0.7)), 10, 7, 2.2, ink=0.9)
+    c.splatter(*(lerp(J['sh'], J['b_el'], 0.6)), 8, 5, 1.8, ink=0.9)
     # katana
     tip = J['f_hand'] + V(sword_a, PDIM['sword'])
     hilt = J['f_hand'] - V(sword_a, 16)
@@ -185,6 +188,8 @@ def draw_ronin(c, J, pose):
         b = lerp(brimL, brimR, t) + up * (-3 * math.sin(t * math.pi))
         c.stroke([tuple(top), tuple(b)], w=1.6, dry=0.6, ink=0.8, taper=(0.1, 0.3))
     c.stroke([tuple(brimL), tuple(h - up * 11), tuple(brimR)], w=5.5, dry=0.35, taper=(0.1, 0.2))
+    c.splatter(*(lerp(J['hip'], J['f_foot'], 0.8)), 14, 10, 2.6, ink=0.9)
+    c.splatter(*J['chest'], 12, 6, 2.2, ink=0.9)
     draw_sleeve_dark(c, J['sh'], J['f_el'], J['f_hand'], 0.75)
     tip = tipb
     if pose.get('pole_behind', 0) <= 0.5: tip = naginata()
