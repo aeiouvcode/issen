@@ -445,7 +445,8 @@ func _camera(delta: float) -> void:
 	cam.fov = 50.0 if portrait else 40.0
 	var want := focus + off
 	cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-5.0 * delta)) if cam.global_position.length() > 0.1 else want
-	cam.look_at(cam.global_position - off + Vector3(0, 1.2, 0), Vector3.UP)
+	# portrait: aim a little higher so the duel sits nearer the vertical middle, not above empty ground
+	cam.look_at(cam.global_position - off + Vector3(0, 2.7 if portrait else 1.2, 0), Vector3.UP)
 	if shake > 0.0:
 		shake = maxf(0.0, shake - delta)
 		cam.h_offset = randf_range(-1, 1) * shake * 0.5
