@@ -8,6 +8,7 @@ var specks: Array[Texture2D] = []
 var slash_tex: Array[Texture2D] = []
 var dab_tex: Texture2D
 var cloud_tex: Texture2D
+var red_tex: Texture2D
 var slash_shader: Shader
 var quad: QuadMesh
 var items: Array = []   # {node, kind, t, life, vel, ...}
@@ -23,6 +24,7 @@ func _ready() -> void:
 	slash_tex = [load("res://art/slash0.png"), load("res://art/slash1.png")]
 	dab_tex = load("res://art/dab.png")
 	cloud_tex = load("res://art/cloud.png")
+	red_tex = load("res://art/redblot.png")
 	slash_shader = load("res://shaders/slash.gdshader")
 	quad = QuadMesh.new()
 	quad.size = Vector2(4.6, 2.3)
@@ -113,6 +115,17 @@ func dash_mark(pos: Vector3) -> void:
 	s.global_position = pos + Vector3(randf_range(-0.1, 0.1), 0.22, 0.0)
 	items.append({"node": s, "kind": "mark", "t": 0.0, "dur": 1.6})
 
+## Hit mark: a red ink blot that blooms on the struck figure's body, then fades.
+func red_mark(f: Node3D, h := 1.5) -> void:
+	var s := _billboard(red_tex, 0.0095)
+	s.modulate = Color(1, 1, 1, 0.95)
+	s.render_priority = 2
+	s.no_depth_test = true
+	f.add_child(s)
+	s.position = Vector3(randf_range(-0.15, 0.15), h + randf_range(-0.2, 0.2), 0.4)
+	s.rotation.z = randf() * TAU
+	items.append({"node": s, "kind": "redmark", "t": 0.0, "dur": 0.55, "s0": s.pixel_size})
+
 func ghost(src: Sprite3D, pos: Vector3) -> void:
 	var s := Sprite3D.new()
 	s.texture = src.texture
@@ -194,6 +207,13 @@ func _process(delta: float) -> void:
 				var km: float = it["t"] / it["dur"]
 				(n as Sprite3D).modulate.a = clampf(1.6 - km * 1.6, 0.0, 1.0)
 				if km >= 1.0:
+					n.queue_free(); continue
+			"redmark":
+				var kr: float = it["t"] / it["dur"]
+				var sr: Sprite3D = n
+				sr.pixel_size = it["s0"] * (0.6 + minf(kr * 4.0, 1.0) * 0.6)
+				sr.modulate.a = 0.95 * clampf(1.5 - kr * 1.5, 0.0, 1.0)
+				if kr >= 1.0 or not is_instance_valid(n):
 					n.queue_free(); continue
 			"ghost":
 				var k3: float = it["t"] / it["dur"]

@@ -314,6 +314,7 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	e.facing = -dir
 	var hitpos := e.global_position + Vector3(0, 1.4, 0.3)
 	fx.burst(hitpos, dir, 1.3 if heavy else 0.9, 0.35)
+	fx.red_mark(e, 1.6)
 	fx.stain(e.global_position + Vector3(dir * 0.6, 0, 0), 0.008, null, Color(1, 1, 1, 0.7))
 	hitstop = 0.06 if not heavy else 0.1
 	shake = 0.18 if heavy else 0.1
@@ -403,6 +404,7 @@ func _player_hurt(dmg: float, dir: float) -> void:
 	p.flash = 1.0
 	p.facing = -dir
 	fx.burst(p.global_position + Vector3(0, 1.1, 0.2), dir, 1.0, 0.6)
+	fx.red_mark(p, 1.4)
 	shake = 0.2; hitstop = 0.08
 	post_mat.set_shader_parameter("hurt", 1.0)
 	if p.hp <= 0.0:

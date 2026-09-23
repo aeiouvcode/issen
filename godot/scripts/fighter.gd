@@ -80,7 +80,7 @@ func tick_anim(delta: float) -> void:
 	_apply()
 	if flash > 0.0:
 		flash = maxf(0.0, flash - delta * 4.0)
-	sprite.modulate = Color(1.0, 1.0 - flash * 0.35, 1.0 - flash * 0.4, 1.0)
+	sprite.modulate = Color(1.0, 1.0 - flash * 0.55, 1.0 - flash * 0.6, 1.0)
 
 func alive() -> bool:
 	return hp > 0.0

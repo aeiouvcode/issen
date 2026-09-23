@@ -155,6 +155,19 @@ def cloud():
     c.stroke([(40, 186), (120, 196), (216, 186)], w=3.0, dry=0.7, taper=(0.2, 0.4), ink=0.8)
     c.render().save(f'{OUT}/cloud.png', optimize=True)
 
+def redblot():
+    """Red ink blot for hit marks (baked in red so modulate isn't multiplying black ink)."""
+    c = Canvas(128, 2, seed=960)
+    for k in range(7):
+        x, y = 64 + c.rng.normal(0, 10), 64 + c.rng.normal(0, 8); r = c.rng.uniform(8, 20) if k == 0 else c.rng.uniform(3, 9)
+        if k == 0: r = 22
+        c.wash([(x + math.cos(t) * r * (1 + 0.25 * math.cos(3 * t + k)), y + math.sin(t) * r) for t in np.linspace(0, 2 * math.pi, 22, endpoint=False)], dens=0.95, edge=0.3, layer='red', rag=1.4)
+    for k in range(14):
+        a = c.rng.uniform(0, 2 * math.pi); d = c.rng.uniform(26, 44); r = c.rng.uniform(1.2, 3.5)
+        x, y = 64 + math.cos(a) * d, 64 + math.sin(a) * d * 0.8
+        c.wash([(x + math.cos(t) * r, y + math.sin(t) * r) for t in np.linspace(0, 2 * math.pi, 10, endpoint=False)], dens=0.95, edge=0.2, layer='red', rag=0.4)
+    c.render().save(f'{OUT}/redblot.png', optimize=True)
+
 def barstroke():
     c = Canvas(512, 2, seed=700)
     c.stroke([(10, 256), (180, 253), (340, 257), (502, 255)], w=16, dry=0.35, taper=(0.03, 0.08))
@@ -163,5 +176,5 @@ def barstroke():
 if __name__ == '__main__':
     import os; os.makedirs(OUT, exist_ok=True)
     slash(f'{OUT}/slash0.png', 1); slash(f'{OUT}/slash1.png', 2)
-    blots(); drips(); grass(); footprint(); plaque(); icon_ring(); skill_icons(); cloud(); barstroke()
+    blots(); drips(); grass(); footprint(); plaque(); icon_ring(); skill_icons(); cloud(); redblot(); barstroke()
     print('fx ok')
