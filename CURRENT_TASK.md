@@ -36,7 +36,9 @@ Single-file three.js sumi-e duel that reads like sensonoken's "Thousands Layered
 | G-03 | Slash arc band edges too clean; reference edges are ragged/wispy | medium | improved M68+M69 (2-octave edgeN torn edges); close to reference now - watch, low residual |
 | G-04 | Reference robes are pale paper with bold black accent shapes; ours are mid-tan gradients | high | fixed in M69 (pale robe + black hem read verified on deployed build) |
 | G-05 | Camera sits lower than reference's high top-down follow cam; ground not the canvas | medium | fixed M69 (.40->.55) + M70 (pitch floor .85, dist 9.0/10.6 - near-overhead duel framing like ref-4.5) |
-| G-06 | Reference fields multiple foes with their own health bars; ours is a single boss | medium | stage 1 fixed in M70 (shade minion w/ own bar + AI, near-overhead duel cam); stage 2 = true enemy variety (ref-4.5 shield-spear bearer is a distinct silhouette, not a clone) - open |
+| G-06 | Reference fields multiple foes with their own health bars; ours is a single boss | medium | stage 1 fixed in M70 (shade minion w/ own bar + AI); M71 deepened it to true ink black; stage 2 = true enemy variety (ref-4.5 shield-spear bearer, distinct silhouette) - open |
+| G-08 | Ground speckle far sparser than reference's dense washi dash texture | high | fixed in M71 (thresholds .74/.83 + .79/.87, mask floors .45/.38, inkAmt .72) |
+| G-09 | Shade read gray-mud, not the reference's bold black ink mass; its slash arc was muddy brown-red, off the sumi palette | high | fixed in M71 (uPaper lerp .82 toward 0x0d0a06; slash arc red 0 = ink; telegraph ring .55->.42) |
 
 ## Definition of done
 
