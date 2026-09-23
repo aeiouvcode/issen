@@ -3,17 +3,22 @@ extends Node3D
 ## Ink effects: sweeping slash curtains, splatter bursts, lingering ground stains, dodge ghosts.
 
 var blots: Array[Texture2D] = []
+var drips: Array[Texture2D] = []
+var specks: Array[Texture2D] = []
 var slash_tex: Array[Texture2D] = []
 var dab_tex: Texture2D
 var slash_shader: Shader
 var quad: QuadMesh
 var items: Array = []   # {node, kind, t, life, vel, ...}
-const MAX_STAINS := 70
+const MAX_STAINS := 240
 var stains: Array = []
 
 func _ready() -> void:
 	for i in 6:
 		blots.append(load("res://art/blot%d.png" % i))
+	for i in 3:
+		drips.append(load("res://art/drip%d.png" % i))
+		specks.append(load("res://art/speck%d.png" % i))
 	slash_tex = [load("res://art/slash0.png"), load("res://art/slash1.png")]
 	dab_tex = load("res://art/dab.png")
 	slash_shader = load("res://shaders/slash.gdshader")
@@ -55,16 +60,29 @@ func burst(pos: Vector3, dir: float, power := 1.0, red := 0.25) -> void:
 		s.global_position = pos + Vector3(randf_range(-1.0, 1.0), randf_range(-0.8, 0.9), 0.1)
 		s.rotation.z = randf() * TAU
 		items.append({"node": s, "kind": "bloom", "t": 0.0, "dur": randf_range(0.35, 0.6), "s0": s.pixel_size})
-	# flying droplets that land as stains
-	for i in int(80 * power):
-		var tex := blots[3 + randi() % 3] if randf() < 0.6 else blots[randi() % 3]
-		var s := _billboard(tex, randf_range(0.0012, 0.0045) * (1.0 + power * 0.3))
+	# flying ink: many fine specks, streaking drips aligned to their flight, a few fat drops.
+	# All land as stains, so a fight leaves a dense splattered floor like the reference.
+	for i in int(150 * power):
+		var r := randf()
+		var tex: Texture2D
+		var px: float
+		var kind := "drop"
+		if r < 0.62:
+			tex = specks[randi() % 3]; px = randf_range(0.0028, 0.0085)
+		elif r < 0.8:
+			tex = drips[randi() % 3]; px = randf_range(0.0013, 0.0028); kind = "drip"
+		else:
+			tex = blots[3 + randi() % 3]; px = randf_range(0.0018, 0.0038)
+		var s := _billboard(tex, px * (1.0 + power * 0.25))
 		if randf() < red:
 			s.modulate = Color(0.75, 0.1, 0.1)
 		add_child(s)
-		s.global_position = pos + Vector3(randf_range(-0.5, 0.5), randf_range(-0.5, 0.6), 0)
-		var v := Vector3(dir * randf_range(0.5, 6.0) + randf_range(-2.0, 2.0), randf_range(0.5, 5.0), randf_range(-2.5, 2.5))
-		items.append({"node": s, "kind": "drop", "t": 0.0, "vel": v})
+		s.global_position = pos + Vector3(randf_range(-0.35, 0.35), randf_range(-0.4, 0.5), 0)
+		# radial spray biased along the cut, so the burst reads as a splash, not speed lines
+		var a := randf() * TAU
+		var sp := randf_range(1.0, 6.5)
+		var v := Vector3(cos(a) * sp + dir * randf_range(0.5, 3.5), sin(a) * sp * 0.8 + 2.0, randf_range(-2.5, 2.5))
+		items.append({"node": s, "kind": kind, "t": 0.0, "vel": v})
 
 func ghost(src: Sprite3D, pos: Vector3) -> void:
 	var s := Sprite3D.new()
@@ -121,11 +139,16 @@ func _process(delta: float) -> void:
 				s.modulate.a = clampf(1.3 - k2 * 1.3, 0.0, 1.0)
 				if k2 >= 1.0:
 					n.queue_free(); continue
-			"drop":
+			"drop", "drip":
 				var v: Vector3 = it["vel"]
 				v.y -= 16.0 * delta
 				it["vel"] = v
 				n.global_position += v * delta
+				if it["kind"] == "drip":
+					# head leads, tail trails along screen-space velocity; stretch with speed
+					var s3: Sprite3D = n
+					s3.rotation.z = atan2(v.y, v.x)
+					s3.scale = Vector3(clampf(0.5 + Vector2(v.x, v.y).length() * 0.07, 0.5, 1.1), 1.0, 1.0)
 				if n.global_position.y <= 0.02:
 					var s2: Sprite3D = n
 					stain(n.global_position, s2.pixel_size * 1.1, s2.texture, Color(s2.modulate.r, s2.modulate.g, s2.modulate.b, 0.75))

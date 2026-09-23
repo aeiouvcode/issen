@@ -53,6 +53,23 @@ def blots():
             c.splatter(64, 64, 18, 16, 8)
         img = c.render(); img.save(f'{OUT}/blot{i}.png', optimize=True)
 
+def drips():
+    """Flying-ink streaks: a wet head (right) trailing a thin dry tail (left)."""
+    for i in range(3):
+        c = Canvas(128, 2, seed=800 + i)
+        L = 70 + i * 18; y0 = 64 + c.rng.normal(0, 1)
+        pts = [(118 - L + k * L / 6, y0 + c.rng.normal(0, 0.6) + (k - 6) ** 2 * 0.05) for k in range(7)]
+        c.stroke(pts, w=3.2 + i * 0.6, dry=0.55, taper=(0.9, 0.02), ink=0.95)
+        c.dab(116, y0, 4.2 + i * 0.8, ink=0.97, rag=0.25)
+        for _ in range(3):
+            c.dab(118 - L * c.rng.uniform(0.2, 0.9), y0 + c.rng.normal(0, 3), c.rng.uniform(0.6, 1.3), ink=0.9)
+        c.render().crop((0, 40, 128, 88)).save(f'{OUT}/drip{i}.png', optimize=True)
+    for i in range(3):
+        c = Canvas(32, 2, seed=820 + i)
+        c.dab(16, 16, 3.0 + i * 1.3, ink=0.97, rag=0.4)
+        if i == 2: c.dab(22, 19, 1.4, ink=0.95)
+        c.render().save(f'{OUT}/speck{i}.png', optimize=True)
+
 def grass():
     for i in range(3):
         c = Canvas(256, 2, seed=400 + i)
@@ -110,5 +127,5 @@ def barstroke():
 if __name__ == '__main__':
     import os; os.makedirs(OUT, exist_ok=True)
     slash(f'{OUT}/slash0.png', 1); slash(f'{OUT}/slash1.png', 2)
-    blots(); grass(); footprint(); plaque(); icon_ring(); barstroke()
+    blots(); drips(); grass(); footprint(); plaque(); icon_ring(); barstroke()
     print('fx ok')
