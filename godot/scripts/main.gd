@@ -229,6 +229,10 @@ func _player(delta: float) -> void:
 				p.vel = p.vel.lerp(Vector3.ZERO, 12.0 * delta)
 		"attack":
 			p.vel = p.vel.lerp(Vector3.ZERO, 9.0 * delta)
+			# lunge stops at blade contact instead of carrying the figures into each other
+			var near := _nearest(p.global_position, 3.0)
+			if near and (near.global_position.x - p.global_position.x) * p.facing > 0.0 and absf(near.global_position.x - p.global_position.x) < 2.7:
+				p.vel.x = 0.0
 			if want_atk:
 				atk_buf = 0.0
 				queued = true
@@ -337,7 +341,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.play("idle"); e.vel = e.vel.lerp(Vector3.ZERO, 6.0 * delta)
 			elif dist > 3.0:
 				e.play("walk")
-				var goal := p.global_position - Vector3(e.facing * 2.7, 0, 0)
+				var goal := p.global_position - Vector3(e.facing * 2.9, 0, 0)
 				var dir := (goal - e.global_position); dir.y = 0
 				e.vel = dir.normalized() * 2.6
 			else:
@@ -352,6 +356,8 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.set_meta("struck", false)
 		"swing":
 			e.vel = e.vel.lerp(Vector3(e.facing * 1.5, 0, 0), 6.0 * delta)
+			if absf(d.x) < 2.7:
+				e.vel.x = 0.0
 			if not e.get_meta("struck") and e.frame >= 2:
 				e.set_meta("struck", true)
 				fx.slash(e.global_position + Vector3(e.facing * 1.1, 0.1, 0.12), e.facing, 1.25, 0.34, 0.0, 1)
@@ -380,8 +386,8 @@ func _enemy(e: Fighter, delta: float) -> void:
 		var sp: Vector3 = e.global_position - p.global_position
 		sp.y = 0.0
 		var sl := Vector2(sp.x, sp.z * 1.6).length()
-		if sl < 1.9 and sl > 0.001:
-			e.global_position += sp.normalized() * (1.9 - sl)
+		if sl < 2.5 and sl > 0.001:
+			e.global_position += sp.normalized() * (2.5 - sl)
 	e.global_position += e.vel * delta
 	e.posture = minf(100.0, e.posture + 8.0 * delta)
 	e.tick_anim(delta)
