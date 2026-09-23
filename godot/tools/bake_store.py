@@ -99,6 +99,26 @@ def feature():
     seal(im, 392, 196, 50, "I")
     im.convert("RGB").save(os.path.join(OUT, "feature-1024x500.jpg"), quality=90)
 
+def android_icons():
+    """Launcher icons for the Android export: legacy 192, adaptive foreground/background/monochrome 432.
+    Adaptive layers are masked to a circle/squircle by the launcher; keep the figure inside the
+    central 288 px safe zone."""
+    A = os.path.join(os.path.dirname(__file__), "..", "android_icons")
+    os.makedirs(A, exist_ok=True)
+    Image.open(os.path.join(OUT, "icon-512.png")).resize((192, 192), Image.LANCZOS).save(os.path.join(A, "icon_192.png"))
+    S = 432
+    bg = parchment(S, S)
+    bg.alpha_composite(slash_layer((S + 120, (S + 120) // 2), 0.75).rotate(28, resample=Image.BICUBIC), (-80, 70))
+    bg.convert("RGB").save(os.path.join(A, "adaptive_bg.png"))
+    fg = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    p = frame("player", "atk3", 3).resize((264, 264), Image.LANCZOS)
+    fg.alpha_composite(p, (92, 66))
+    a = np.array(fg)[..., 3].copy()  # monochrome: figure only, the seal would read as a blank square
+    seal(fg, 256, 108, 42, "I")
+    fg.save(os.path.join(A, "adaptive_fg.png"))
+    mono = np.zeros((S, S, 4), np.uint8); mono[..., :3] = 255; mono[..., 3] = a
+    Image.fromarray(mono).save(os.path.join(A, "adaptive_mono.png"))
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    icon(); feature()
+    icon(); feature(); android_icons()
