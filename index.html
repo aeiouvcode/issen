@@ -323,7 +323,7 @@ const M = {
   dark:  inkMat(0x9a917c, 0x171208, 1.15, .30, 0, .5, 0, .7, 1, 1, .45),
   wrap:  inkMat(0x7c7260, 0x14100a, 1.3, .5, 1, .5, 0, .8, 1, 1, .4),
   robe:  inkMat(0xe8e1ca, 0x14100a, 1.34, .10, 1, 2.1, 1.0, .5, 1.2, 1, .65),
-  kasa:  inkMat(0xc3b897, 0x14100a, 1.45, .38, 1, 1.1, .5, .7),
+  kasa:  inkMat(0xd9d2bd, 0x14100a, 1.58, .30, 1, 1.1, .5, .7),
   blade: inkMat(0xd8d0b8, 0x100c07, 1.15, .25),
   red:   new THREE.MeshBasicMaterial({color:RED}),
   redGlow: new THREE.MeshBasicMaterial({color:0xff3120}),
@@ -1434,6 +1434,56 @@ minion.root.traverse(o=>{
 minion.J.kasa.visible=false; // bare-headed shade: the ink wears no hat
 minion.J.eyes.visible=true;  // red glints in the dark
 
+// the lancer - wave two: the field's second duelist, round shield and long spear (reference frame 4.5s)
+const lancer = {
+  ...buildBoss(), pos:new THREE.Vector3(-9.5,0,-9.5), yaw:0, kind:'lancer',
+  hp:90, maxhp:90, posture:70, maxposture:70,
+  state:'idle', stateT:0, thinkT:1.6, alive:false, _hit:false, _spawnT:Infinity,
+};
+lancer.root.scale.setScalar(.94);
+lancer.root.position.copy(lancer.pos);
+scene.add(lancer.root);
+// the spiked round shield on the left forearm: the reference's signature disc
+{
+  const sh = new THREE.Group(); sh.position.set(0,-.78,.16);
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(.52,.52,.07,18), M.dark);
+  disc.rotation.x = Math.PI/2; sh.add(disc);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.52,.045,8,22), M.pale);
+  sh.add(rim);
+  for(let i=0;i<6;i++){
+    const a = i/6*Math.PI*2;
+    const sp = new THREE.Mesh(new THREE.ConeGeometry(.06,.22,6), M.dark);
+    sp.position.set(Math.cos(a)*.56, Math.sin(a)*.56, 0);
+    sp.rotation.z = a - Math.PI/2;
+    sh.add(sp);
+  }
+  const hub = new THREE.Mesh(new THREE.SphereGeometry(.12,10,8), M.pale);
+  hub.position.z=.06; sh.add(hub);
+  lancer.J.armL.add(sh); lancer.J.shield = sh;
+}
+// the long spear: thinner and longer than the boss's naginata, leaf point
+{
+  const g = lancer.J.glaive;
+  g.children.forEach(c=>c.visible=false);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,4.6,8), M.dark);
+  g.add(pole);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(.05,.5,8), M.blade);
+  tip.position.y = 2.5; g.add(tip);
+}
+lancer._fadeMats=[];
+lancer.root.traverse(o=>{
+  if(o.isMesh && o.material){
+    const m=o.material.clone(); m.transparent=true;
+    if(m.isShaderMaterial && m.uniforms && m.uniforms.uPaper) m.uniforms.uPaper.value.lerp(new THREE.Color(0x241c10), .5);
+    else m.userData.baseOp=(m.opacity===undefined?1:m.opacity);
+    o.material=m; lancer._fadeMats.push(m);
+  }
+});
+lancer.J.kasa.visible=false; // bare-headed like the shade, but gray-ink where the shade is black
+lancer.J.eyes.visible=true;
+lancer.root.visible=false;   // it has not taken the field yet
+
+
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
 const easeOut=t=>1-Math.pow(1-t,3);
@@ -1771,6 +1821,7 @@ function tryHitMinion(a){
   sfx.hit();
   if(minion.hp<=0 && minion.alive){
     minion.alive=false; minion.state='dead'; minion.stateT=0;
+    if(!lancer.alive && !isFinite(lancer._spawnT)) lancer._spawnT=4.0; // wave two takes the field
     inkBurst(minion.pos.clone().setY(1.3), 50, 7, 2, .9); inkBurst(minion.pos.clone().setY(1.3), 16, 5, 0, .7);
     groundSplat(minion.pos.x, minion.pos.z, 2.6, 18);
     inkCloud(minion.pos, 16);
@@ -1784,6 +1835,59 @@ function tryHitMinion(a){
     const kl=Math.hypot(kx,kz)||1;
     minion.pos.x += kx/kl*1.1; minion.pos.z += kz/kl*1.1;
     inkBurst(minion.pos.clone().setY(1.4), 40, 6, 0, .7);
+    G.hitstop = Math.max(G.hitstop, .1);
+    sfx.big();
+  }
+}
+function tryHitLancer(a){
+  if(!lancer.alive || !lancer.root.visible) return;
+  const d = dist2D(player.pos, lancer.pos);
+  if(d > a.range + .7) return;
+  const toL = Math.atan2(lancer.pos.x-player.pos.x, lancer.pos.z-player.pos.z);
+  let dy = Math.abs(((toL-player.yaw)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI);
+  if(dy > a.arc) return;
+  player._landed = true;
+  const staggered = lancer.state==='stagger';
+  const counter = (player.counterT||0) > 0;
+  let dmg = staggered ? Math.round(a.dmg*(counter?3:1.5)) : counter ? Math.round(a.dmg*2) : a.dmg;
+  // the round shield drinks frontal ink: strikes into its facing are halved unless it staggers
+  const facing = Math.abs(((toL-lancer.yaw)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI);
+  const guarded = !staggered && facing < 1.0;
+  if(guarded) dmg = Math.max(1, Math.round(dmg*.5));
+  if(counter){
+    player.counterT = 0;
+    kanjiFlash('\u9583', .5);
+    G.hitstop = Math.max(G.hitstop, .14); G.slowmo = Math.max(G.slowmo, .22);
+    inkBurst(lancer.pos.clone().setY(1.4), 30, 7, 0, .7);
+    sfx.crack();
+  }
+  lancer.hp = Math.max(0, lancer.hp - dmg);
+  lancer.posture = Math.max(0, lancer.posture - (guarded ? a.post*.5 : a.post));
+  const hitPos = lancer.pos.clone(); hitPos.y = 1.4;
+  if(guarded){
+    inkBurst(hitPos, 12, 4, 0, .45); inkBurst(hitPos, 5, 3, 2, .3);
+    sfx.hit();
+  } else {
+    inkBurst(hitPos, 30, 5.5, 2, .6); inkBurst(hitPos, 8, 4, 0, .5);
+    if(Math.random()<.5) groundSplat(lancer.pos.x+(Math.random()-.5), lancer.pos.z+(Math.random()-.5), .8, 8, true);
+    sfx.hit();
+  }
+  G.hitstop = Math.max(G.hitstop, .06); G.camShake = Math.max(G.camShake||0, .1);
+  if(lancer.hp<=0 && lancer.alive){
+    lancer.alive=false; lancer.state='dead'; lancer.stateT=0;
+    inkBurst(lancer.pos.clone().setY(1.3), 50, 7, 2, .9); inkBurst(lancer.pos.clone().setY(1.3), 16, 5, 0, .7);
+    groundSplat(lancer.pos.x, lancer.pos.z, 2.6, 18);
+    inkCloud(lancer.pos, 16);
+    G.slowmo = Math.max(G.slowmo, .35); G.camShake = Math.max(G.camShake||0, .4);
+    kanjiFlash('\u76fe', .7); // 盾 - the shield-bearer falls
+    sfx.big();
+    setTimeout(()=>{ if(!lancer.alive) lancer.root.visible=false; }, 900);
+  } else if(lancer.posture<=0 && lancer.state!=='stagger'){
+    lancer.state='stagger'; lancer.stateT=0; lancer.posture=lancer.maxposture;
+    const kx=lancer.pos.x-player.pos.x, kz=lancer.pos.z-player.pos.z;
+    const kl=Math.hypot(kx,kz)||1;
+    lancer.pos.x += kx/kl*1.1; lancer.pos.z += kz/kl*1.1;
+    inkBurst(lancer.pos.clone().setY(1.4), 40, 6, 0, .7);
     G.hitstop = Math.max(G.hitstop, .1);
     sfx.big();
   }
@@ -1895,7 +1999,7 @@ function updatePlayer(dt){
     const a = ATK[p.atkIdx];
     if(!p.atkHitDone && p.stateT>=a.hitAt){
       p.atkHitDone = true;
-      tryHitBoss(a); tryHitMinion(a);
+      tryHitBoss(a); tryHitMinion(a); tryHitLancer(a);
       const sp = p.pos.clone(); sp.y=1.3;
       sp.x += Math.sin(p.yaw)*.9; sp.z += Math.cos(p.yaw)*.9;
       // band center lands ~.4 below/above spawn depending on roll: compensate per swing
@@ -1961,6 +2065,7 @@ function doAttack(){
     let best=null, bd=5.5;
     if(boss.alive && boss.root.visible){ const d=dist2D(p.pos, boss.pos); if(d<bd){ bd=d; best=boss.pos; } }
     if(minion.alive && minion.root.visible){ const d=dist2D(p.pos, minion.pos); if(d<bd){ bd=d; best=minion.pos; } }
+    if(lancer.alive && lancer.root.visible){ const d=dist2D(p.pos, lancer.pos); if(d<bd){ bd=d; best=lancer.pos; } }
     if(best) p.yaw = Math.atan2(best.x-p.pos.x, best.z-p.pos.z);
   }
   // chain: pick next in combo based on timing
@@ -2057,6 +2162,88 @@ function updateMinion(dt){
   else if(m.state==='recover'){ if(m.stateT>=.8){ m.state='approach'; m.stateT=0; } }
   else if(m.state==='stagger'){ if(m.stateT>=1.6){ m.state='approach'; m.stateT=0; } }
   animMinion(dt);
+  m.root.position.copy(m.pos);
+}
+function animLancer(dt){
+  const J=lancer.J, t=lancer.stateT, s=lancer.state;
+  resetPose(J);
+  lancer.body.position.y = 0; lancer.body.rotation.set(0,0,0);
+  const wob = Math.sin(performance.now()*.0016+4.2);
+  if(s==='idle'){ J.armR.rotation.x = -.5+wob*.04; J.armL.rotation.x = -.25; lancer.body.position.y = wob*.03; }
+  else if(s==='approach'){
+    const w=performance.now()*.0062;
+    lancer.body.position.y = Math.abs(Math.sin(w))*.07;
+    lancer.body.rotation.z = Math.sin(w)*.045;
+    J.armR.rotation.x = -.45+Math.sin(w)*.08; J.armL.rotation.x = -.3;
+  }
+  else if(s==='windup'){
+    const k=easeOut(clamp(t/.7,0,1));
+    J.armR.rotation.x = -.45-k*.9; // the spear drawn back and high
+    lancer.body.rotation.y = -k*.55;
+    lancer.body.position.y = -k*.06;
+  }
+  else if(s==='thrust'){
+    const k=easeInOut(clamp(t/.25,0,1));
+    J.armR.rotation.x = -1.35+k*2.05; // snaps level, the point shoots forward
+    lancer.body.rotation.y = -.55+k*1.1;
+  }
+  else if(s==='recover'){ J.armR.rotation.x = .7-(.7+.5)*clamp(t/.9,0,1); }
+  else if(s==='stagger'){
+    lancer.body.rotation.z = Math.sin(t*20)*.05*(1-t/1.8);
+    lancer.body.position.y = -.12;
+    J.armL.rotation.z = .5; J.armR.rotation.z = -.5;
+  }
+  else if(s==='dead'){
+    const k=easeOut(clamp(t/.9,0,1));
+    lancer.body.position.y = -k*.5; lancer.body.rotation.x = -k*1.35;
+  }
+}
+function updateLancer(dt){
+  const m=lancer;
+  m.stateT+=dt;
+  if(!m.alive){
+    if(!m.root.visible && G.running && !minion.alive && isFinite(m._spawnT)){
+      m._spawnT-=dt;
+      if(m._spawnT<=0){
+        const a=Math.random()*Math.PI*2;
+        m.pos.set(Math.sin(a)*8.5, 0, Math.cos(a)*8.5);
+        m.alive=true; m.root.visible=true; m.state='idle'; m.stateT=0; m.thinkT=1.6;
+        m.hp=m.maxhp; m.posture=m.maxposture;
+        m._spawnT=Infinity;
+        inkCloud(m.pos, 20);
+        sfx.big();
+      }
+    }
+    animLancer(dt); m.root.position.copy(m.pos); return;
+  }
+  if(!G.running){ animLancer(dt); return; }
+  const d = dist2D(m.pos, player.pos);
+  const toP = Math.atan2(player.pos.x-m.pos.x, player.pos.z-m.pos.z);
+  m.yaw = angLerp(m.yaw, toP, Math.min(1, 5*dt));
+  m.root.rotation.y = m.yaw;
+  if(m.state==='idle'){ m.thinkT-=dt; if(m.thinkT<=0){ m.state='approach'; m.stateT=0; } }
+  else if(m.state==='approach'){
+    if(d>3.1){ m.pos.x += Math.sin(m.yaw)*2.2*dt; m.pos.z += Math.cos(m.yaw)*2.2*dt; }
+    else { m.state='windup'; m.stateT=0; slashArc(m.pos.clone().setY(.2), m.yaw, 3.6, .5, .45, false, 0); sfx.charge(); }
+  }
+  else if(m.state==='windup'){
+    if(m.stateT>=.7){ m.state='thrust'; m.stateT=0; m._hit=false;
+      slashArc(m.pos.clone().setY(1.3), m.yaw, 3.6, .9, .15, false, 0); }
+  }
+  else if(m.state==='thrust'){
+    if(!m._hit && m.stateT>=.12){
+      m._hit=true;
+      if(d<3.9){
+        const dy2=Math.abs(((toP-m.yaw)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI);
+        if(dy2<.6) hurtPlayer(10, m.pos, m);
+      }
+    }
+    if(m.stateT<.25){ m.pos.x += Math.sin(m.yaw)*3.2*dt; m.pos.z += Math.cos(m.yaw)*3.2*dt; } // the lunge behind the point
+    if(m.stateT>=.3){ m.state='recover'; m.stateT=0; }
+  }
+  else if(m.state==='recover'){ if(m.stateT>=.9){ m.state='approach'; m.stateT=0; } }
+  else if(m.state==='stagger'){ if(m.stateT>=1.8){ m.state='approach'; m.stateT=0; } }
+  animLancer(dt);
   m.root.position.copy(m.pos);
 }
 function updateBoss(dt){
@@ -2755,8 +2942,9 @@ function updateHUD(dt){
       }
     } else hud.bossBars.style.display='none';
   } else hud.bossBars.style.display='none';
-  if(minion.root.visible && minion.alive){
-    projV.copy(minion.pos); projV.y += 2.4;
+  const wave2 = (minion.root.visible && minion.alive) ? minion : ((lancer.root.visible && lancer.alive) ? lancer : null);
+  if(wave2){
+    projV.copy(wave2.pos); projV.y += 2.4;
     projV.project(camera);
     if(projV.z<1){
       const edge=Math.max(Math.abs(projV.x), Math.abs(projV.y));
@@ -2770,7 +2958,7 @@ function updateHUD(dt){
       }
     } else hud.minBars.style.display='none';
   } else hud.minBars.style.display='none';
-  hud.minHpFill.style.width = (minion.hp/minion.maxhp*100)+'%';
+  hud.minHpFill.style.width = ((wave2?wave2.hp/wave2.maxhp:0)*100)+'%';
   hud.bossHpFill.style.width = (boss.hp/boss.maxhp*100)+'%';
   hud.bossHpT.textContent = `${Math.ceil(boss.hp)}/${boss.maxhp}`;
   hud.postFill.style.width = (boss.posture/boss.maxposture*100)+'%';
@@ -2885,6 +3073,8 @@ function resetFight(){
   boss.pos.set(0,0,-7); boss.hp=185; boss.posture=130; boss.alive=true;
   minion.pos.set(3.4,0,-8.6); minion.hp=70; minion.posture=50; minion.alive=true; minion._hit=false;
   minion.root.visible=true; minion.state='idle'; minion.stateT=0; minion.thinkT=3.2;
+  lancer.pos.set(-9.5,0,-9.5); lancer.hp=90; lancer.posture=70; lancer.alive=false; lancer._hit=false; lancer._spawnT=Infinity;
+  lancer.root.visible=false; lancer.state='idle'; lancer.stateT=0; lancer.thinkT=1.6;
   boss.root.visible=false; boss.state='vanish'; boss.stateT=.2; boss.thinkT=1.2;
   inkCloud(boss.pos, 22);
   G.time=0; G.over=false; G.intro=0; G.timeScale=1; G.hitstop=0; G.slowmo=0; kanjiT=0; hud.kanji.style.display='none';
@@ -3013,12 +3203,12 @@ function updateCamera(dt){
 /* ================= main loop ================= */
 let last = performance.now();
 function loop(now){
-  window.QA = {player, boss, minion, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, fgStalks, timeRing, camera, scene, inkCloud, inkPuff,
+  window.QA = {player, boss, minion, lancer, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, fgStalks, timeRing, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     const rawDt=dt;
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
     if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
-    if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); updateMinion(dt); }
+    if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); updateMinion(dt); updateLancer(dt); }
     updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
     sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
@@ -3036,6 +3226,7 @@ requestAnimationFrame(loop);
     updatePlayer(dt);
     updateBoss(dt);
     updateMinion(dt);
+    updateLancer(dt);
   }
   updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
   sfx.tick(dt, windIntensity());
@@ -3048,12 +3239,12 @@ addEventListener('resize', ()=>{
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-window.QA = {player, boss, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, fgStalks, timeRing, camera, scene, inkCloud, inkPuff,
+window.QA = {player, boss, minion, lancer, G, arcs, ribbons, ghosts, decals, parts, puffs, leaves, fgStalks, timeRing, camera, scene, inkCloud, inkPuff,
   step:(dt=.05, n=1)=>{ for(let i=0;i<n;i++){
     const rawDt=dt;
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
     if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
-    if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); updateMinion(dt); }
+    if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); updateMinion(dt); updateLancer(dt); }
     updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
     sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
