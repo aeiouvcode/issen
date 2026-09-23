@@ -39,11 +39,12 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
     background-size:contain;background-repeat:no-repeat;background-position:center;z-index:1;}
   /* ---- boss floating bars ---- */
   #bossbars{position:fixed;left:0;top:0;width:130px;z-index:6;pointer-events:none;display:none;}
-  #bossbars .bartext{display:none;}
+  #bossbars .bartext{display:block;font-size:9px;text-align:center;margin-bottom:0;}
   #bossbars .brushbar{width:118px;margin:1px 0 4px 0;}
   #boss-hp .fill{background:linear-gradient(90deg,#8e2418,var(--red-hi));}
   #minbars{position:fixed;left:0;top:0;width:110px;z-index:6;pointer-events:none;display:none;}
   #minbars .brushbar{width:92px;margin:1px 0 4px 0;}
+  #minbars .bartext{display:block;font-size:9px;text-align:center;margin-bottom:0;}
   #min-hp .fill{background:linear-gradient(90deg,#3d3428,#8e2418);}
   #boss-posture .fill{background:linear-gradient(90deg,#241d12,#463a28);}
   /* ---- time parchment box ---- */
@@ -151,8 +152,8 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
 <body>
 <svg width="0" height="0" style="position:absolute">
   <filter id="rough" x="-20%" y="-20%" width="140%" height="140%">
-    <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="3" seed="7" result="n"/>
-    <feDisplacementMap in="SourceGraphic" in2="n" scale="4.5"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.02 0.4" numOctaves="3" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="7"/>
   </filter>
 </svg>
 <canvas id="game"></canvas>
@@ -171,6 +172,7 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   <div class="brushbar" id="boss-posture"><div class="fill" style="width:0%"></div></div>
 </div>
 <div id="minbars">
+  <div class="bartext" id="min-hp-t">70/70</div>
   <div class="brushbar" id="min-hp"><div class="fill" style="width:100%"></div></div>
 </div>
 
@@ -1130,7 +1132,7 @@ function updateDecals(dt){
 
 /* ---------------- slash arc ribbons ---------------- */
 const arcs = [];
-function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true, red=0){
+function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true, red=0, life=.8){
   const seg = 26;
   const g = new THREE.BufferGeometry();
   const verts = new Float32Array((seg+1)*2*3);
@@ -1140,7 +1142,7 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true, red=
     const a = (i/seg - .5)*sweep;
     const c=Math.cos(a), s=Math.sin(a);
     const o=i*6;
-    verts[o]=c*radius*.40; verts[o+1]=0; verts[o+2]=s*radius*.40;
+    verts[o]=c*radius*.16; verts[o+1]=0; verts[o+2]=s*radius*.16;
     verts[o+3]=c*radius; verts[o+4]=0; verts[o+5]=s*radius;
     uvs[i*4]=i/seg; uvs[i*4+1]=0; uvs[i*4+2]=i/seg; uvs[i*4+3]=1;
     if(i<seg){ const b=i*2; idx.push(b,b+1,b+2, b+1,b+3,b+2); }
@@ -1160,17 +1162,21 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true, red=
         float streak = fbm(vec2(vUv.x*2.5, vUv.y*16.0));
         float streak2 = fbm(vec2(vUv.x*1.1, vUv.y*34.0));
         float a = smoothstep(0.,.14,vUv.x)*smoothstep(1.,.78,vUv.x);
-        float edgeN = (fbm(vec2(vUv.x*24., 3.7))-.5)*.20 + (fbm(vec2(vUv.x*61., 9.1))-.5)*.14;
-        a *= smoothstep(0.,.16+edgeN,vUv.y)*smoothstep(1.,.60-edgeN,vUv.y);
+        float edgeN = (fbm(vec2(vUv.x*24., 3.7))-.5)*.30 + (fbm(vec2(vUv.x*61., 9.1))-.5)*.20;
+        a *= smoothstep(0.,.20+edgeN,vUv.y)*smoothstep(1.,.52-edgeN,vUv.y);
         a *= .55 + .75*streak + .45*streak2;
         a *= 1.0 - smoothstep(.55,1.,vUv.y)*fbm(vec2(vUv.x*26.,vUv.y*3.))*.85;
-        float fade = 1.0-uT; a *= fade*fade*(.6+.4*fade);
+        float fade = 1.0-smoothstep(.38,1.,uT); a *= fade*(.7+.3*fade);
         vec3 col = mix(vec3(.12,.10,.07), vec3(.84,.81,.72), uPale);
         col = mix(col, vec3(.55,.11,.07), uRed);
+        // multi-band wash: layered tonal zones so one slash reads as several brush passes
+        float band = fbm(vec2(vUv.x*4.0, vUv.y*1.5));
+        float band2 = fbm(vec2(vUv.x*9.0+7.0, vUv.y*3.0));
+        col *= .60 + .55*smoothstep(.2,.8,band) + .25*smoothstep(.3,.9,band2);
         // dry-brush gaps: pale streaks where the bristles split (skip red telegraphs)
-        float gap = smoothstep(.58,.92, fbm(vec2(vUv.x*3.5, vUv.y*24.0)));
-        col = mix(col, vec3(.90,.87,.78), gap*(1.0-uRed)*.55);
-        gl_FragColor = vec4(col, min(a*2.0,1.0));
+        float gap = smoothstep(.50,.92, fbm(vec2(vUv.x*3.5, vUv.y*24.0)));
+        col = mix(col, vec3(.90,.87,.78), gap*(1.0-uRed)*.7);
+        gl_FragColor = vec4(col, min(a*1.8,1.0));
       }`
   });
   mat.uniforms.uRed.value = red;
@@ -1186,7 +1192,7 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true, red=
   }
   m.renderOrder = 5;
   scene.add(m);
-  arcs.push({m, t:0, life:.68});
+  arcs.push({m, t:0, life});
 }
 function updateArcs(dt){
   for(let i=arcs.length-1;i>=0;i--){
@@ -2081,7 +2087,8 @@ function updatePlayer(dt){
       const pale = p.atkIdx===2 ? .55 : .48;
       // vertical ink curtain facing the camera: the reference's towering brush wash
       const roll = p.atkIdx===0 ? Math.PI/2-.45 : p.atkIdx===1 ? Math.PI*1.5+.45 : Math.PI/2+.15;
-      slashArc(sp, roll, p.atkIdx===2?3.0:2.7, p.atkIdx===2?2.6:3.0, pale, true);
+      slashArc(sp, roll, p.atkIdx===2?3.5:3.1, p.atkIdx===2?2.6:3.0, pale, true);
+      slashArc(sp, roll+.38, p.atkIdx===2?2.8:2.5, p.atkIdx===2?2.2:2.6, Math.min(1,pale+.14), true, 0, .55); // second pass: offset wash
       inkSplatter(sp, p.yaw);
       sfx.whoosh();
     }
@@ -2708,7 +2715,7 @@ const el = id=>document.getElementById(id);
 const hud = {
   time: el('timeval'), hpFill: document.querySelector('#hpbar .fill'),
   hpT: el('hp-t'), stamFill: document.querySelector('#stambar .fill'), stamT: el('stam-t'),
-  bossBars: el('bossbars'), minBars: el('minbars'), minHpFill: document.querySelector('#min-hp .fill'), bossHpFill: document.querySelector('#boss-hp .fill'),
+  bossBars: el('bossbars'), minBars: el('minbars'), minHpFill: document.querySelector('#min-hp .fill'), minHpT: el('min-hp-t'), bossHpFill: document.querySelector('#boss-hp .fill'),
   bossHpT: el('boss-hp-t'), postFill: document.querySelector('#boss-posture .fill'),
   postT: el('boss-posture-t'),
   pips: [el('pip0'),el('pip1'),el('pip2'),el('pip3')],
@@ -3046,6 +3053,7 @@ function updateHUD(dt){
     } else hud.minBars.style.display='none';
   } else hud.minBars.style.display='none';
   hud.minHpFill.style.width = ((wave2?wave2.hp/wave2.maxhp:0)*100)+'%';
+  hud.minHpT.textContent = wave2 ? `${Math.ceil(wave2.hp)}/${wave2.maxhp}` : '';
   hud.bossHpFill.style.width = (boss.hp/boss.maxhp*100)+'%';
   hud.bossHpT.textContent = `${Math.ceil(boss.hp)}/${boss.maxhp}`;
   hud.postFill.style.width = (boss.posture/boss.maxposture*100)+'%';
