@@ -16,13 +16,21 @@ void fragment() {
 	// rotate around the arc centre so the wet leading edge travels with prog
 	vec2 c = vec2(0.5, 1.02);
 	vec2 p = (uv - c) * vec2(2.0, 1.0);
-	float a = (1.0 - prog) * 2.3;
+	float a = (1.0 - prog) * 1.3;
 	p = mat2(vec2(cos(a), sin(a)), vec2(-sin(a), cos(a))) * p;
 	vec2 suv = p / vec2(2.0, 1.0) + c;
 	vec4 t = texture(tex, suv);
 	float inside = step(0.0, suv.x) * step(suv.x, 1.0) * step(0.0, suv.y) * step(suv.y, 1.0);
+	// soft quad border so the rotated sweep never shows a hard cut
+	vec2 bq = min(UV, 1.0 - UV);
+	inside *= smoothstep(0.0, 0.08, min(bq.x * 0.5, bq.y));
+	// sweep reveal: wash appears behind the travelling rim
+	inside *= smoothstep(0.0, 0.25, prog);
 	float n = vnoise(UV * vec2(40.0, 9.0));
 	float d = t.a - (1.0 - life) * (0.7 + 0.5 * n);
-	ALBEDO = mix(t.rgb, vec3(0.62, 0.07, 0.08), tint);
-	ALPHA = clamp(d * 2.5, 0.0, 1.0) * inside;
+	// translucent grey wash body, dense ink only where the texture is dense (wet rim)
+	float dense = smoothstep(0.55, 0.9, t.a);
+	vec3 wash = mix(vec3(0.38, 0.36, 0.34), t.rgb, dense);
+	ALBEDO = mix(wash, vec3(0.62, 0.07, 0.08), tint);
+	ALPHA = clamp(d * 1.6, 0.0, 1.0) * mix(0.5, 0.95, dense) * inside;
 }

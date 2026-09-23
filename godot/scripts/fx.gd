@@ -50,7 +50,7 @@ func _billboard(tex: Texture2D, px: float) -> Sprite3D:
 func burst(pos: Vector3, dir: float, power := 1.0, red := 0.25) -> void:
 	# central bloom: a few big blots that swell and dry out
 	for i in int(10 + 8 * power):
-		var s := _billboard(blots[randi() % 6], 0.009 * power * randf_range(0.6, 1.3))
+		var s := _billboard(blots[randi() % 6], 0.0055 * power * randf_range(0.6, 1.3))
 		add_child(s)
 		s.global_position = pos + Vector3(randf_range(-1.0, 1.0), randf_range(-0.8, 0.9), 0.1)
 		s.rotation.z = randf() * TAU

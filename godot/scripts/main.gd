@@ -33,10 +33,21 @@ var joy_base: Control
 var touch_atk := false
 var touch_dodge := false
 var hitstop := 0.0
+var atk_buf := 0.0
+var dodge_buf := 0.0
+# Desktop QA only: `godot -- --autoplay` drives a fixed input timeline for Movie Maker captures.
+# Web builds never receive user args, so this path is inert on Pages.
+var autoplay := false
+var auto_t := 0.0
+var auto_steps := [[0.3, "right", true], [0.9, "right", false], [1.0, "attack"], [1.25, "attack"], [1.5, "attack"], [2.6, "dodge"], [3.3, "attack"], [3.55, "attack"], [3.8, "attack"], [5.0, "attack"], [5.25, "attack"], [5.5, "attack"]]
 var banner: Label
 
 func _ready() -> void:
-	randomize()
+	autoplay = "--autoplay" in OS.get_cmdline_user_args()
+	if autoplay:
+		seed(7)
+	else:
+		randomize()
 	_input_map()
 	player_tex = load("res://art/player.png")
 	ronin_tex = load("res://art/ronin.png")
@@ -138,6 +149,8 @@ func _spawn(pos: Vector3) -> void:
 
 # ------------------------------------------------------------------ loop
 func _physics_process(delta: float) -> void:
+	if autoplay:
+		_autoplay(delta)
 	if hitstop > 0.0:
 		hitstop -= delta
 		return
@@ -173,16 +186,21 @@ func _player(delta: float) -> void:
 	p.state_t += delta
 	dodge_cd = maxf(0.0, dodge_cd - delta)
 	var mv := _move_input()
-	var want_atk := Input.is_action_just_pressed("attack") or touch_atk
-	var want_dodge := Input.is_action_just_pressed("dodge") or touch_dodge
+	atk_buf = maxf(0.0, atk_buf - delta); dodge_buf = maxf(0.0, dodge_buf - delta)
+	if touch_atk: atk_buf = 0.3
+	if touch_dodge: dodge_buf = 0.3
 	touch_atk = false; touch_dodge = false
+	var want_atk := atk_buf > 0.0
+	var want_dodge := dodge_buf > 0.0
 	match p.state:
 		"idle", "run":
 			if not p.alive():
 				pass
 			elif want_dodge and dodge_cd <= 0.0:
+				dodge_buf = 0.0
 				_start_dodge(mv)
 			elif want_atk:
+				atk_buf = 0.0
 				combo = 0
 				_start_attack()
 			elif mv.length() > 0.1:
@@ -201,6 +219,7 @@ func _player(delta: float) -> void:
 		"attack":
 			p.vel = p.vel.lerp(Vector3.ZERO, 9.0 * delta)
 			if want_atk:
+				atk_buf = 0.0
 				queued = true
 			var strike := 2 if combo < 2 else 3
 			if not hit_done and p.frame >= strike:
@@ -251,7 +270,7 @@ func _player_strike() -> void:
 	var dmg: float = [12.0, 14.0, 24.0][combo]
 	var yoff: float = [0.1, 0.3, -0.1][combo]
 	var anchor := p.global_position + Vector3(p.facing * 1.1, yoff, 0.2)
-	var sk: float = [1.45, 1.35, 1.8][combo]
+	var sk: float = [1.2, 1.15, 1.45][combo]
 	fx.slash(anchor, p.facing, sk, 0.42, 0.0, combo)
 	for e in enemies:
 		if not e.alive():
@@ -303,9 +322,9 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.facing = signf(d.x)
 			if not p.alive():
 				e.play("idle"); e.vel = e.vel.lerp(Vector3.ZERO, 6.0 * delta)
-			elif dist > 2.9:
+			elif dist > 3.0:
 				e.play("walk")
-				var goal := p.global_position - Vector3(e.facing * 2.5, 0, 0)
+				var goal := p.global_position - Vector3(e.facing * 2.7, 0, 0)
 				var dir := (goal - e.global_position); dir.y = 0
 				e.vel = dir.normalized() * 2.6
 			else:
@@ -322,7 +341,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 			e.vel = e.vel.lerp(Vector3(e.facing * 1.5, 0, 0), 6.0 * delta)
 			if not e.get_meta("struck") and e.frame >= 2:
 				e.set_meta("struck", true)
-				fx.slash(e.global_position + Vector3(e.facing * 1.0, 0.1, 0.12), e.facing, 1.15, 0.3, 0.0, 1)
+				fx.slash(e.global_position + Vector3(e.facing * 1.1, 0.1, 0.12), e.facing, 1.25, 0.34, 0.0, 1)
 				var dd: Vector3 = p.global_position - e.global_position
 				if p.alive() and p.state != "dodge" and absf(dd.z) < 1.3 and dd.x * e.facing > -0.5 and absf(dd.x) < 3.7:
 					_player_hurt(18.0, e.facing)
@@ -348,8 +367,8 @@ func _enemy(e: Fighter, delta: float) -> void:
 		var sp: Vector3 = e.global_position - p.global_position
 		sp.y = 0.0
 		var sl := Vector2(sp.x, sp.z * 1.6).length()
-		if sl < 1.5 and sl > 0.001:
-			e.global_position += sp.normalized() * (1.5 - sl)
+		if sl < 1.9 and sl > 0.001:
+			e.global_position += sp.normalized() * (1.9 - sl)
 	e.global_position += e.vel * delta
 	e.posture = minf(100.0, e.posture + 8.0 * delta)
 	e.tick_anim(delta)
@@ -398,7 +417,7 @@ func _camera(delta: float) -> void:
 	var tgt := _nearest(focus, 7.0)
 	if tgt:
 		focus = focus.lerp(tgt.global_position, 0.35)
-	var off := Vector3(0, 3.6, 6.0) if not portrait else Vector3(0, 4.4, 4.9)
+	var off := Vector3(0, 3.6, 6.0) if not portrait else Vector3(0, 5.4, 4.3)
 	cam.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
 	cam.fov = 50.0 if portrait else 40.0
 	var want := focus + off
@@ -566,6 +585,11 @@ func _touch_ui() -> void:
 	joy_base.add_child(joy_knob)
 
 func _input(ev: InputEvent) -> void:
+	if not (ev is InputEventScreenTouch or ev is InputEventScreenDrag):
+		if ev.is_action_pressed("attack", false):
+			atk_buf = 0.3
+		elif ev.is_action_pressed("dodge", false):
+			dodge_buf = 0.3
 	if ev is InputEventScreenTouch:
 		touch_ui.visible = true
 		var vs := get_viewport().get_visible_rect().size
@@ -588,3 +612,16 @@ func _input(ev: InputEvent) -> void:
 			v = v.normalized()
 		joy_vec = v
 		joy_knob.position = Vector2(37, 37) + v * 36.0
+
+func _autoplay(delta: float) -> void:
+	auto_t += delta
+	while auto_steps.size() > 0 and auto_t >= float(auto_steps[0][0]):
+		var st: Array = auto_steps.pop_front()
+		if st[1] == "attack":
+			atk_buf = 0.3
+		elif st[1] == "dodge":
+			dodge_buf = 0.3
+		elif st[2]:
+			Input.action_press(st[1])
+		else:
+			Input.action_release(st[1])
