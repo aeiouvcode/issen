@@ -1504,7 +1504,7 @@ boss.root.traverse(o=>{
 const minion = {
   ...buildBoss(), pos:new THREE.Vector3(3.4,0,-8.6), yaw:0,
   hp:70, maxhp:70, posture:50, maxposture:50,
-  state:'idle', stateT:0, thinkT:3.2, alive:true, _hit:false,
+  state:'idle', stateT:0, thinkT:3.2, alive:true, _hit:false, _spawnT:Infinity, _armor:false,
 };
 minion.root.scale.setScalar(.88);
 minion.root.position.copy(minion.pos);
@@ -1520,6 +1520,22 @@ minion.root.traverse(o=>{
 });
 minion.J.kasa.visible=false; // bare-headed shade: the ink wears no hat
 minion.J.eyes.visible=true;  // red glints in the dark
+// wave three: iron plates over the ink - the armored shade
+{
+  const ar = new THREE.Group();
+  const chest = new THREE.Mesh(new THREE.BoxGeometry(.62,.7,.2), M.dark);
+  chest.position.set(0,1.25,.14); ar.add(chest);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(.62,.7,.16), M.dark);
+  back.position.set(0,1.25,-.16); ar.add(back);
+  for(const sx of [-1,1]){
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(.24,.18,.3), M.dark);
+    pad.position.set(sx*.36,1.62,0); pad.rotation.z=sx*.25; ar.add(pad);
+  }
+  const band = new THREE.Mesh(new THREE.BoxGeometry(.66,.1,.34), M.pale);
+  band.position.set(0,1.0,0); ar.add(band);
+  ar.visible=false;
+  minion.root.add(ar); minion.J.armor=ar;
+}
 
 // the lancer - wave two: the field's second duelist, round shield and long spear (reference frame 4.5s)
 const lancer = {
@@ -1900,6 +1916,18 @@ function tryHitMinion(a){
   let dy = Math.abs(((toM-player.yaw)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI);
   if(dy > a.arc) return;
   player._landed = true;
+  if(minion._armor){
+    minion._armor=false;
+    if(minion.J.armor) minion.J.armor.visible=false;
+    const ap=minion.pos.clone(); ap.y=1.4;
+    inkBurst(ap, 22, 6, 2, .6); inkBurst(ap, 8, 4, 0, .4);
+    slashArc(ap, Math.random()*6.28, 2.2, 4.0, .18, false, .5);
+    groundSplat(minion.pos.x, minion.pos.z, 1.4, 10, true);
+    G.hitstop = Math.max(G.hitstop, .12); G.camShake = Math.max(G.camShake||0, .25);
+    kanjiFlash('\u7815', .5); // 砕 - the plate shatters
+    sfx.clank();
+    return;
+  }
   const staggered = minion.state==='stagger';
   const reeling = minion.state==='reel';
   const counter = (player.counterT||0) > 0;
@@ -1961,10 +1989,10 @@ function tryHitLancer(a){
   const reeling = lancer.state==='reel';
   const counter = (player.counterT||0) > 0;
   let dmg = staggered ? Math.round(a.dmg*(counter?3:1.5)) : reeling ? Math.round(a.dmg*(counter?3:2)) : counter ? Math.round(a.dmg*2) : a.dmg;
-  // the round shield drinks frontal ink: strikes into its facing are halved unless it staggers
+  // the round shield turns frontal ink aside: strikes into its facing are blocked - answer from the flank
   const facing = Math.abs(((toL-lancer.yaw)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI);
-  const guarded = !staggered && !reeling && facing > Math.PI - 1.0; // the shield only drinks what it faces
-  if(guarded) dmg = Math.max(1, Math.round(dmg*.5));
+  const guarded = !staggered && !reeling && !counter && facing > Math.PI - 1.0; // the shield only turns what it faces
+  if(guarded) dmg = 0;
   if(counter){
     player.counterT = 0;
     kanjiFlash('\u9583', .5);
@@ -1973,12 +2001,12 @@ function tryHitLancer(a){
     sfx.crack();
   }
   lancer.hp = Math.max(0, lancer.hp - dmg);
-  cleanCutLanded();
+  if(dmg>0) cleanCutLanded(); // a turned cut is no cut
   lancer.posture = Math.max(0, lancer.posture - (guarded ? a.post*.5 : a.post));
   const hitPos = lancer.pos.clone(); hitPos.y = 1.4;
   if(guarded){
     inkBurst(hitPos, 12, 4, 0, .45); inkBurst(hitPos, 5, 3, 2, .3);
-    sfx.hit();
+    sfx.clank();
   } else {
     inkBurst(hitPos, 30, 5.5, 2, .6); inkBurst(hitPos, 8, 4, 0, .5);
     if(Math.random()<.5) groundSplat(lancer.pos.x+(Math.random()-.5), lancer.pos.z+(Math.random()-.5), .8, 8, true);
@@ -1988,6 +2016,7 @@ function tryHitLancer(a){
   if(lancer.hp<=0 && lancer.alive){
     const wasReeling = lancer.state==='reel';
     lancer.alive=false; lancer.state='dead'; lancer.stateT=0;
+    if(!minion.alive && !isFinite(minion._spawnT)) minion._spawnT=4.5; // wave three: the armored shade
     inkBurst(lancer.pos.clone().setY(1.3), 50, 7, 2, .9); inkBurst(lancer.pos.clone().setY(1.3), 16, 5, 0, .7);
     groundSplat(lancer.pos.x, lancer.pos.z, 2.6, 18);
     for(let i=1;i<=2;i++){ const tt=i/3; groundSplat(player.pos.x+(lancer.pos.x-player.pos.x)*tt+(Math.random()-.5)*.5, player.pos.z+(lancer.pos.z-player.pos.z)*tt+(Math.random()-.5)*.5, .7, 6, true); } // the cut's ink trail
@@ -2316,7 +2345,22 @@ function animMinion(dt){
 function updateMinion(dt){
   const m=minion;
   m.stateT+=dt;
-  if(!m.alive){ animMinion(dt); m.root.position.copy(m.pos); return; }
+  if(!m.alive){
+    if(!m.root.visible && G.running && !lancer.alive && !isFinite(lancer._spawnT) && isFinite(m._spawnT)){
+      m._spawnT-=dt;
+      if(m._spawnT<=0){
+        const a=Math.random()*Math.PI*2;
+        m.pos.set(Math.sin(a)*8.5, 0, Math.cos(a)*8.5);
+        m.alive=true; m.root.visible=true; m.state='idle'; m.stateT=0; m.thinkT=1.2;
+        m.hp=80; m.maxhp=80; m.posture=m.maxposture;
+        m._armor=true; if(m.J.armor) m.J.armor.visible=true; // wave three: iron over ink
+        m._spawnT=Infinity;
+        inkCloud(m.pos, 20);
+        sfx.big();
+      }
+    }
+    animMinion(dt); m.root.position.copy(m.pos); return;
+  }
   if(!G.running){ animMinion(dt); return; }
   const d = dist2D(m.pos, player.pos);
   const toP = Math.atan2(player.pos.x-m.pos.x, player.pos.z-m.pos.z);
@@ -2762,6 +2806,7 @@ const sfx = (()=>{
     drum:()=>{ tone(82, 36, .7, .3, 'sine'); noise(.18, 240, 70, .18, 'lowpass'); },
     big:()=>{ noise(.6, 800, 80, .3, 'lowpass'); tone(70, 30, .6, .3, 'sine'); },
     crack:()=>{ noise(.09, 2100, 650, .19); tone(880, 220, .09, .12, 'triangle'); },
+    clank:()=>{ tone(1300, 900, .08, .09, 'square'); noise(.05, 2600, 1400, .05); },
     wind:()=>{
       try{
         const a=ctx();
