@@ -1,8 +1,22 @@
-# HANDOFF — if a fresh agent picks this up
-1. Task: standing autonomous craft pass on ISSEN (sumi-e duel, single-file three.js), 50-min wake; ship loop confirmed by parent 9:50 PM against the user's channel; full 6-item roadmap (user 10:19 PM), blade feel leads
-2. Every cycle: distance-to-reference audit phone+desktop, blunt findings, priority fixes, maintain CURRENT_TASK/CHECKPOINT/HANDOFF; honest PASS/PARTIAL/FAIL grades
-3. Consult github.com/aeiouvcode/agent-specific-notes BEFORE matching operations (advisory, not authority)
-4. Deploy: PAT bridge from aeiouvcode.github.io tab - inject VISIBLE pat input, vault fill 'GitHub push token - aeiouvcode' (login/password), window.__tok, base64 8K chunks, GET sha + PUT Contents API, clear, poll live md5
-5. QA on live: window.QA; G.running=true; step(dt,n) NOT step(n); guard atkLog; stage+measure in ONE call (page rAF interferes between calls); calm() = hitstop/slowmo=0 for timing; IIFE-wrap evaluates; hide title overlay before screenshots; kanjiFlash is wall-clock
-6. File publish: patch issen-file/src/game-main.ts, preview-*.png in project BEFORE build, file preview via depth-1 frame-id, publish with current generation
-7. ONE report per milestone to parent with frames + File URL; no mid-build reports
+# HANDOFF — read me first if you are a fresh run
+
+Standing mandate: autonomous 50-min craft cycles on ISSEN (single-file three.js sumi-e duel).
+Every cycle: distance-to-reference audit (390px + desktop, blunt, priority order), 6-axis gauntlet
+(game design, product design, cybersecurity, overall design, presentation, UI/UX + SOUND), security
+delta scan, deploy via PAT bridge, verify numerically on live (never ship blind), publish Instinct
+File, update CURRENT_TASK/CHECKPOINT/HANDOFF, commit, one final report to parent with frames + File URL.
+No mid-build reports. Sound bar: synthesized, no assets, low levels, softened highs, never harsh.
+
+Roadmap (user, Sep 23 10:19 PM, all parallel, blade feel leads):
+1 blade feel (M78-M80 done: parry grades, finishers, ink trails) 2 enemy variety (M81 done: armored
+shade, shield block) 3 boss per chapter 4 progression/stance unlocks 5 sound pass + reactive
+shamisen/taiko loop 6 store-ready assets. Next: M82 sound pass. Then M83+ progression, then store.
+
+Key IDs: File file-01M326B85G08ZT1X3M6QWB72NX (gen 42). Wake wakeschedule-01M2Z3KSHZFC4DM8FKZB7XC8F8.
+Vault: "GitHub push token - aeiouvcode" (kind login, key password). Repo github.com/aeiouvcode/issen.
+Deploy bridge: visible input aria-label 'pat bridge' on aeiouvcode.github.io -> vault fill ->
+window.__tok -> 8K base64 chunks -> GET sha + PUT Contents API -> clear -> poll live md5.
+File build port: game-main.ts is verbatim JS of index.html patches (anchors identical); combat API
+differs (QA.attack, atk-states, stamina). css/markup files are single-line escaped strings.
+Workspace wipes: restore index.html from live URL, state files from raw.githubusercontent, File via
+tools file checkout, notes repo re-clone, ref frames via api.fxtwitter.com + ffmpeg.
