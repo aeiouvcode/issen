@@ -97,6 +97,10 @@ def ronin_anims():
     # 3/4 views for foes that close in depth; appended so existing rows keep their seeds
     A['walk_f'] = [dict(p) for p in A['walk']]
     A['walk_b'] = [dict(p) for p in A['walk']]
+    # turned attack rows so a foe can strike from in front of / behind the player (F-20)
+    for v in ('_f', '_b'):
+        for a in ('windup', 'swing', 'recover'):
+            A[a + v] = [dict(p) for p in A[a]]
     return A
 
 def bake(name, anims, dims, drawer, seed0, cols=8, only=None, per_row=1):

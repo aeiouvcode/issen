@@ -79,6 +79,10 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_spawn(Vector3(5.5, 0, -2.0))
+	if "--autoplay-foe" in OS.get_cmdline_user_args():
+		# QA: first foe squares up behind the player to exercise the turned attack rows
+		autoplay = true; auto_steps = []
+		enemies[0].set_meta("lane", -1)
 
 func _input_map() -> void:
 	var defs := {
@@ -139,6 +143,12 @@ func _grass() -> void:
 		mi.material_override = m
 		add_child(mi)
 
+## Where a foe squares up: 0 beside the player (profile duel), +1 in front of the player
+## (between them and the camera), -1 behind. Depth lanes use the turned attack rows.
+func _pick_lane() -> int:
+	var r := randf()
+	return 0 if r < 0.65 else (1 if r < 0.8 else -1)
+
 func _spawn(pos: Vector3) -> void:
 	var e := Fighter.new()
 	add_child(e)
@@ -147,6 +157,8 @@ func _spawn(pos: Vector3) -> void:
 	e.facing = -1.0
 	e.state = "approach"
 	e.set_meta("cool", randf_range(0.6, 1.2))
+	e.set_meta("lane", _pick_lane())
+	e.set_meta("vw", "")
 	enemies.append(e)
 	var bar := _bar_pair(90.0)
 	hud.add_child(bar)
@@ -254,7 +266,7 @@ func _player(delta: float) -> void:
 			ghost_t -= delta
 			if ghost_t <= 0.0:
 				ghost_t = 0.05
-				fx.dash_mark(p.global_position)
+				fx.dash_mark(p.global_position, clampf(p.state_t / 0.34, 0.0, 1.0))
 				fx.footprint(p.global_position)
 			p.vel = p.vel.lerp(Vector3.ZERO, 3.5 * delta)
 			if p.state_t > 0.34:
@@ -304,7 +316,7 @@ func _player_strike() -> void:
 		var d: Vector3 = e.global_position - p.global_position
 		var in_arc := absf(d.z) < 1.3 and d.x * p.facing > -0.4 and absf(d.x) < 3.4
 		if zdir != 0.0:
-			in_arc = absf(d.x) < 1.6 and d.z * zdir > -0.4 and absf(d.z) < 3.2
+			in_arc = absf(d.x) < 2.1 and d.z * zdir > -0.4 and absf(d.z) < 3.2
 		if in_arc:
 			_hurt(e, dmg, p.facing, combo == 2)
 
@@ -348,14 +360,15 @@ func _enemy(e: Fighter, delta: float) -> void:
 	var dist := Vector2(d.x, d.z * 1.6).length()
 	match e.state:
 		"approach":
+			var lane: int = int(e.get_meta("lane"))
 			var cool: float = float(e.get_meta("cool")) - delta
 			e.set_meta("cool", cool)
 			if absf(d.x) > 0.2:
 				e.facing = signf(d.x)
 			if not p.alive():
 				e.play("idle"); e.vel = e.vel.lerp(Vector3.ZERO, 6.0 * delta)
-			elif dist > 3.0:
-				var goal := p.global_position - Vector3(e.facing * 2.9, 0, 0)
+			elif (lane == 0 and dist > 3.0) or (lane != 0 and (absf(d.z) > 3.0 or absf(d.x) > 1.9)):
+				var goal := p.global_position - Vector3(e.facing * 2.9, 0, 0) if lane == 0 else p.global_position + Vector3(-e.facing * 1.4, 0, lane * 2.6)
 				var dir := (goal - e.global_position); dir.y = 0
 				e.vel = dir.normalized() * 2.6
 				# closing mostly in depth: show the kasa from the front or the back
@@ -367,28 +380,45 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.play("idle")
 				e.vel = e.vel.lerp(Vector3.ZERO, 8.0 * delta)
 				if cool <= 0.0:
-					e.state = "windup"; e.state_t = 0.0; e.play("windup", true)
+					# depth lane: in front of the player the foe is seen from behind, and vice versa
+					var vw := "" if lane == 0 else ("_b" if d.z < 0.0 else "_f")
+					e.set_meta("vw", vw)
+					e.state = "windup"; e.state_t = 0.0; e.play("windup" + vw, true)
 		"windup":
 			e.vel = e.vel.lerp(Vector3.ZERO, 10.0 * delta)
 			if e.state_t > 0.62:
-				e.state = "swing"; e.state_t = 0.0; e.play("swing", true)
+				e.state = "swing"; e.state_t = 0.0; e.play("swing" + str(e.get_meta("vw")), true)
 				e.set_meta("struck", false)
 		"swing":
-			e.vel = e.vel.lerp(Vector3(e.facing * 1.5, 0, 0), 6.0 * delta)
-			if absf(d.x) < 2.7:
-				e.vel.x = 0.0
+			var ew: String = e.get_meta("vw")
+			var zd := 0.0 if ew == "" else signf(d.z)
+			if zd == 0.0:
+				e.vel = e.vel.lerp(Vector3(e.facing * 1.5, 0, 0), 6.0 * delta)
+				if absf(d.x) < 2.7:
+					e.vel.x = 0.0
+			else:
+				e.vel = e.vel.lerp(Vector3(0, 0, zd * 1.2), 6.0 * delta)
+				if absf(d.z) < 1.7:
+					e.vel.z = 0.0
 			if not e.get_meta("struck") and e.frame >= 2:
 				e.set_meta("struck", true)
-				fx.slash(e.global_position + Vector3(e.facing * 1.1, 0.1, 0.12), e.facing, 1.25, 0.34, 0.0, 1)
 				var dd: Vector3 = p.global_position - e.global_position
-				if p.alive() and p.state != "dodge" and absf(dd.z) < 1.3 and dd.x * e.facing > -0.5 and absf(dd.x) < 3.7:
+				var hit_ok := absf(dd.z) < 1.3 and dd.x * e.facing > -0.5 and absf(dd.x) < 3.7
+				if zd == 0.0:
+					fx.slash(e.global_position + Vector3(e.facing * 1.1, 0.1, 0.12), e.facing, 1.25, 0.34, 0.0, 1)
+				else:
+					fx.slash(e.global_position + Vector3(e.facing * 0.4, 0.1, zd * 1.0 + 0.12), e.facing, 1.05, 0.34, 0.0, 1)
+					hit_ok = absf(dd.x) < 2.1 and dd.z * zd > -0.5 and absf(dd.z) < 3.4
+				if p.alive() and p.state != "dodge" and hit_ok:
 					_player_hurt(18.0, e.facing)
 			if e.anim_done:
-				e.state = "recover"; e.state_t = 0.0; e.play("recover", true)
+				e.state = "recover"; e.state_t = 0.0; e.play("recover" + str(e.get_meta("vw")), true)
 		"recover":
 			e.vel = e.vel.lerp(Vector3.ZERO, 8.0 * delta)
 			if e.anim_done and e.state_t > 0.5:
 				e.state = "approach"; e.set_meta("cool", randf_range(0.8, 1.8))
+				if randf() < 0.5:
+					e.set_meta("lane", _pick_lane())
 		"hit":
 			e.vel = e.vel.lerp(Vector3.ZERO, 7.0 * delta)
 			if e.state_t > 0.38:
