@@ -71,19 +71,24 @@ def drips():
         c.render().save(f'{OUT}/speck{i}.png', optimize=True)
 
 def grass():
+    """Grass swath clumps: many thin dry-brush fibres, dense and dark at the root,
+    thinning to pale hairline tips (reference grass reads as grey fibre, not hedge)."""
     for i in range(3):
         c = Canvas(256, 2, seed=400 + i)
-        for k in range(46):
-            x = c.rng.uniform(10, 246); base = 250 - c.rng.uniform(0, 20)
-            hgt = c.rng.uniform(40, 150) * (1 - abs(x - 128) / 170)
-            lean = c.rng.normal(4, 6)
-            c.stroke([(x, base), (x + lean * 0.5, base - hgt * 0.5), (x + lean, base - hgt)], w=c.rng.uniform(2.5, 5), ink=c.rng.uniform(0.35, 0.8), dry=0.7, taper=(0.05, 0.7))
-        # soft ground wash at base
+        for k in range(150):
+            x = c.rng.uniform(6, 250); base = 252 - c.rng.uniform(0, 14)
+            hgt = c.rng.uniform(35, 175) * (1 - abs(x - 128) / 150) ** 0.7
+            if hgt < 12: continue
+            lean = c.rng.normal(5, 7)
+            c.stroke([(x, base), (x + lean * 0.35, base - hgt * 0.5), (x + lean, base - hgt)], w=c.rng.uniform(0.9, 2.1), ink=c.rng.uniform(0.25, 0.65), dry=0.85, taper=(0.02, 0.85))
+        for k in range(10):
+            x = c.rng.uniform(30, 226)
+            c.stroke([(x - 16, 250), (x + 16, 249)], w=2.4, ink=0.35, dry=0.8, taper=(0.3, 0.3))
         img = c.render()
         a = np.asarray(img, np.float32)
         yy = np.linspace(0, 1, 256)[:, None]
-        a[..., 3] *= np.clip(0.4 + yy * 0.9, 0, 1)
-        Image.fromarray(a.astype(np.uint8), 'RGBA').save(f'{OUT}/grass{i}.png', optimize=True)
+        a[..., 3] *= np.clip(0.35 + yy * 0.8, 0, 1)
+        Image.fromarray(a.astype(np.uint8), 'RGBA').quantize(colors=128, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(f'{OUT}/grass{i}.png', optimize=True)
 
 def footprint():
     c = Canvas(64, 2, seed=500)

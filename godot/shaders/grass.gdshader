@@ -1,6 +1,7 @@
 shader_type spatial;
 render_mode unshaded, cull_disabled;
 uniform sampler2D tex : source_color, filter_linear_mipmap, repeat_disable;
+// soft alpha blend (no scissor) so thin fibres stay feathered
 uniform float fade_near = 26.0;
 uniform float fade_far = 44.0;
 varying float vdist;
@@ -14,7 +15,8 @@ void vertex() {
 void fragment() {
 	vec4 t = texture(tex, UV);
 	float fade = 1.0 - smoothstep(fade_near, fade_far, vdist);
-	ALBEDO = mix(t.rgb, vec3(0.55, 0.52, 0.48), 0.55);
-	ALPHA = t.a * fade;
-	ALPHA_SCISSOR_THRESHOLD = 0.35;
+	// aerial perspective: far swaths go pale grey and thin, near ones keep ink weight
+	float far = smoothstep(9.0, 32.0, vdist);
+	ALBEDO = mix(t.rgb, vec3(0.56, 0.53, 0.49), 0.4 + 0.35 * far);
+	ALPHA = t.a * fade * mix(0.95, 0.6, far);
 }
