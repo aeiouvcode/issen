@@ -557,11 +557,19 @@ func _hud() -> void:
 	banner.visible = false
 	hud.add_child(banner)
 
+func pb_scale() -> Vector2:
+	var vs := get_viewport().get_visible_rect().size
+	return Vector2.ONE * (1.45 if vs.y > vs.x else 1.0)
+
 func _layout() -> void:
 	var vs := get_viewport().get_visible_rect().size
+	# narrow screens: HUD scales up so bars, rings and timer stay readable on a phone
+	var k := pb_scale().x
 	var pb: Control = hud.get_node("PlayerBars")
-	pb.position = Vector2(vs.x * 0.5 - 75, vs.y - 60)
+	pb.scale = Vector2(k, k)
+	pb.position = Vector2(vs.x * 0.5 - 75 * k, vs.y - 60 * k)
 	var plaque: Control = hud.get_node("Plaque")
+	plaque.scale = Vector2(k, k)
 	plaque.position = Vector2(0, clampf(vs.y * 0.2, 50, 110))
 
 	banner.position = Vector2(vs.x * 0.5 - 200, vs.y * 0.4)
@@ -585,7 +593,8 @@ func _hud_update() -> void:
 		b.visible = e.alive() and not cam.is_position_behind(wp)
 		if b.visible:
 			var sp := cam.unproject_position(wp)
-			b.position = Vector2(sp.x - 45.0, maxf(sp.y, 24.0))
+			b.scale = pb_scale()
+			b.position = Vector2(sp.x - 45.0 * b.scale.x, maxf(sp.y - 16.0 * (b.scale.y - 1.0), 24.0))
 			var f: ColorRect = b.get_node("F")
 			f.size.x = f.get_meta("w") * e.hp / e.max_hp
 			(b.get_node("L") as Label).text = "%d/100" % int(ceil(e.hp))
