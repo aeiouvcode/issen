@@ -1,11 +1,11 @@
 # Handoff
 
 ## Resume here
-Cycle 6 done: F-13 (camera lead), F-14 (phone HUD scale), F-12 (broad curtain sweep). Open gaps, priority order:
-1. F-15 Attacks, hit and death are side view only; turned locomotion snaps back to side view on attack.
-2. F-16 Reference has a cloud/smoke dash effect and footprint trails of black dabs behind a dash; our dodge ghosts are grey sprite copies.
-3. F-17 Reference hit flash tints the struck figure red (red ink blot on the body); ours only tints the sprite slightly.
-4. F-18 Slash PNGs are 128-colour quantized; visible posterization bands in close-up. Consider 256 colours if the push budget allows.
+Cycle 7 done: F-16 (dash puff + dab trail), F-17 (red hit blot), F-15 (turned attacks). Open gaps, priority order:
+1. F-18 Slash PNGs are 128-colour quantized; posterization bands in close-up. Try 256 colours (push budget ~1 MB per page).
+2. F-19 Hit and death are still side view only.
+3. F-20 Ronin AI always settles to a lateral 2.9 m offset, so depth attacks are rare in play; let foes attack from depth sometimes.
+4. F-21 Player sheet is 4096 px wide: fine for WebGL2 on current phones, but check an older Android before Pages.
 
 ## Capture method (use this, not Playwright timing)
 `printf '[display]\nwindow/size/window_width_override=1280\nwindow/size/window_height_override=720\n' > override.cfg` then
@@ -28,6 +28,7 @@ Cycle 6 done: F-13 (camera lead), F-14 (phone HUD scale), F-12 (broad curtain sw
 | CJK glyphs on HUD rings | Engine default font has no CJK, rendered as tofu boxes | 2026-09-23 |
 | Long fast drip streaks thrown along the cut | Read as horizontal speed lines, not splatter; now radial spray, short streaks, stretch capped 1.1x | 2026-09-23 |
 | Bigger bloom blots at full ink | Read as black rocks; replaced with soft wash dabs + many small blots | 2026-09-23 |
+| Tinting black ink blots red via modulate | Modulate multiplies the near-black ink, so the mark stayed black; baked a red blot texture instead | 2026-09-23 |
 | Per-vertex random jitter for blots | Spiky star shapes, not ink drops; switched to low-harmonic radius | 2026-09-23 |
 | Sine-stack fibres for slash texture | Read as clean concentric rings; replaced with random radial profile x arc noise | 2026-09-23 |
 

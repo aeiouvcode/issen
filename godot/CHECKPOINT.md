@@ -22,3 +22,6 @@
 - 2026-09-23 C6: F-13 camera leads the player's travel (0.3 x z-velocity, capped 1.8 m) and follows faster on z, so running toward the camera no longer crops the figure at the bottom edge.
 - 2026-09-23 C6: F-14 HUD scales 1.45x on portrait screens (player bars + skill rings, timer plaque, enemy bars).
 - 2026-09-23 C6: F-12 slash curtain re-baked: 22 broad smooth bristle bands (was 96 thin ones) plus faint fine grain, grey body that tapers in at the trailing end. Reads as one wide dry-brush sweep instead of concentric rings.
+- 2026-09-23 C7: F-16 dodge: an inked cloud puff where the dodge starts plus a trail of upright black dabs every 0.05 s (reference dash look); grey sprite ghosts no longer spawned.
+- 2026-09-23 C7: F-17 hits: a baked red ink blot blooms on the struck figure's body (drawn in front of the burst) and fades in 0.55 s; hit tint stronger.
+- 2026-09-23 C7: F-15 turned attacks: atk1-3 baked in 3/4 front and back (player sheet now packs two animations per row, 4096x2304, meta col0). When the target lies mostly in depth the combo plays the turned rows, lunges in z, anchors the curtain in front and hits along z. `-- --autoplay-depth` capture timeline.
