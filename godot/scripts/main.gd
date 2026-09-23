@@ -812,6 +812,8 @@ func _hud_update() -> void:
 			var sp := cam.unproject_position(wp)
 			b.scale = pb_scale()
 			b.position = Vector2(sp.x - 45.0 * b.scale.x, maxf(sp.y - 16.0 * (b.scale.y - 1.0), 24.0))
+			if chips and chips.visible and chips.get_global_rect().grow(6.0).intersects(Rect2(b.position, Vector2(90, 20) * b.scale)):
+				b.position.y = chips.get_global_rect().end.y + 8.0
 			var f: ColorRect = b.get_node("F")
 			f.size.x = f.get_meta("w") * e.hp / e.max_hp
 			(b.get_node("L") as Label).text = "%d/100" % int(ceil(e.hp))
