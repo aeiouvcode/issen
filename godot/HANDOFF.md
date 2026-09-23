@@ -1,11 +1,11 @@
 # Handoff
 
 ## Resume here
-Cycle 5 done: F-06 (brush font + skill glyphs), F-11 (portrait framing), F-10 (ronin front/back walk). Open gaps, priority order:
-1. F-12 Slash curtain inner fibres read as fine concentric rings up close; reference curtain is a broader grey dry-brush sweep.
-2. F-13 Camera lags when the player runs toward the camera: figure gets huge and cropped at the bottom edge. Lead the camera on z or clamp the follow offset.
-3. F-14 At 390px the HUD (bars, rings, plaque) is small; scale the HUD up on narrow screens.
-4. F-15 Attacks, hit and death are side view only; turned locomotion snaps back to side view on attack.
+Cycle 6 done: F-13 (camera lead), F-14 (phone HUD scale), F-12 (broad curtain sweep). Open gaps, priority order:
+1. F-15 Attacks, hit and death are side view only; turned locomotion snaps back to side view on attack.
+2. F-16 Reference has a cloud/smoke dash effect and footprint trails of black dabs behind a dash; our dodge ghosts are grey sprite copies.
+3. F-17 Reference hit flash tints the struck figure red (red ink blot on the body); ours only tints the sprite slightly.
+4. F-18 Slash PNGs are 128-colour quantized; visible posterization bands in close-up. Consider 256 colours if the push budget allows.
 
 ## Capture method (use this, not Playwright timing)
 `printf '[display]\nwindow/size/window_width_override=1280\nwindow/size/window_height_override=720\n' > override.cfg` then

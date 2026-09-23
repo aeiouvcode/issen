@@ -19,3 +19,6 @@
 - 2026-09-23 C5: F-06 HUD: Caveat Brush (OFL, subset to ASCII, licenses/CaveatBrush-OFL.txt) as the project theme font, larger timer/bar numerals; baked inked skill glyphs (cut, evade, burst) in the HUD rings and on the touch attack/dodge buttons.
 - 2026-09-23 C5: F-11 portrait: camera aims 2.7 m above the focus (was 1.2) so the duel sits near 60% height instead of above an empty lower half.
 - 2026-09-23 C5: F-10 ronin 3/4 views: rig yaw applied to the ronin (near/far limbs, projected naginata); walk_f shows the kasa underside shadowing the face, walk_b from behind. AI plays them when closing mostly in depth.
+- 2026-09-23 C6: F-13 camera leads the player's travel (0.3 x z-velocity, capped 1.8 m) and follows faster on z, so running toward the camera no longer crops the figure at the bottom edge.
+- 2026-09-23 C6: F-14 HUD scales 1.45x on portrait screens (player bars + skill rings, timer plaque, enemy bars).
+- 2026-09-23 C6: F-12 slash curtain re-baked: 22 broad smooth bristle bands (was 96 thin ones) plus faint fine grain, grey body that tapers in at the trailing end. Reads as one wide dry-brush sweep instead of concentric rings.
