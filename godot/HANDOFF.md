@@ -5,6 +5,12 @@ Cycle 11 in progress: F-24 and F-26 done (depth kill readable, fresh kills stay 
 1. F-22 Depth-lane foes stand 1.4 m off the player's axis so both figures stay readable; straight-on depth clashes would need a camera nudge.
 3. F-25 Real older-Android device check still not done (only the texture size rule is enforced).
 
+## Android APK
+- `./build_android.sh` (see header for env). Tooling: Godot 4.5.2 Android templates (from the official export_templates.tpz), JDK 17 (Temurin), Android SDK build-tools 35.0.0 + platform 35 via sdkmanager. Editor settings file `~/.config/godot/editor_settings-4.5.tres` sets android_sdk_path and java_sdk_path.
+- Signing: self-signed release keystore (alias `issen`) generated in the agent workspace, NOT in the repo. The workspace is ephemeral: if the keystore is lost, the next APK has a different signature and Android will refuse to update in place - uninstall the old app first. Keep one keystore per release line if updates matter.
+- Output: export_android/issen.apk (gitignored). Package com.aeiouvcode.issen, minSdk 24, GLES3 required, no permissions.
+- Not tested on a real device or emulator.
+
 ## Deploy
 Pages serves main root. The Godot preview lives in main:/godot/ (index.html, index.js, index.wasm, index.pck, worklets, icons). Redeploy only on Main's go; commit with base_tree so the Three.js files on main are untouched, non-force ref update.
 
