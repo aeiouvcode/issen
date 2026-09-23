@@ -1956,10 +1956,12 @@ function doAttack(){
   }
   if(!['idle','run'].includes(p.state)) return;
   if(p.stam<16){ flashStam(); return; }
-  // soft auto-face: snap toward the boss when close (touch-friendly)
-  if(boss.alive && boss.root.visible){
-    const db = dist2D(p.pos, boss.pos);
-    if(db < 5.5) p.yaw = Math.atan2(boss.pos.x-p.pos.x, boss.pos.z-p.pos.z);
+  // soft auto-face: snap toward the nearest living foe when close (touch-friendly)
+  {
+    let best=null, bd=5.5;
+    if(boss.alive && boss.root.visible){ const d=dist2D(p.pos, boss.pos); if(d<bd){ bd=d; best=boss.pos; } }
+    if(minion.alive && minion.root.visible){ const d=dist2D(p.pos, minion.pos); if(d<bd){ bd=d; best=minion.pos; } }
+    if(best) p.yaw = Math.atan2(best.x-p.pos.x, best.z-p.pos.z);
   }
   // chain: pick next in combo based on timing
   p.atkIdx = (p._lastAtkEnd && performance.now()-p._lastAtkEnd<900) ? (p.atkIdx+1)%3 : 0;
@@ -2040,7 +2042,7 @@ function updateMinion(dt){
   }
   else if(m.state==='windup'){
     if(m.stateT>=.55){ m.state='slash'; m.stateT=0; m._hit=false;
-      slashArc(m.pos.clone().setY(1.3), m.yaw, 2.6, 2.2, .18, false, .55); }
+      slashArc(m.pos.clone().setY(1.3), m.yaw, 2.6, 2.2, .18, false, .3); }
   }
   else if(m.state==='slash'){
     if(!m._hit && m.stateT>=.1){
