@@ -1788,7 +1788,7 @@ function animBoss(dt){
     boss.body.rotation.x = .14*(1-k);
     J.armR.rotation.x = lerp(-3.0,.15,k);
     J.kasa.rotation.x = -.08*(1-k);
-  } else if(s==='stagger'){
+  } else if(s==='stagger'||s==='reel'){
     const k=easeOut(clamp(t/.4,0,1));
     boss.body.position.y = -k*.55;
     J.kasa.rotation.z = .06+k*.55;
@@ -1827,8 +1827,9 @@ function tryHitBoss(a){
   // land
   player._landed = true;
   const staggered = boss.state==='stagger';
+  const reeling = boss.state==='reel';
   const counter = (player.counterT||0) > 0;
-  const dmg = staggered ? Math.round(a.dmg*(counter?3:1.5)) : counter ? Math.round(a.dmg*2) : a.dmg;
+  const dmg = staggered ? Math.round(a.dmg*(counter?3:1.5)) : reeling ? Math.round(a.dmg*(counter?3:2)) : counter ? Math.round(a.dmg*2) : a.dmg;
   if(counter){
     player.counterT = 0;
     kanjiFlash('\u9583', .5); // 閃 - the flash: the answer lands
@@ -1890,8 +1891,9 @@ function tryHitMinion(a){
   if(dy > a.arc) return;
   player._landed = true;
   const staggered = minion.state==='stagger';
+  const reeling = minion.state==='reel';
   const counter = (player.counterT||0) > 0;
-  const dmg = staggered ? Math.round(a.dmg*(counter?3:1.5)) : counter ? Math.round(a.dmg*2) : a.dmg;
+  const dmg = staggered ? Math.round(a.dmg*(counter?3:1.5)) : reeling ? Math.round(a.dmg*(counter?3:2)) : counter ? Math.round(a.dmg*2) : a.dmg;
   if(counter){
     player.counterT = 0;
     kanjiFlash('\u9583', .5);
@@ -1935,11 +1937,12 @@ function tryHitLancer(a){
   if(dy > a.arc) return;
   player._landed = true;
   const staggered = lancer.state==='stagger';
+  const reeling = lancer.state==='reel';
   const counter = (player.counterT||0) > 0;
-  let dmg = staggered ? Math.round(a.dmg*(counter?3:1.5)) : counter ? Math.round(a.dmg*2) : a.dmg;
+  let dmg = staggered ? Math.round(a.dmg*(counter?3:1.5)) : reeling ? Math.round(a.dmg*(counter?3:2)) : counter ? Math.round(a.dmg*2) : a.dmg;
   // the round shield drinks frontal ink: strikes into its facing are halved unless it staggers
   const facing = Math.abs(((toL-lancer.yaw)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI);
-  const guarded = !staggered && facing > Math.PI - 1.0; // the shield only drinks what it faces
+  const guarded = !staggered && !reeling && facing > Math.PI - 1.0; // the shield only drinks what it faces
   if(guarded) dmg = Math.max(1, Math.round(dmg*.5));
   if(counter){
     player.counterT = 0;
@@ -2156,12 +2159,62 @@ function doAttack(){
     if(lancer.alive && lancer.root.visible){ const d=dist2D(p.pos, lancer.pos); if(d<bd){ bd=d; best=lancer.pos; } }
     if(best) p.yaw = Math.atan2(best.x-p.pos.x, best.z-p.pos.z);
   }
+  // cut-press parry: a true strike landing inside .22s from a foe in reach is deflected, and this swing becomes the riposte
+  {
+    let pf=null, pe=.22;
+    for(const f of [boss, minion, lancer]){
+      const e=strikeEta(f);
+      if(e>0 && e<=pe && dist2D(p.pos, f.pos)<4.2){ pf=f; pe=e; }
+    }
+    if(pf) doCutParry(pf);
+  }
   // chain: pick next in combo based on timing
   p.atkIdx = (p._lastAtkEnd && performance.now()-p._lastAtkEnd<900) ? (p.atkIdx+1)%3 : 0;
   p.state = 'atk'+(p.atkIdx+1); p.stateT=0; p.atkHitDone=false; p._landed=false;
   p.stam -= 16; p.regenDelay = .5;
   p.atkLog.push(G.time); while(p.atkLog.length>6) p.atkLog.shift();
   p._lastAtkEnd = performance.now() + ATK[p.atkIdx].dur*1000;
+}
+/* ---------------- cut-press parry (blade feel M78) ---------------- */
+// seconds until a foe's true strike lands; feints return Infinity - a lie invites the swing, not the parry
+function strikeEta(f){
+  if(!f.alive || !f.root.visible || f._feint) return Infinity;
+  const t=f.stateT, s=f.state;
+  if(f===boss){
+    if(s==='windup_spin') return .95-t;
+    if(s==='spin') return .25-t;
+    if(s==='windup_twin') return .62-t;
+    if(s==='twin1') return .12-t;
+    if(s==='windup_twin2') return .48-t;
+    if(s==='twin2') return .14-t;
+    if(s==='windup_slam') return 1.1-t;
+    if(s==='leap') return .55-t;
+    if(s==='burst') return .28-t;
+    if(s==='counter') return .2-t;
+    if(s==='windup_iai') return .86-t;
+    if(s==='iai') return .11-t;
+    return Infinity;
+  }
+  if(f===minion){
+    if(s==='windup') return .65-t;
+    if(s==='slash') return .1-t;
+    return Infinity;
+  }
+  if(s==='windup') return .82-t;  // lancer
+  if(s==='thrust') return .12-t;
+  return Infinity;
+}
+function doCutParry(f){
+  // the strike dies on the blade: cancel its pending hit and break the guard
+  f._hit=true; f._spinHit=true; f._twinHit=true; f._burstHit=true; f._iaiHit=true; f._counterHit=true;
+  if(f===boss) bossSetState('reel'); else { f.state='reel'; f.stateT=0; }
+  const dp=player.pos.clone(); dp.y=1.4;
+  inkBurst(dp, 26, 5.5, 0, .55);                                  // clash spray
+  slashArc(dp, player.yaw+Math.PI/2+.55, 2.4, 1.5, .3, true, 0, .3); // crossed strokes
+  slashArc(dp, player.yaw+Math.PI/2-.55, 2.4, 1.5, .3, true, 0, .3);
+  kanjiFlash('\u6368', .42); // 捌 - the parry: the cut turned aside
+  G.hitstop = Math.max(G.hitstop, .14); G.slowmo = Math.max(G.slowmo, .3);
+  sfx.parry();
 }
 function doDodge(){
   if(G.intro>0) return;
@@ -2209,7 +2262,7 @@ function animMinion(dt){
     J.armR.rotation.x = -2.2+k*2.9; minion.body.rotation.y = .5-k*1.0;
   }
   else if(s==='recover'){ J.armR.rotation.x = .7*clamp(1-t/.7,0,1); }
-  else if(s==='stagger'){
+  else if(s==='stagger'||s==='reel'){
     minion.body.rotation.z = Math.sin(t*22)*.05*(1-t/1.6);
     minion.body.position.y = -.12;
     J.armL.rotation.z = .5; J.armR.rotation.z = -.5;
@@ -2249,6 +2302,7 @@ function updateMinion(dt){
   }
   else if(m.state==='recover'){ if(m.stateT>=.8){ m.state='approach'; m.stateT=0; } }
   else if(m.state==='stagger'){ if(m.stateT>=1.6){ m.state='approach'; m.stateT=0; } }
+  else if(m.state==='reel'){ if(m.stateT>=1.0){ m.state='approach'; m.stateT=0; } } // parried: guard broken ~1s
   animMinion(dt);
   m.root.position.copy(m.pos);
 }
@@ -2278,7 +2332,7 @@ function animLancer(dt){
     lancer.body.rotation.y = -.55+k*1.1;
   }
   else if(s==='recover'){ J.armR.rotation.x = .7-(.7+.5)*clamp(t/.9,0,1); J.glaive.rotation.x = Math.PI/2; }
-  else if(s==='stagger'){
+  else if(s==='stagger'||s==='reel'){
     lancer.body.rotation.z = Math.sin(t*20)*.05*(1-t/1.8);
     lancer.body.position.y = -.12;
     J.glaive.rotation.x = Math.PI/2;
@@ -2335,6 +2389,7 @@ function updateLancer(dt){
   }
   else if(m.state==='recover'){ if(m.stateT>=.9){ m.state='approach'; m.stateT=0; } }
   else if(m.state==='stagger'){ if(m.stateT>=1.8){ m.state='approach'; m.stateT=0; } }
+  else if(m.state==='reel'){ if(m.stateT>=1.0){ m.state='approach'; m.stateT=0; } } // parried: guard broken ~1s
   animLancer(dt);
   m.root.position.copy(m.pos);
 }
@@ -2420,6 +2475,10 @@ function updateBoss(dt){
     case 'parry':
       b.yaw = angLerp(b.yaw, toP, .2);
       if(b.stateT>=.6) bossSetState('idle');
+      break;
+    case 'reel': // cut-parried: guard broken ~1s, takes double ink
+      b.yaw = angLerp(b.yaw, toP, .03);
+      if(b.stateT>=1.0) bossSetState('idle');
       break;
     case 'counter':
       if(!b._counterHit && b.stateT>=.2){
@@ -2658,6 +2717,7 @@ const sfx = (()=>{
     poof:()=>noise(.35, 400, 90, .2, 'lowpass'),
     charge:()=>tone(120, 240, .3, .07, 'sawtooth'),
     ringTick:(p=0)=>tone(300+p*170, 250+p*170, .07, .055, 'square'),
+    parry:()=>{ tone(1900, 1450, .12, .11, 'triangle'); tone(2350, 2100, .07, .05, 'sine'); noise(.07, 3400, 1900, .05); },
     drum:()=>{ tone(82, 36, .7, .3, 'sine'); noise(.18, 240, 70, .18, 'lowpass'); },
     big:()=>{ noise(.6, 800, 80, .3, 'lowpass'); tone(70, 30, .6, .3, 'sine'); },
     crack:()=>{ noise(.09, 2100, 650, .19); tone(880, 220, .09, .12, 'triangle'); },
