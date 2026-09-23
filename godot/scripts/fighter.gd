@@ -59,6 +59,13 @@ func play(a: String, restart := false) -> void:
 	anim_done = false
 	_apply()
 
+## C26: swap to another baked sheet with the same rig/rows (armor variants, boss); keeps the frame
+func reskin(tex_pages: Array[Texture2D], meta_path: String) -> void:
+	pages = tex_pages
+	meta = JSON.parse_string(FileAccess.get_file_as_string(meta_path))
+	cur_page = -1
+	_apply()
+
 func frame_count() -> int:
 	return int(meta["anims"][anim]["count"])
 

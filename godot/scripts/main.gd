@@ -94,6 +94,9 @@ var ground_mat: ShaderMaterial
 var grass_mats: Array[ShaderMaterial] = []
 var palette_i := 0
 var palette_test := false
+var armor_tex: Array[Texture2D] = []
+var spear_tex: Array[Texture2D] = []
+var boss_tex: Array[Texture2D] = []
 var kick := Vector2.ZERO   # C25 blade feel: camera push along a heavy cut
 var strike_zdir := 0.0
 var strike_dz := 0.0
@@ -112,6 +115,9 @@ func _ready() -> void:
 	_input_map()
 	player_tex = _pages("player")
 	ronin_tex = _pages("ronin")
+	armor_tex = _pages("ronin_armor")
+	spear_tex = _pages("ronin_spear")
+	boss_tex = _pages("boss")
 	cam = Camera3D.new()
 	cam.fov = 38.0
 	cam.far = 120.0
@@ -285,10 +291,12 @@ func _spawn(pos: Vector3) -> void:
 		# C21 spear foe: guards its front with the shaft and thrusts in a straight line
 		e.set_meta("spear", true)
 		e.set_meta("lane", 0)
-		e.tint = Color(0.86, 0.78, 0.7)
+		e.reskin(spear_tex, "res://art/ronin_spear.json")
+		e.tint = Color(0.94, 0.9, 0.86)
 	elif spawned >= 3 and (spawned % 2 == 1 or armor_test):
 		e.set_meta("armor", 2)
-		e.tint = Color(0.62, 0.64, 0.7)
+		e.reskin(armor_tex, "res://art/ronin_armor.json")
+		e.tint = Color(0.8, 0.82, 0.88)
 		e.sprite.scale = Vector3(1.06, 1.06, 1.0)
 	enemies.append(e)
 	var bar := _bar_pair(90.0)
@@ -748,6 +756,7 @@ func _armor_hit(e: Fighter, dir: float, strong: bool) -> void:
 	if left == 0:
 		e.tint = Color(1, 1, 1)
 		e.sprite.scale = Vector3.ONE
+		e.reskin(ronin_tex, "res://art/ronin.json")  # plates gone: back to the bare robe
 		# the break leaves the foe open, like a late parry
 		e.state = "stagger"; e.state_t = 0.0
 		e.set_meta("stag_len", 0.6); e.set_meta("riposte_k", 1.5)
@@ -767,8 +776,9 @@ func _spawn_boss(pos: Vector3) -> void:
 	e.set_meta("boss", true); e.set_meta("lane", 0)
 	e.max_hp = boss_test_hp if boss_test_hp > 0.0 else 300.0
 	e.hp = e.max_hp
-	e.tint = Color(0.42, 0.4, 0.42)
-	e.sprite.scale = Vector3(1.18, 1.18, 1.0)
+	e.reskin(boss_tex, "res://art/boss.json")
+	e.tint = Color(0.8, 0.78, 0.8)
+	e.sprite.scale = Vector3(1.08, 1.08, 1.0)
 	e.set_meta("cool", 1.4)
 	boss = e; boss_phase = 1
 	boss_bar.visible = true
