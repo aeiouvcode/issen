@@ -864,6 +864,16 @@ function buildPlayer(){
   // pale kimono skirt over the legs
   const pskirt = new THREE.Mesh(new THREE.ConeGeometry(.34, .72, 10, 1, true), M.pale);
   pskirt.position.y = .72; body.add(pskirt);
+  // hakama brush marks - the reference's black strokes on the pale skirt (ref-0.5/8.5)
+  for(let i=0;i<3;i++){
+    const a=i/3*Math.PI*2+.9;
+    const hold=new THREE.Group();
+    hold.position.set(Math.cos(a)*.24,.58,Math.sin(a)*.24);
+    hold.rotation.y=-a-Math.PI/2;
+    const dab=capsule(.035,.42,M.hair);
+    dab.rotation.x=.62;
+    hold.add(dab); body.add(hold);
+  }
   // legs
   for(const s of [-1,1]){
     const leg = new THREE.Group(); leg.position.set(.10*s, .92, 0); body.add(leg);
