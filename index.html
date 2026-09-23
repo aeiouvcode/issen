@@ -1852,7 +1852,7 @@ function tryHitLancer(a){
   let dmg = staggered ? Math.round(a.dmg*(counter?3:1.5)) : counter ? Math.round(a.dmg*2) : a.dmg;
   // the round shield drinks frontal ink: strikes into its facing are halved unless it staggers
   const facing = Math.abs(((toL-lancer.yaw)%(Math.PI*2)+Math.PI*3)%(Math.PI*2)-Math.PI);
-  const guarded = !staggered && facing < 1.0;
+  const guarded = !staggered && facing > Math.PI - 1.0; // the shield only drinks what it faces
   if(guarded) dmg = Math.max(1, Math.round(dmg*.5));
   if(counter){
     player.counterT = 0;
