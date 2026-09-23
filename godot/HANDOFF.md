@@ -1,6 +1,7 @@
 # Handoff
 
 ## Resume here
+Cycle 27: adaptive launcher icons (godot/android_icons, Android preset) + blade drip after kills. The next APK picks up the new icon; building one waits for Naksh. Next: re-capture store screenshots with the new foe art, then the distance-to-reference gap list (blade feel first).
 Cycle 26: foe variants baked (ronin_armor, ronin_spear, boss sheets; `python3 bake_sprites.py <kind>` in tools/). Next: C27 Android adaptive icon from store/icon-512 + blade-feel polish; store screenshots predate the new foe art and should be re-captured before submission.
 Cycle 25: per-chapter field palettes (--autoplay-palettes) + camera kick on heavy cuts. Next: C26 sprite bake (armored plates, yari spear rig, distinct boss rig), C27 Android adaptive icon + blade-feel polish.
 Cycle 24: store assets drafted in godot/store (listing.md, icon, feature graphic, 8 screenshots; regenerate with tools/bake_store.py + Movie Maker). Roadmap items 1-6 all have a first pass. Next: per-chapter field palettes, owed sprite bake (plates, yari, boss rig), Android adaptive icon from icon-512, blade-feel polish. Large binaries: the push bridge is a data: URL, keep each page under ~1.5 MB (one screenshot set per page).
