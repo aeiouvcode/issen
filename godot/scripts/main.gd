@@ -59,6 +59,9 @@ var auto_steps := [[0.3, "right", true], [0.9, "right", false], [1.0, "attack"],
 var banner: Label
 var spawned := 0
 var armor_test := false
+var spear_test := false
+var strike_zdir := 0.0
+var strike_dz := 0.0
 
 func _ready() -> void:
 	autoplay = "--autoplay" in OS.get_cmdline_user_args() or "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args()
@@ -120,6 +123,19 @@ func _ready() -> void:
 			enemies[0].set_meta("cool", 99.0)  # foe holds back so only plain cuts land
 			for i in 10:
 				auto_steps.append([2.2 + i * 0.7, "attack"])
+	if "--autoplay-spear" in OS.get_cmdline_user_args():
+		# QA: spear foes only. First two cuts go straight down its line (guarded), then the bot
+		# steps off the line in depth and cuts again (lands); the parry bot handles thrusts after.
+		spear_test = true; autoplay = true
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		_spawn(Vector3(5.5, 0, 0.0))
+		enemies[0].set_meta("cool", 99.0)
+		if "--thrust" in OS.get_cmdline_user_args():
+			# first thrust lands on a player who stands still; the second is side-stepped in depth
+			enemies[0].set_meta("cool", 0.8)
+			auto_steps = [[4.3, "down", true], [4.6, "down", false]]
+		else:
+			auto_steps = [[2.4, "attack"], [3.4, "attack"], [4.2, "down", true], [4.5, "down", false], [4.55, "attack"], [5.1, "attack"], [5.5, "attack"]]
 	if "--autoplay-die" in OS.get_cmdline_user_args():
 		# QA: player starts nearly spent and never acts, so the death banner and rise hint are captured
 		autoplay = true; auto_steps = []
@@ -203,7 +219,12 @@ func _spawn(pos: Vector3) -> void:
 	# C19 enemy variety: from the third foe on, every other one wears armor that takes two cuts
 	# (or one riposte / third-combo cut) to break before the blade reaches the body
 	spawned += 1
-	if spawned >= 3 and (spawned % 2 == 1 or armor_test):
+	if (spawned >= 4 and spawned % 3 == 1) or spear_test:
+		# C21 spear foe: guards its front with the shaft and thrusts in a straight line
+		e.set_meta("spear", true)
+		e.set_meta("lane", 0)
+		e.tint = Color(0.86, 0.78, 0.7)
+	elif spawned >= 3 and (spawned % 2 == 1 or armor_test):
 		e.set_meta("armor", 2)
 		e.tint = Color(0.62, 0.64, 0.7)
 		e.sprite.scale = Vector3(1.06, 1.06, 1.0)
@@ -378,6 +399,7 @@ func _player_strike() -> void:
 		if zdir != 0.0:
 			in_arc = absf(d.x) < 2.1 and d.z * zdir > -0.4 and absf(d.z) < 3.2
 		if in_arc:
+			strike_zdir = zdir; strike_dz = d.z
 			_hurt(e, dmg, p.facing, combo == 2)
 
 func _start_dodge(mv: Vector2) -> void:
@@ -418,11 +440,22 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	if int(e.get_meta("armor", 0)) > 0:
 		_armor_hit(e, dir, riposte or heavy)
 		return
+	if e.get_meta("spear", false) and e.state in ["approach", "hit"] and strike_zdir == 0.0 and absf(strike_dz) < 0.7:
+		# C21: a cut straight down the spear's line meets the shaft. Step off the line in depth
+		# (or turn and cut along z), or wait for the thrust to pass, to get through.
+		fx.clash(e.global_position + Vector3(-dir * 0.5, 1.5, 0.3), dir, 0.6)
+		sfx.play("armor", 0.05)
+		player.vel = Vector3(-dir * 2.5, 0, 0)
+		hitstop = 0.05; shake = 0.05
+		clean_hits = 0
+		if autoplay:
+			print("QA spear guard dz=%.2f" % strike_dz)
+		return
 	if riposte:
 		dmg *= float(e.get_meta("riposte_k", 2.0)); heavy = true
 	clean_hits += 1
 	e.hp = maxf(0.0, e.hp - dmg)
-	if autoplay and armor_test:
+	if autoplay and (armor_test or spear_test):
 		print("QA flesh hit hp=%d" % e.hp)
 	e.posture = maxf(0.0, e.posture - dmg * 1.6)
 	e.flash = 1.0
@@ -503,7 +536,13 @@ func _enemy(e: Fighter, delta: float) -> void:
 		"swing":
 			var ew: String = e.get_meta("vw")
 			var zd := 0.0 if ew == "" else signf(d.z)
-			if zd == 0.0:
+			var spear: bool = e.get_meta("spear", false)
+			if spear:
+				# C21 thrust: a fast straight lunge along its facing, stopping just short of the player
+				e.vel = Vector3(e.facing * (7.5 if e.frame <= 3 else 0.5), 0, 0)
+				if absf(d.x) < 1.2 or (absf(d.x) < 1.8 and absf(d.z) < 1.4):
+					e.vel.x = 0.0
+			elif zd == 0.0:
 				e.vel = e.vel.lerp(Vector3(e.facing * 1.5, 0, 0), 6.0 * delta)
 				if absf(d.x) < 2.7:
 					e.vel.x = 0.0
@@ -515,7 +554,11 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.set_meta("struck", true)
 				var dd: Vector3 = p.global_position - e.global_position
 				var hit_ok := absf(dd.z) < 1.3 and dd.x * e.facing > -0.5 and absf(dd.x) < 3.7
-				if zd == 0.0:
+				if spear:
+					# narrow and long: only a step sideways (in depth) or a dodge gets out of the line
+					hit_ok = absf(dd.z) < 0.7 and dd.x * e.facing > -0.3 and absf(dd.x) < 4.4
+					fx.thrust(e.global_position + Vector3(0, 1.45, 0.12), e.facing)
+				elif zd == 0.0:
 					fx.slash(e.global_position + Vector3(e.facing * 1.1, 0.1, 0.12), e.facing, 1.25, 0.34, 0.0, 1)
 				else:
 					fx.slash(e.global_position + Vector3(e.facing * 0.4, 0.1, zd * 1.0 + 0.12), e.facing, 1.05, 0.34, 0.0, 1)
@@ -528,7 +571,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 			e.vel = e.vel.lerp(Vector3.ZERO, 8.0 * delta)
 			if e.anim_done and e.state_t > 0.5:
 				e.state = "approach"; e.set_meta("cool", randf_range(0.8, 1.8))
-				if randf() < 0.5:
+				if randf() < 0.5 and not e.get_meta("spear", false):
 					e.set_meta("lane", _pick_lane())
 		"stagger":
 			# deflected: reeling and open, cuts land double (C15 parry)
@@ -903,7 +946,7 @@ func _hud_update() -> void:
 			var f: ColorRect = b.get_node("F")
 			f.size.x = f.get_meta("w") * e.hp / e.max_hp
 			var ar := int(e.get_meta("armor", 0))
-			(b.get_node("L") as Label).text = ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
+			(b.get_node("L") as Label).text = ("spear  " if e.get_meta("spear", false) else "") + ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
 
 # ------------------------------------------------------------------ touch
 func _ring(sz: float, glyph: String) -> TextureRect:

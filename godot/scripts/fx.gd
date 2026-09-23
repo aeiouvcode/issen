@@ -339,3 +339,20 @@ func shards(pos: Vector3, dir: float, power := 1.0) -> void:
 		items.append({"node": sp, "kind": "drop", "t": 0.0, "vel": v})
 	for k in 2:
 		slash(pos + Vector3(0, -0.5, 0), dir if k == 0 else -dir, 0.45 * power, 0.18, 0.0, k)
+
+## C21 spear thrust: one straight dry stroke along the line of the thrust plus a few specks off the point.
+func thrust(pos: Vector3, dir: float) -> void:
+	for i in 9:
+		var k := float(i) / 8.0
+		var sp := _billboard(dab_tex, lerpf(0.0065, 0.003, k))
+		sp.modulate = Color(0.14, 0.12, 0.11, 0.9)
+		sp.scale = Vector3(2.6, 0.28, 1.0)
+		add_child(sp)
+		sp.global_position = pos + Vector3(dir * (0.6 + k * 3.4), randfn(0.0, 0.02), 0)
+		items.append({"node": sp, "kind": "mark", "t": -k * 0.05, "dur": 0.3})
+	for i in 10:
+		var d := _billboard(specks[randi() % 3], randf_range(0.002, 0.004))
+		d.modulate = Color(0.2, 0.18, 0.16)
+		add_child(d)
+		d.global_position = pos + Vector3(dir * 4.0, 0, 0)
+		items.append({"node": d, "kind": "drop", "t": 0.0, "vel": Vector3(dir * randf_range(1.0, 3.0), randf_range(0.5, 2.5), randf_range(-0.5, 0.5))})
