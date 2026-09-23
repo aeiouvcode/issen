@@ -1,10 +1,10 @@
 # Handoff
 
 ## Resume here
-Cycle 8 done: dodge dab fix, F-18 (256-level slash alpha), F-20 (ronin depth-lane attacks). Open gaps, priority order:
-1. F-19 Hit and death are still side view only (player and ronin); bake _f/_b hit/die rows.
-2. F-21 Player sheet is 4096 px wide, ronin 3840 px tall: fine for WebGL2 on current phones, check an older Android before Pages.
-3. F-22 Depth-lane foes sit 1.4 m off axis so both figures stay readable; if the reference wants straight-on depth clashes, revisit with a camera nudge instead.
+Cycle 9 done: F-19 (turned hit/death rows for player and ronin, knockback along z). Open gaps, priority order:
+1. F-21 Sheets are now both 4096 px on the long side (player 4096x2816, ronin 4096x2560): at the WebGL2 limit on older phones; check an older Android before Pages, or split sheets.
+2. F-22 Depth-lane foes stand 1.4 m off the player's axis so both figures stay readable; straight-on depth clashes would need a camera nudge.
+3. F-23 Turned death is wired but not yet captured in play (the foe-mode capture leaves the depth foe at 24 HP); extend the capture timeline.
 
 ## Capture method (use this, not Playwright timing)
 `printf '[display]\nwindow/size/window_width_override=1280\nwindow/size/window_height_override=720\n' > override.cfg` then
