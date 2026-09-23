@@ -2,6 +2,9 @@ extends Node3D
 ## ISSEN Godot take: world, duel loop, camera, HUD and touch controls.
 
 var cam: Camera3D
+## F-22: depth-lane foes stand this far off the player's axis; the camera swings sideways to open the rest
+const DEPTH_SIDE := 0.8
+var cam_side := 0.0
 var fx: InkFX
 var sfx: Sfx
 var player: Fighter
@@ -405,8 +408,8 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.facing = signf(d.x)
 			if not p.alive():
 				e.play("idle"); e.vel = e.vel.lerp(Vector3.ZERO, 6.0 * delta)
-			elif (lane == 0 and dist > 3.0) or (lane != 0 and (absf(d.z) > 3.0 or absf(d.x) > 1.9)):
-				var goal := p.global_position - Vector3(e.facing * 2.9, 0, 0) if lane == 0 else p.global_position + Vector3(-e.facing * 1.4, 0, lane * 2.6)
+			elif (lane == 0 and dist > 3.0) or (lane != 0 and (absf(d.z) > 3.0 or absf(d.x) > DEPTH_SIDE + 0.5)):
+				var goal := p.global_position - Vector3(e.facing * 2.9, 0, 0) if lane == 0 else p.global_position + Vector3(-e.facing * DEPTH_SIDE, 0, lane * 2.6)
 				var dir := (goal - e.global_position); dir.y = 0
 				e.vel = dir.normalized() * 2.6
 				# closing mostly in depth: show the kasa from the front or the back
@@ -540,6 +543,16 @@ func _camera(delta: float) -> void:
 		if portrait:
 			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 3.6, 1.0, 1.35)
 	var off := Vector3(0, 3.6, 6.0) if not portrait else Vector3(0, 5.4, 4.3) * zoom
+	# F-22: a foe lined up in depth hides behind (or in front of) the player; swing the camera
+	# toward the foe's side so the line of sight opens a gap between the two figures
+	var side := 0.0
+	if tgt and tgt.alive():
+		var dd: Vector3 = tgt.global_position - player.global_position
+		var along := clampf((absf(dd.z) - absf(dd.x) * 0.6) / 1.5, 0.0, 1.0)
+		if absf(dd.z) > 1.0:
+			side = (signf(dd.x) if absf(dd.x) > 0.05 else 1.0) * signf(dd.z) * -1.6 * along
+	cam_side = lerpf(cam_side, side, 1.0 - exp(-2.5 * delta))
+	off.x += cam_side
 	cam.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
 	cam.fov = 50.0 if portrait else 40.0
 	var want := focus + off
