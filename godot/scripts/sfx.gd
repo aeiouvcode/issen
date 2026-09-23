@@ -21,6 +21,7 @@ func _ready() -> void:
 	sounds["parry"] = _wav(_ring(0.35), -16.0)
 	sounds["parry_perfect"] = _wav(_ring(0.7), -12.5)
 	sounds["finisher"] = _wav(_finish(), -8.0)
+	sounds["patter"] = _wav(_patter(), -19.0)
 	sounds["dodge"] = _wav(_sweep(0.26, 1400.0, 500.0, 0.0), -16.0)
 	var wind := AudioStreamPlayer.new()
 	wind.stream = _wav(_wind(6.0), -24.0, true)
@@ -44,6 +45,27 @@ func play(name: String, pitch_jitter := 0.06) -> void:
 	a.play()
 
 # --- synthesis -------------------------------------------------------------
+
+## C17: wet ink landing - a loose run of soft, dull ticks (1.2 kHz low-pass, no clicks) that
+## thin out, matching the flung kill trail hitting the ground.
+func _patter() -> PackedFloat32Array:
+	var n := int(0.5 * RATE)
+	var out := PackedFloat32Array(); out.resize(n)
+	var t0 := 0.0
+	for j in 11:
+		var st := int(t0 * RATE)
+		var amp := lerpf(1.0, 0.3, j / 10.0) * rng.randf_range(0.7, 1.0)
+		var ln := int(rng.randf_range(0.012, 0.03) * RATE)
+		var y := 0.0
+		var k := 1.0 - exp(-TAU * 1200.0 / RATE)
+		for i in ln:
+			if st + i >= n:
+				break
+			y += k * (rng.randf_range(-1.0, 1.0) - y)
+			var e := sin(PI * float(i) / ln)
+			out[st + i] += y * e * amp * 2.2
+		t0 += rng.randf_range(0.02, 0.05)
+	return out
 
 ## Air through cloth: noise through a low-pass whose cutoff glides from f0 to f1.
 func _sweep(dur: float, f0: float, f1: float, _unused: float) -> PackedFloat32Array:

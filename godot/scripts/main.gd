@@ -417,6 +417,7 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 			fx.burst(hitpos + Vector3(0, 0.3, -0.7), dir, 1.1, 0.5)
 		fx.slash(e.global_position + Vector3(0, 0.2, 0.1), dir, 0.8, 0.4, 0.8, 1)
 		var finisher := riposte or clean_hits >= FINISH_STREAK
+		get_tree().create_timer(0.14).timeout.connect(sfx.play.bind("patter", 0.08))
 		fx.kill_splash(e.global_position, dir if hv == "" else signf(e.vel.x), 1.5 if finisher else 1.0)
 		if finisher:
 			_finisher(e, dir)
