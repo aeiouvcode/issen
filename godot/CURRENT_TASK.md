@@ -13,5 +13,5 @@ Close the gaps ISSEN can't: hand-animated brushwork silhouettes, ragged dry-brus
 
 ## Non-goals (until asked)
 - Replacing ISSEN on main or touching the live Pages site
-- Audio, progression, menus, save data
+- Progression, menus, save data (audio now in scope: code-synthesized only, low levels, soft highs)
 - Engagement / dopamine mechanics

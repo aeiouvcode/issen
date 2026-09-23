@@ -1,8 +1,9 @@
 # Handoff
 
 ## Resume here
-Cycle 11 in progress: F-24 and F-26 done (depth kill readable, fresh kills stay framed); F-22 next. Cycle 10 done: F-21 (sprite sheets split into <=2048 px pages), F-23 (turned death captured). First Pages preview deployed at /issen/godot/ on Naksh's go (main:/godot/ holds only the web export; source stays on godot-take). Open gaps, priority order:
+Cycle 13: procedural sound added (scripts/sfx.gd, no audio assets). APK v0.11 shipped as a GitHub pre-release (tag godot-apk-v0.11, branch apk) and audited read-only (no permissions, only launcher + DUMP-guarded profileinstaller receiver exported, not debuggable, v2+v3 self-signed). Audit gaps: keystore has no backup, no in-game license/credits screen. Cycle 11: F-24 and F-26 done (depth kill readable, fresh kills stay framed). Cycle 10 done: F-21 (sprite sheets split into <=2048 px pages), F-23 (turned death captured). First Pages preview deployed at /issen/godot/ on Naksh's go (main:/godot/ holds only the web export; source stays on godot-take). Open gaps, priority order:
 1. F-22 Depth-lane foes stand 1.4 m off the player's axis so both figures stay readable; straight-on depth clashes would need a camera nudge.
+2. F-27 In-game credits/licenses screen (Godot MIT, Caveat Brush OFL, AndroidX Apache-2.0) - the APK ships none.
 3. F-25 Real older-Android device check still not done (only the texture size rule is enforced).
 
 ## Android APK
