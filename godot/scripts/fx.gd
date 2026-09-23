@@ -206,6 +206,14 @@ func _process(delta: float) -> void:
 					var sf: Sprite3D = n
 					stain(n.global_position, it["sz"], sf.texture, Color(1, 1, 1, it["a"]))
 					n.queue_free(); continue
+			"cue":
+				var fc = it["f"]
+				if not is_instance_valid(fc) or fc.state != "stagger":
+					n.queue_free(); continue
+				var sc: Sprite3D = n
+				var beat := 0.5 + 0.5 * cos(it["t"] * TAU * 3.0)
+				sc.pixel_size = it["s0"] * (0.85 + beat * 0.3)
+				sc.modulate.a = clampf(it["t"] * 8.0, 0.0, 1.0) * (0.55 + beat * 0.45)
 			"puff":
 				var kp: float = it["t"] / it["dur"]
 				var sp_: Sprite3D = n
@@ -300,3 +308,15 @@ func glint(f: Node3D, pos: Vector3) -> void:
 	f.add_child(s)
 	s.global_position = pos
 	items.append({"node": s, "kind": "redmark", "t": 0.0, "dur": 0.3, "s0": s.pixel_size})
+
+## C18 riposte cue: while a parried foe reels, the tell star stays by its sword arm and beats
+## (3 per second), so the opening reads as "cut now". Gone the moment the stagger ends.
+func riposte_cue(f: Node3D, big := false, at := Vector3(0, 2.1, 0.35)) -> void:
+	if glint_tex == null:
+		glint(f, f.global_position + Vector3(0, -50, 0))
+	var s := _billboard(glint_tex, 0.0072 if big else 0.0058)
+	s.render_priority = 2
+	s.no_depth_test = true
+	f.add_child(s)
+	s.position = at
+	items.append({"node": s, "kind": "cue", "t": 0.0, "f": f, "s0": s.pixel_size})

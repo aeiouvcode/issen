@@ -584,6 +584,7 @@ func _parry(e: Fighter, perfect := false) -> void:
 	e.posture = 0.0
 	e.vel = _knock(_face_view(e, p), p.facing, 3.0)
 	fx.clash(mid, p.facing, 1.6 if perfect else 1.0)
+	fx.riposte_cue(e, perfect, Vector3(e.facing * 0.7, 2.1, 0.35))
 	sfx.play("parry_perfect" if perfect else "parry", 0.02)
 	hitstop = 0.16 if perfect else 0.1; shake = 0.14 if perfect else 0.08
 	clean_hits += 1
