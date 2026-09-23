@@ -364,28 +364,44 @@ function bambooTexture(){
     const ccx=(ci+.2+Math.random()*.6)/CL*1024;
     const spread=46+Math.random()*70;
     const n=3+(Math.random()*3|0);
+    const groveA=.5+Math.random()*.45; // each grove its own ink depth
     for(let i=0;i<n;i++){
     const bx = ccx+(Math.random()-.5)*spread;
     const w = 6+Math.random()*14;
     const lean = (Math.random()-.5)*30;
-    const a = .45+Math.random()*.5;
-    x.strokeStyle = `rgba(20,16,11,${a})`;
+    const tip = -30+Math.random()*150; // varied heights - jagged skyline, no flat-top rectangles
+    const a = groveA*(.55+Math.random()*.45);
+    x.strokeStyle = `rgba(20,16,11,${a.toFixed(3)})`;
     x.lineWidth = w; x.lineCap='round';
     x.beginPath();
     x.moveTo(bx, 512);
-    x.quadraticCurveTo(bx+lean*.5, 250, bx+lean, -20);
+    x.quadraticCurveTo(bx+lean*.5, 250, bx+lean, tip);
     x.stroke();
+    // leaf crown at the tip: bamboo crowns, not cut stalks
+    const tx=bx+lean, nl=5+(Math.random()*3|0);
+    for(let l=0;l<nl;l++){
+      const dir=(l/(nl-1))*2-1;
+      const ll=22+Math.random()*30;
+      x.strokeStyle = `rgba(20,16,11,${(a*.8).toFixed(3)})`;
+      x.lineWidth = 1.6+Math.random()*1.6;
+      x.beginPath(); x.moveTo(tx, tip+6);
+      x.quadraticCurveTo(tx+dir*ll*.6, tip-ll*.25, tx+dir*ll, tip+2+Math.random()*10);
+      x.stroke();
+    }
     // segment nodes
+    x.strokeStyle = `rgba(20,16,11,${a.toFixed(3)})`;
     x.lineWidth = w*.4;
     for(let s2=0;s2<4;s2++){
-      const ny = 80+s2*110+Math.random()*30;
+      const ny = tip+80+s2*100+Math.random()*26;
+      if(ny>500) continue;
       const nx = bx+lean*(1-ny/512);
       x.beginPath(); x.moveTo(nx-w*.8, ny); x.lineTo(nx+w*.8, ny-4); x.stroke();
     }
-    // sparse leaves
+    // sparse mid leaves
+    x.lineWidth = 2+Math.random()*2;
     for(let l=0;l<3;l++){
-      const ly = 40+Math.random()*200, lx = bx+lean*(1-ly/512)+(Math.random()-.5)*60;
-      x.lineWidth = 2+Math.random()*2;
+      const ly = tip+60+Math.random()*200, lx = bx+lean*(1-ly/512)+(Math.random()-.5)*60;
+      if(ly>500) continue;
       x.beginPath(); x.moveTo(lx, ly);
       x.quadraticCurveTo(lx+25, ly-12, lx+45+Math.random()*20, ly-4);
       x.stroke();
