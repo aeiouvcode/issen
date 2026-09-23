@@ -1,10 +1,13 @@
 # Handoff
 
 ## Resume here
-Cycle 9 done: F-19 (turned hit/death rows for player and ronin, knockback along z). Open gaps, priority order:
-1. F-21 Sheets are now both 4096 px on the long side (player 4096x2816, ronin 4096x2560): at the WebGL2 limit on older phones; check an older Android before Pages, or split sheets.
-2. F-22 Depth-lane foes stand 1.4 m off the player's axis so both figures stay readable; straight-on depth clashes would need a camera nudge.
-3. F-23 Turned death is wired but not yet captured in play (the foe-mode capture leaves the depth foe at 24 HP); extend the capture timeline.
+Cycle 10 done: F-21 (sprite sheets split into <=2048 px pages), F-23 (turned death captured). First Pages preview deployed at /issen/godot/ on Naksh's go (main:/godot/ holds only the web export; source stays on godot-take). Open gaps, priority order:
+1. F-22 Depth-lane foes stand 1.4 m off the player's axis so both figures stay readable; straight-on depth clashes would need a camera nudge.
+2. F-24 The turned death is mostly hidden under the kill burst; consider a shorter burst on depth kills or a longer body hold.
+3. F-25 Real older-Android device check still not done (only the texture size rule is enforced).
+
+## Deploy
+Pages serves main root. The Godot preview lives in main:/godot/ (index.html, index.js, index.wasm, index.pck, worklets, icons). Redeploy only on Main's go; commit with base_tree so the Three.js files on main are untouched, non-force ref update.
 
 ## Capture method (use this, not Playwright timing)
 `printf '[display]\nwindow/size/window_width_override=1280\nwindow/size/window_height_override=720\n' > override.cfg` then
