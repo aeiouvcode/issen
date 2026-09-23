@@ -38,6 +38,10 @@ Single-file three.js sumi-e duel that reads like sensonoken's "Thousands Layered
 | G-05 | Camera sits lower than reference's high top-down follow cam; ground not the canvas | medium | fixed M69 (.40->.55) + M70 (pitch floor .85, dist 9.0/10.6 - near-overhead duel framing like ref-4.5) |
 | G-06 | Reference fields multiple foes with their own health bars; ours is a single boss | medium | stage 1 fixed M70 (shade); stage 2 fixed M72 (the lancer: round spiked shield + long spear, guard halves frontal dmg, 3.9-reach thrust, wave-two spawn 4s after the shade falls, hp90/posture70 vs shade's 70/50 - distinct maxes like ref's 109/105) |
 | G-08 | Ground speckle far sparser than reference's dense washi dash texture | high | fixed in M71 (thresholds .74/.83 + .79/.87, mask floors .45/.38, inkAmt .72) |
+| G-10 | Reference vanish/spawn clouds carry small outlined ink-triangle shards orbiting inside them; ours were plain puff clusters | medium | fixed M73 (inkShards: 4-6 brush-stroke triangle sprites orbit/rise with each inkCloud, renderOrder above puffs, verified in File preview frame) |
+| G-11 | Lancer idle spear read horizontal; reference carries the spear upright | low | fixed M73 (glaive.rotation.x per-state: .12 idle/approach, lerps to level for windup/thrust) |
+| S-01 | No sound control for the player; two voices (hit, crack) had harsh highs | medium | fixed M73 (master gain + mute toggle 音/黙 in HUD + M key, persists in localStorage; hit 2200->1600Hz, crack 3400->2100Hz square->triangle) |
+| G-12 | Ground blotch field reads busy/muddy vs reference's even fine stipple | low | improved M73 (blotch amp .13->.09, edge contribution .4->.3) |
 | G-09 | Shade read gray-mud, not the reference's bold black ink mass; its slash arc was muddy brown-red, off the sumi palette | high | fixed in M71 (uPaper lerp .82 toward 0x0d0a06; slash arc red 0 = ink; telegraph ring .55->.42) |
 
 ## Definition of done
