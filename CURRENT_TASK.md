@@ -26,10 +26,10 @@ Single-file three.js sumi-e duel that reads like sensonoken's "Thousands Layered
 | ID | Finding | Severity | Status |
 | --- | --- | --- | --- |
 | F-01 | Player slash arcs lie flat on the ground; reference arcs tower vertically | high | fixed in M65 |
-| F-02 | Timer is plain text; reference uses a rolled-scroll plaque | medium | open |
-| F-03 | Edge vignette weaker than reference's dark mottled wash | medium | open |
+| F-02 | Timer is plain text; reference uses a rolled-scroll plaque | medium | fixed in M66 |
+| F-03 | Edge vignette weaker than reference's dark mottled wash | medium | fixed in M66 |
 | F-04 | Grass reads as sparse tufts; reference has dense swaths | medium | open |
-| F-05 | Hit sparks read as red butterflies; reference uses dark ink splatter | medium | open |
+| F-05 | Hit sparks read as red butterflies; reference uses dark ink splatter | medium | color fixed in M66; drift/spin motion open |
 | F-06 | Lone bamboo stalk planes (8-11 tall) read as pole artifacts | high | fixed in M65 |
 | F-07 | Boss kasa still dominates frame at close range | low | open |
 
