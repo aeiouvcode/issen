@@ -1,9 +1,9 @@
 # Handoff
 
 ## Resume here
-Cycle 10 done: F-21 (sprite sheets split into <=2048 px pages), F-23 (turned death captured). First Pages preview deployed at /issen/godot/ on Naksh's go (main:/godot/ holds only the web export; source stays on godot-take). Open gaps, priority order:
+Cycle 11 in progress: F-24 done (depth kill readable). Cycle 10 done: F-21 (sprite sheets split into <=2048 px pages), F-23 (turned death captured). First Pages preview deployed at /issen/godot/ on Naksh's go (main:/godot/ holds only the web export; source stays on godot-take). Open gaps, priority order:
 1. F-22 Depth-lane foes stand 1.4 m off the player's axis so both figures stay readable; straight-on depth clashes would need a camera nudge.
-2. F-24 The turned death is mostly hidden under the kill burst; consider a shorter burst on depth kills or a longer body hold.
+2. F-26 In portrait, side-on kills slide the body to the screen edge (camera stops framing dead foes).
 3. F-25 Real older-Android device check still not done (only the texture size rule is enforced).
 
 ## Deploy
