@@ -22,11 +22,14 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   /* ---- aged paper vignette ---- */
   #vignette{position:fixed;inset:0;pointer-events:none;z-index:5;
     background:
-      radial-gradient(ellipse 120% 90% at 50% 42%, rgba(0,0,0,0) 40%, rgba(58,45,26,.46) 80%, rgba(30,22,11,.80) 100%),
-      radial-gradient(ellipse 140% 120% at 50% 110%, rgba(0,0,0,0) 60%, rgba(60,44,20,.30) 100%);
+      radial-gradient(ellipse 115% 88% at 50% 42%, rgba(0,0,0,0) 34%, rgba(58,45,26,.55) 74%, rgba(28,20,10,.88) 100%),
+      radial-gradient(ellipse 140% 120% at 50% 110%, rgba(0,0,0,0) 55%, rgba(60,44,20,.38) 100%),
+      radial-gradient(ellipse 90% 60% at 8% 12%, rgba(48,36,18,.30) 0%, rgba(0,0,0,0) 60%),
+      radial-gradient(ellipse 80% 55% at 94% 88%, rgba(48,36,18,.28) 0%, rgba(0,0,0,0) 60%);
     mix-blend-mode:multiply;}
-  #vignette::after{content:"";position:absolute;inset:0;opacity:.05;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");}
+  #vignette::after{content:"";position:absolute;inset:0;opacity:.09;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.016 0.022' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.24 0 0 0 0 0.18 0 0 0 0 0.09 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='420' height='420' filter='url(%23m)'/%3E%3C/svg%3E");}
   /* ---- brush bars ---- */
   .brushbar{position:relative;height:9px;filter:url(#rough);}
   .brushbar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:1px;transition:width .18s ease-out;}
@@ -42,18 +45,24 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   #boss-posture .fill{background:linear-gradient(90deg,#241d12,#463a28);}
   /* ---- time parchment box ---- */
   #timebox{position:fixed;top:9%;left:0;z-index:7;pointer-events:none;
-    background:linear-gradient(180deg,#e8dcba 0%,#dfD2ab 55%,#d3c49c 100%);
-    border:1px solid rgba(58,44,24,.55);border-left:none;
-    box-shadow:0 2px 8px rgba(40,30,12,.35), inset 0 0 18px rgba(120,95,50,.25);
-    padding:8px 26px 10px 14px;min-width:150px;
-    border-radius:0 3px 3px 0;}
-  #timebox::after{content:"";position:absolute;right:-13px;top:-4px;bottom:-4px;width:22px;
-    background:radial-gradient(circle at 40% 50%, #efe4c4 0%, #dccb9e 45%, #a98f5c 78%, #7d6740 100%);
-    border-radius:50%;box-shadow:-2px 0 4px rgba(40,30,12,.3);}
-  #timebox::before{content:"";position:absolute;right:4px;top:-4px;bottom:-4px;width:5px;
-    background:linear-gradient(90deg,rgba(0,0,0,.22),rgba(0,0,0,0));}
-  #timebox .lbl{font-size:15px;font-weight:700;color:var(--ink);}
-  #timebox .val{font-size:21px;font-weight:700;letter-spacing:1px;color:var(--ink);}
+    background:
+      repeating-linear-gradient(90deg, rgba(46,32,16,.7) 0 3px, rgba(0,0,0,0) 3px 15px) left top / 100% 6px no-repeat,
+      repeating-linear-gradient(90deg, rgba(46,32,16,.7) 0 3px, rgba(0,0,0,0) 3px 15px) left bottom / 100% 6px no-repeat,
+      linear-gradient(180deg, #a67c4b 0%, #c9a26c 24%, #cfa972 52%, #c4985f 78%, #8f6a3c 100%);
+    border:1px solid rgba(52,38,18,.6);border-left:none;
+    box-shadow:0 3px 10px rgba(40,30,12,.45), inset 0 0 22px rgba(90,64,30,.45);
+    padding:9px 30px 11px 16px;min-width:158px;
+    border-radius:0 4px 4px 0;}
+  #timebox::after{content:"";position:absolute;right:-14px;top:-5px;bottom:-5px;width:24px;
+    background:
+      repeating-radial-gradient(circle at 50% 50%, #5d4426 0 2px, #d8c193 2px 4px),
+      radial-gradient(circle at 42% 50%, #efe4c4 0%, #dccb9e 45%, #a98f5c 78%, #7d6740 100%);
+    background-blend-mode:multiply;
+    border-radius:50%;box-shadow:-2px 0 4px rgba(40,30,12,.35), inset 0 0 3px rgba(40,30,12,.5);}
+  #timebox::before{content:"";position:absolute;right:5px;top:-5px;bottom:-5px;width:6px;
+    background:linear-gradient(90deg,rgba(0,0,0,.30),rgba(0,0,0,0));}
+  #timebox .lbl{font-size:15px;font-weight:700;color:#33230f;transform:rotate(-.4deg);}
+  #timebox .val{font-size:22px;font-weight:800;letter-spacing:1px;color:#2c1e0c;transform:rotate(.3deg);}
   /* ---- player HUD ---- */
   #playerhud{position:fixed;left:50%;bottom:4.5%;transform:translateX(-50%);z-index:7;
     display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;width:160px;}
@@ -114,7 +123,7 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   #btn-dodge{right:26px;bottom:222px;}
   #btn-heal{right:26px;bottom:306px;}
   body.coarse #playerhud{width:160px;bottom:calc(24px + env(safe-area-inset-bottom,0px));}
-  body.coarse #timebox{top:12%;background:none;border:none;box-shadow:none;padding:4px 10px;min-width:0;}
+  body.coarse #timebox{top:12%;}
   body.coarse #timebox::before,body.coarse #timebox::after{display:none;}
   body.coarse #timebox .lbl{display:none;}
   body.coarse #timebox .val{font-size:15px;font-weight:600;opacity:.7;}
@@ -910,11 +919,11 @@ const pMat = new THREE.ShaderMaterial({
         // blood: flung spatter, not a disc - stretched along a per-drop angle, ragged edge
         float cs = cos(vS), sn = sin(vS);
         vec2 r = mat2(cs,-sn,sn,cs) * q;
-        r.x *= .48;
+        r.x *= .68;
         float ang = atan(r.y, r.x);
-        float edge = .30 + .09*sin(ang*3.0 + vS*5.0) + .05*sin(ang*7.0 + vS*11.0);
+        float edge = .30 + .07*sin(ang*3.0 + vS*5.0) + .04*sin(ang*7.0 + vS*11.0);
         a = smoothstep(edge, edge*.4, length(r)) * vA;
-        ink = mix(vec3(.42,.075,.05), vec3(.23,.038,.028), smoothstep(.02,.30,length(r)));
+        ink = mix(vec3(.27,.048,.032), vec3(.13,.024,.018), smoothstep(.02,.30,length(r)));
       } else {
         float d = length(q);
         a = smoothstep(.5, .06, d) * vA;
@@ -1058,6 +1067,9 @@ function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true, red=
         float fade = 1.0-uT; a *= fade*fade*(.6+.4*fade);
         vec3 col = mix(vec3(.12,.10,.07), vec3(.84,.81,.72), uPale);
         col = mix(col, vec3(.55,.11,.07), uRed);
+        // dry-brush gaps: pale streaks where the bristles split (skip red telegraphs)
+        float gap = smoothstep(.58,.92, fbm(vec2(vUv.x*3.5, vUv.y*24.0)));
+        col = mix(col, vec3(.90,.87,.78), gap*(1.0-uRed)*.55);
         gl_FragColor = vec4(col, min(a*2.0,1.0));
       }`
   });
