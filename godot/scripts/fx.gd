@@ -197,6 +197,15 @@ func _process(delta: float) -> void:
 					var s2: Sprite3D = n
 					stain(n.global_position, s2.pixel_size * 1.1, s2.texture, Color(s2.modulate.r, s2.modulate.g, s2.modulate.b, 0.75))
 					n.queue_free(); continue
+			"fling":
+				var vf: Vector3 = it["vel"]
+				vf.y -= 16.0 * delta
+				it["vel"] = vf
+				n.global_position += vf * delta
+				if n.global_position.y <= 0.02:
+					var sf: Sprite3D = n
+					stain(n.global_position, it["sz"], sf.texture, Color(1, 1, 1, it["a"]))
+					n.queue_free(); continue
 			"puff":
 				var kp: float = it["t"] / it["dur"]
 				var sp_: Sprite3D = n
@@ -247,12 +256,24 @@ func clash(pos: Vector3, dir: float, power := 1.0) -> void:
 ## plus a heavy pool under the body.
 func kill_splash(pos: Vector3, dir: float, power := 1.0) -> void:
 	var d := dir if dir != 0.0 else 1.0
-	stain(pos + Vector3(d * 0.3, 0, 0.1), 0.012 * power, null, Color(1, 1, 1, 0.85))
-	var n := int(9 * power)
+	stain(pos + Vector3(d * 0.3, 0, 0.3), 0.014 * power, null, Color(1, 1, 1, 0.85))
+	# C17: the trail starts past where the body slides to rest (~0.6 m), runs on the camera side
+	# of the body line (+z) so the falling figure can't cover it, and is flung: each splat flies
+	# as a drop and lands a beat later, so the eye follows the cut outward.
+	var n := int(11 * power)
 	for i in n:
 		var k := float(i + 1) / n
-		var at := pos + Vector3(d * (0.6 + k * 3.2 * power) + randfn(0.0, 0.15), 0, randfn(0.0, 0.35) * (0.5 + k))
-		stain(at, lerpf(0.009, 0.0025, k) * randf_range(0.8, 1.2) * power, null, Color(1, 1, 1, lerpf(0.85, 0.55, k)))
+		var at := pos + Vector3(d * (1.0 + k * 2.6 * power) + randfn(0.0, 0.15), 0, 0.35 + k * 0.4 + randfn(0.0, 0.18))
+		var sz := lerpf(0.011, 0.0035, k) * randf_range(0.8, 1.2) * power
+		var sp := _billboard(blots[randi() % 6], sz * 0.6)
+		sp.modulate = Color(1, 1, 1, 0.9)
+		add_child(sp)
+		var t := 0.12 + k * 0.28
+		var h0 := 1.0
+		sp.global_position = pos + Vector3(d * 0.2, h0, 0.2)
+		var v := (at - sp.global_position) / t
+		v.y = (0.02 - h0 + 8.0 * t * t) / t
+		items.append({"node": sp, "kind": "fling", "t": 0.0, "vel": v, "sz": sz, "a": lerpf(0.9, 0.6, k)})
 
 var glint_tex: Texture2D
 
