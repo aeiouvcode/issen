@@ -82,6 +82,18 @@ var stance_btn: Button
 var map_layer: CanvasLayer
 var map_view: Control
 var map_note := ""
+## C25: each chapter has its own field palette (paper, flecks, grass ink, grass far tone, grass density)
+const PALETTES := [
+	{"paper": Color(0.886, 0.816, 0.69), "fleck": Color(0.30, 0.25, 0.20), "ink": Color(1, 1, 1), "far": Color(0.56, 0.53, 0.49), "dens": 1.0},
+	{"paper": Color(0.83, 0.83, 0.72), "fleck": Color(0.20, 0.26, 0.19), "ink": Color(0.82, 0.95, 0.8), "far": Color(0.49, 0.55, 0.47), "dens": 1.0},
+	{"paper": Color(0.79, 0.77, 0.74), "fleck": Color(0.16, 0.15, 0.15), "ink": Color(0.9, 0.9, 0.9), "far": Color(0.46, 0.45, 0.44), "dens": 0.7},
+	{"paper": Color(0.93, 0.93, 0.92), "fleck": Color(0.36, 0.40, 0.46), "ink": Color(0.95, 1.0, 1.1), "far": Color(0.66, 0.69, 0.74), "dens": 0.45},
+	{"paper": Color(0.87, 0.75, 0.63), "fleck": Color(0.32, 0.13, 0.09), "ink": Color(1.1, 0.9, 0.85), "far": Color(0.52, 0.41, 0.37), "dens": 0.85},
+]
+var ground_mat: ShaderMaterial
+var grass_mats: Array[ShaderMaterial] = []
+var palette_i := 0
+var palette_test := false
 var strike_zdir := 0.0
 var strike_dz := 0.0
 
@@ -110,6 +122,7 @@ func _ready() -> void:
 	var gm := ShaderMaterial.new()
 	gm.shader = load("res://shaders/ground.gdshader")
 	ground.material_override = gm
+	ground_mat = gm
 	add_child(ground)
 	_grass()
 	sfx = Sfx.new()
@@ -173,6 +186,13 @@ func _ready() -> void:
 		boss_test_hp = 60.0
 		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
 		kills = CHAPTER_KILLS; spawn_t = 0.3
+	if "--autoplay-palettes" in OS.get_cmdline_user_args():
+		# QA: hold still and step through the five chapter palettes, 2 s each
+		autoplay = true; auto_steps = []; palette_test = true
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		spawn_t = 999.0
+		for i in PALETTES.size():
+			get_tree().create_timer(0.5 + 2.0 * i).timeout.connect(_set_palette.bind(i, 0.0))
 	if "--autoplay-die" in OS.get_cmdline_user_args():
 		# QA: player starts nearly spent and never acts, so the death banner and rise hint are captured
 		autoplay = true; auto_steps = []
@@ -238,6 +258,7 @@ func _grass() -> void:
 		m.shader = load("res://shaders/grass.gdshader")
 		m.set_shader_parameter("tex", load("res://art/grass%d.png" % v))
 		mi.material_override = m
+		grass_mats.append(m)
 		add_child(mi)
 
 ## Where a foe squares up: 0 beside the player (profile duel), +1 in front of the player
@@ -822,6 +843,7 @@ func _restart() -> void:
 	player.global_position = Vector3.ZERO
 	elapsed = 0.0; kills = 0; spawn_t = 1.0; spawned = 0
 	boss = null; boss_phase = 0; chapters = 0; boss_bar.visible = false
+	_set_palette(0, 1.0)
 	banner.visible = false
 
 func _nearest(pos: Vector3, r: float) -> Fighter:
@@ -1309,6 +1331,7 @@ func _chapter_cleared() -> void:
 			map_note = "New stance: %s  (%s)" % [st.name, st.sub]
 	_write_save()
 	get_tree().create_timer(2.2, true, false, true).timeout.connect(_show_map.bind(3.6))
+	get_tree().create_timer(5.9, true, false, true).timeout.connect(_set_palette.bind(chapters % PALETTES.size(), 2.5))
 
 func _show_map(secs: float) -> void:
 	map_layer.visible = true
@@ -1395,3 +1418,21 @@ func _draw_map() -> void:
 	if map_note != "":
 		c.draw_string(font, Vector2(r.position.x, sy + 30), map_note, HORIZONTAL_ALIGNMENT_CENTER, pw, 19, Color(0.62, 0.09, 0.07))
 	c.draw_string(font, Vector2(r.position.x, sy + 60), "Q or the stance chip switches stance.  Tap to close", HORIZONTAL_ALIGNMENT_CENTER, pw, 15, Color(ink, 0.6))
+
+## ---- C25 chapter palettes ----
+func _set_palette(i: int, secs: float) -> void:
+	palette_i = i
+	var pal: Dictionary = PALETTES[i]
+	var pairs := [[ground_mat, "paper", pal.paper], [ground_mat, "fleck", pal.fleck]]
+	for m in grass_mats:
+		pairs.append([m, "ink_tint", pal.ink]); pairs.append([m, "far_col", pal.far]); pairs.append([m, "density", pal.dens])
+	if secs <= 0.0:
+		for pr in pairs:
+			pr[0].set_shader_parameter(pr[1], pr[2])
+		return
+	var tw := create_tween().set_parallel(true).set_ignore_time_scale(true)
+	for pr in pairs:
+		var from = pr[0].get_shader_parameter(pr[1])
+		if from == null:
+			from = pr[2]
+		tw.tween_method(func(v): pr[0].set_shader_parameter(pr[1], v), from, pr[2], secs)
