@@ -2,7 +2,7 @@
 
 ## Resume here
 
-Next cycle: all F-findings closed except F-07 (boss kasa close-range dominance, low). Fresh audit first: play a full exchange vs the reference frames and find NEW gaps. Candidates: figures' wet-ink silhouette read vs our smooth 3D shading (biggest structural gap), slash arc edge raggedness, camera height/framing vs reference's slightly higher follow cam, the reference's enemy variety (multiple foes) vs our single boss. Re-run the 390px + desktop side-by-side (re-extract reference frames if /tmp/refframes is gone: cdn.syndication.twimg.com tweet-result?id=2100371695727198244 + ffmpeg).
+Next cycle (M69): fresh audit first, then G-04 as the top priority - push figures toward the reference's graphic contrast (pale paper robes, bold black accent shapes at hem/cuffs/collar, fewer mid-tone gradients; tune uBias/uBand thresholds harder and consider reshaping robe ink color stops). Then: arc edges still smoother than reference (G-03 residual), camera height/framing vs reference's slightly higher follow cam, enemy variety vs single boss. M68 shipped wet-ink tonal pools + dry-brush streaks on hair/dark/wrap/robe and ragged arc edges (live md5 aa1363f87d0fd9053a7ff663ffeb7e00, File gen 29). Re-run the 390px + desktop side-by-side (re-extract reference frames if /tmp/refframes is gone: cdn.syndication.twimg.com tweet-result?id=2100371695727198244 + ffmpeg).
 
 ## Blocked
 
@@ -29,3 +29,6 @@ Next cycle: all F-findings closed except F-07 (boss kasa close-range dominance, 
 - The File skeleton's game-css.ts is an escaped JS string (\n, \") and drifts slightly from index.html (extra coarse rules) - patch with escape-aware replacements, and expect the coarse section to differ.
 - Shader verification in compiled bundles: read material.fragmentShader at runtime from the live scene; string-searching document HTML fails (compiler rewrites numbers).
 - config-a lease viewport is not stable: it served 390x844 in M65 and 1280x713 in M66. Verify innerWidth before labeling a capture.
+- Instinct File preview wraps the game in an iframe: execute-js needs list-frames + --frame-id to reach the canvas; top-level querySelector('canvas') returns null.
+- screenshot --save --json returns the PNG path under .path (jq -r '.path'); save=false returns an inline JPEG for reasoning only.
+- inkMat positional args are getting long (11 params) - if more shader knobs are needed, switch to an options object before it gets error-prone.
