@@ -1,12 +1,3 @@
-# CURRENT TASK — M84: stances complete + boss-per-chapter variety (next cycle)
-
-M83 (progression: chapters + persistence + iai stance) SHIPPED Sep 24 ~3:04 AM IST.
-- Live: https://aeiouvcode.github.io/issen/ md5 6a82252249998195ee3a3aefea6af92d
-- File gen 44: https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX
-
-## M84 scope
-- Stance system proper: stance picker on start screen (iai unlocked ch1; add 2nd: 鉄 TETSU iron stance - heavier posture damage, slower swing - unlock ch2). Stance stored in PROGRESS.
-- Boss-per-chapter variety: chapter bosses differ (ch1 boss = phase 1 only / lower hp; ch2 boss faster windups; ch3 full). Reuse phase mechanics, no new rigs needed.
-- Known polish from M83: endscreen note shows only the last unlock (chapter unlock overwrites iai note) - combine into one line.
-- File sandbox note: Instinct File iframe blocks localStorage - progress only persists on github.io; fails safe to ch1. Keep try/catch.
-- Standing: audit 390px+desktop, 6-axis gauntlet + SOUND, security delta, state files, File gen 45, one report.
+# CURRENT TASK - M85
+Cycle M84 SHIPPED (gen 45). M85: store-ready assets - app icon, Play-style listing copy, screenshot set - plus any remaining polish. That completes the 6-item roadmap (blade feel / enemy variety / boss per chapter / progression+stances / sound pass / store-ready). After M85, continue distance-to-reference cycles.
+Standing: blade feel leads every cycle; 50-min cadence; audit vs reference (phone+desktop) each cycle; security scan each cycle; publish every passed build as Instinct File gen++.
