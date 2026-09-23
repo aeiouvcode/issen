@@ -67,6 +67,21 @@ var boss_phase := 0
 var chapters := 0
 var boss_bar: Control
 var boss_test_hp := 0.0
+## C23 progression: chapter map + blade stances unlocked by clearing chapters (saved)
+const SAVE_PATH := "user://issen_save.cfg"
+const CHAPTER_NAMES := ["Grass sea", "Bamboo ford", "Ash temple", "Snow pass", "Castle of blades"]
+const STANCES := [
+	{"name": "Kasumi", "sub": "mist - the balanced cut", "dmg": 1.0, "speed": 1.0, "parry": 0.0, "armor": false, "sk": 1.0},
+	{"name": "Tsubame", "sub": "swallow - quick cuts, wider parry", "dmg": 0.8, "speed": 1.3, "parry": 0.06, "armor": false, "sk": 0.88},
+	{"name": "Iwa", "sub": "stone - slow and heavy, splits plates", "dmg": 1.45, "speed": 0.8, "parry": -0.04, "armor": true, "sk": 1.22},
+]
+var best_chapter := 0     # chapters ever cleared (save data); stance i unlocks at best_chapter >= i
+var stance := 0
+var no_save := false
+var stance_btn: Button
+var map_layer: CanvasLayer
+var map_view: Control
+var map_note := ""
 var strike_zdir := 0.0
 var strike_dz := 0.0
 
@@ -106,7 +121,9 @@ func _ready() -> void:
 	player.setup(player_tex, "res://art/player.json")
 	_hud()
 	_touch_ui()
+	_load_save()
 	_menu_chips()
+	_map_ui()
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 	_spawn(Vector3(5.5, 0, -2.0))
@@ -149,6 +166,13 @@ func _ready() -> void:
 		boss_test_hp = 150.0
 		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
 		kills = CHAPTER_KILLS; spawn_t = 0.3
+	if "--autoplay-map" in OS.get_cmdline_user_args():
+		# QA: chapter 1 already cleared in memory (no save written), Iwa stance, a short boss, then the map
+		autoplay = true; auto_parry = true; auto_steps = []; no_save = true
+		best_chapter = 2; stance = 2; _stance_label()
+		boss_test_hp = 60.0
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		kills = CHAPTER_KILLS; spawn_t = 0.3
 	if "--autoplay-die" in OS.get_cmdline_user_args():
 		# QA: player starts nearly spent and never acts, so the death banner and rise hint are captured
 		autoplay = true; auto_steps = []
@@ -173,6 +197,9 @@ func _input_map() -> void:
 	for pair in [["attack", JOY_BUTTON_X], ["attack", JOY_BUTTON_Y], ["dodge", JOY_BUTTON_A], ["dodge", JOY_BUTTON_B]]:
 		var jb := InputEventJoypadButton.new(); jb.button_index = pair[1]
 		InputMap.action_add_event(pair[0], jb)
+	InputMap.add_action("gp_stance")
+	var js := InputEventJoypadButton.new(); js.button_index = JOY_BUTTON_RIGHT_SHOULDER
+	InputMap.action_add_event("gp_stance", js)
 	for pair in [["left", -1.0, JOY_AXIS_LEFT_X], ["right", 1.0, JOY_AXIS_LEFT_X], ["up", -1.0, JOY_AXIS_LEFT_Y], ["down", 1.0, JOY_AXIS_LEFT_Y]]:
 		var jm := InputEventJoypadMotion.new(); jm.axis = pair[2]; jm.axis_value = pair[1]
 		InputMap.action_add_event(pair[0], jm)
@@ -382,7 +409,7 @@ func _player(delta: float) -> void:
 	p.global_position.x = clampf(p.global_position.x, -40, 40)
 	p.global_position.z = clampf(p.global_position.z, -40, 25)
 	p.posture = minf(100.0, p.posture + 12.0 * delta)
-	p.tick_anim(delta)
+	p.tick_anim(delta * (float(STANCES[stance].speed) if p.state == "attack" else 1.0))
 
 func _start_attack() -> void:
 	var p := player
@@ -404,11 +431,11 @@ func _start_attack() -> void:
 
 func _player_strike() -> void:
 	var p := player
-	var dmg: float = [12.0, 14.0, 24.0][combo]
+	var dmg: float = [12.0, 14.0, 24.0][combo] * float(STANCES[stance].dmg)
 	var yoff: float = [0.1, 0.3, -0.1][combo]
 	var zdir := 0.0 if p.view == "" else (1.0 if p.view == "_f" else -1.0)
 	var anchor := p.global_position + (Vector3(p.facing * 1.1, yoff, 0.2) if zdir == 0.0 else Vector3(p.facing * 0.4, yoff, zdir * 1.0 + 0.2))
-	var sk: float = [1.2, 1.15, 1.45][combo]
+	var sk: float = [1.2, 1.15, 1.45][combo] * float(STANCES[stance].sk)
 	fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.42, 0.0, combo)
 	for e in enemies:
 		if not e.alive():
@@ -457,7 +484,7 @@ func _knock(view: String, dir: float, amt: float) -> Vector3:
 func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	var riposte := e.state == "stagger"
 	if int(e.get_meta("armor", 0)) > 0:
-		_armor_hit(e, dir, riposte or heavy)
+		_armor_hit(e, dir, riposte or heavy or bool(STANCES[stance].armor))
 		return
 	if e.get_meta("spear", false) and e.state in ["approach", "hit"] and strike_zdir == 0.0 and absf(strike_dz) < 0.7:
 		# C21: a cut straight down the spear's line meets the shaft. Step off the line in depth
@@ -513,7 +540,8 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 			boss = null; boss_phase = 0
 			boss_bar.visible = false
 			_flash_banner("Chapter %d cleared.  Kageyama falls" % chapters, 3.0)
-			spawn_t = 3.5
+			spawn_t = 6.5
+			_chapter_cleared()
 		if finisher:
 			_finisher(e, dir)
 		kills += 1
@@ -558,7 +586,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 		"windup":
 			e.vel = e.vel.lerp(Vector3.ZERO, 10.0 * delta)
 			# parry tell: glint as the window opens (a hair early to cover reaction time)
-			var open_t := 0.62 + 2.0 / 18.0 - PARRY_WIN - 0.06
+			var open_t := 0.62 + 2.0 / 18.0 - _pwin() - 0.06
 			if e.state_t >= open_t and e.state_t - delta < open_t:
 				fx.glint(e, e.global_position + Vector3(e.facing * 0.7, 2.1, 0.35))
 			if e.state_t > 0.62:
@@ -670,7 +698,7 @@ func _parry_target() -> Fighter:
 		if not e.alive():
 			continue
 		var ttc := _ttc(e)
-		if ttc > PARRY_WIN:
+		if ttc > _pwin():
 			continue
 		var d: Vector3 = e.global_position - p.global_position
 		if absf(d.x) < 3.9 and absf(d.z) < 3.6:
@@ -942,6 +970,7 @@ func _hud() -> void:
 	banner.add_theme_font_size_override("font_size", 28)
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	banner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# C18: the death line sits on its own parchment slip so it stays legible over ink figures
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.93, 0.89, 0.8, 0.9)
@@ -988,10 +1017,17 @@ func _layout() -> void:
 	banner.size = Vector2(minf(400.0, vs.x / k - 20.0), 96)
 	banner.scale = Vector2(k, k)
 	banner.position = Vector2(vs.x * 0.5 - banner.size.x * k * 0.5, vs.y * (0.24 if vs.y > vs.x else 0.3))
+	var ck := k
 	if chips:
 		chips.size = chips.get_combined_minimum_size()
-		chips.scale = Vector2(k, k)
-		chips.position = Vector2(vs.x - chips.size.x * k - 10, 10)
+		ck = minf(k, (vs.x - 20.0) / chips.size.x)
+		chips.scale = Vector2(ck, ck)
+		chips.position = Vector2(vs.x - chips.size.x * ck - 10, 10)
+	if boss_bar and chips:
+		var bk2 := boss_bar.scale.x
+		boss_bar.position.y = maxf(boss_bar.position.y, 10.0 + 30.0 * ck + 6.0 + 56.0 * bk2)
+		if vs.y > vs.x:
+			plaque.position.y = maxf(plaque.position.y, boss_bar.position.y + 24.0 * bk2)
 	if credits:
 		credits.size = vs
 	if touch_ui:
@@ -1084,6 +1120,15 @@ func _input(ev: InputEvent) -> void:
 			dodge_buf = 0.3
 		if ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_M:
 			_toggle_mute()
+		if ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_Q:
+			_cycle_stance()
+		if ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_TAB:
+			if map_layer.visible:
+				map_layer.visible = false
+			else:
+				_show_map(0.0)
+		if ev.is_action_pressed("gp_stance", false):
+			_cycle_stance()
 	if ev is InputEventScreenTouch:
 		touch_ui.visible = true
 		var vs := get_viewport().get_visible_rect().size
@@ -1141,6 +1186,12 @@ func _menu_chips() -> void:
 	mute_btn = _chip("sound: on")
 	mute_btn.pressed.connect(_toggle_mute)
 	chips.add_child(mute_btn)
+	stance_btn = _chip("stance: Kasumi")
+	stance_btn.pressed.connect(_cycle_stance)
+	chips.add_child(stance_btn)
+	var mb := _chip("map")
+	mb.pressed.connect(_show_map.bind(0.0))
+	chips.add_child(mb)
 	var cb := _chip("credits")
 	cb.pressed.connect(_show_credits.bind(true))
 	chips.add_child(cb)
@@ -1214,3 +1265,133 @@ func _credits_text() -> String:
 	if OS.get_name() == "Android":
 		t += "\n== Android ==\nAndroidX core, startup and profileinstaller (Apache License 2.0), LLVM libc++ (Apache License 2.0 with LLVM exceptions). Full text: https://www.apache.org/licenses/LICENSE-2.0\n"
 	return t
+
+## ---- C23 progression ----
+func _pwin() -> float:
+	return PARRY_WIN + float(STANCES[stance].parry)
+
+func _load_save() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(SAVE_PATH) == OK:
+		best_chapter = int(cf.get_value("progress", "best_chapter", 0))
+		stance = clampi(int(cf.get_value("progress", "stance", 0)), 0, mini(best_chapter, STANCES.size() - 1))
+
+func _write_save() -> void:
+	if no_save or autoplay:
+		return
+	var cf := ConfigFile.new()
+	cf.set_value("progress", "best_chapter", best_chapter)
+	cf.set_value("progress", "stance", stance)
+	cf.save(SAVE_PATH)
+
+func _stance_label() -> void:
+	if stance_btn:
+		stance_btn.text = "stance: " + str(STANCES[stance].name)
+		_layout()
+
+func _cycle_stance() -> void:
+	var open := mini(best_chapter, STANCES.size() - 1)
+	if open == 0:
+		_flash_banner("Clear chapter 1 to learn a second stance", 1.6)
+		return
+	stance = (stance + 1) % (open + 1)
+	_stance_label()
+	sfx.play("swing", 0.0)
+	_flash_banner("%s stance\n%s" % [STANCES[stance].name, STANCES[stance].sub], 1.6)
+	_write_save()
+
+func _chapter_cleared() -> void:
+	map_note = ""
+	if chapters > best_chapter:
+		best_chapter = chapters
+		if best_chapter < STANCES.size():
+			var st: Dictionary = STANCES[best_chapter]
+			map_note = "New stance: %s  (%s)" % [st.name, st.sub]
+	_write_save()
+	get_tree().create_timer(2.2, true, false, true).timeout.connect(_show_map.bind(3.6))
+
+func _show_map(secs: float) -> void:
+	map_layer.visible = true
+	map_view.queue_redraw()
+	if secs > 0.0:
+		get_tree().create_timer(secs, true, false, true).timeout.connect(func(): map_layer.visible = false)
+
+func _map_ui() -> void:
+	map_layer = CanvasLayer.new(); map_layer.layer = 4; map_layer.visible = false
+	map_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(map_layer)
+	map_view = Control.new()
+	map_view.set_anchors_preset(Control.PRESET_FULL_RECT)
+	map_view.mouse_filter = Control.MOUSE_FILTER_STOP
+	map_view.gui_input.connect(func(ev):
+		if (ev is InputEventMouseButton or ev is InputEventScreenTouch) and ev.pressed:
+			map_layer.visible = false)
+	map_view.draw.connect(_draw_map)
+	map_layer.add_child(map_view)
+
+func _draw_map() -> void:
+	var c := map_view
+	var vs := c.get_viewport_rect().size
+	var ink := Color(0.1, 0.08, 0.07)
+	var font := c.get_theme_default_font()
+	c.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.1, 0.08, 0.06, 0.45))
+	var portrait := vs.y > vs.x
+	var pw := minf(vs.x - 24.0, 760.0)
+	var ph := minf(vs.y - 40.0, 640.0 if portrait else 400.0)
+	var r := Rect2((vs - Vector2(pw, ph)) * 0.5, Vector2(pw, ph))
+	c.draw_rect(r, Color(0.93, 0.88, 0.77))
+	c.draw_rect(r.grow(-6.0), Color(0.86, 0.79, 0.66, 0.35), false, 2.0)
+	c.draw_rect(r, ink, false, 3.0)
+	c.draw_string(font, r.position + Vector2(0, 44), "Chapter map", HORIZONTAL_ALIGNMENT_CENTER, pw, 34, ink)
+	# path of five stops, winding like a brush trail
+	var pts: Array[Vector2] = []
+	var n := CHAPTER_NAMES.size()
+	for i in n:
+		var t := float(i) / float(n - 1)
+		var p: Vector2
+		if portrait:
+			p = r.position + Vector2(pw * (0.3 if i % 2 == 0 else 0.7), 100.0 + t * (ph - 300.0))
+		else:
+			p = r.position + Vector2(70.0 + t * (pw - 140.0), ph * (0.52 if i % 2 == 0 else 0.36))
+		pts.append(p)
+	var rng := RandomNumberGenerator.new(); rng.seed = 11
+	for i in n - 1:
+		var a := pts[i]; var b := pts[i + 1]
+		var done := i < best_chapter
+		var steps := 18
+		for k in steps:
+			var t0 := float(k) / steps; var t1 := float(k + 1) / steps
+			var mid := (a + b) * 0.5 + (b - a).orthogonal().normalized() * 18.0
+			var q0 := a.lerp(mid, t0).lerp(mid.lerp(b, t0), t0)
+			var q1 := a.lerp(mid, t1).lerp(mid.lerp(b, t1), t1)
+			if not done and k % 2 == 1:
+				continue
+			var w := (5.0 if done else 2.5) * (1.0 - 0.5 * t0) + rng.randf_range(-0.6, 0.6)
+			c.draw_line(q0, q1, Color(ink, 0.9 if done else 0.45), w, true)
+	for i in n:
+		var p := pts[i]
+		var cleared := i < best_chapter
+		var current := i == mini(chapters, n - 1)
+		if cleared:
+			c.draw_circle(p, 17.0, ink)
+			c.draw_circle(p + Vector2(4, -3), 6.0, Color(0.72, 0.1, 0.08))
+		elif current:
+			c.draw_arc(p, 18.0, 0.3, TAU - 0.2, 32, ink, 4.0, true)
+		else:
+			c.draw_arc(p, 14.0, 0.0, TAU, 28, Color(ink, 0.35), 2.0, true)
+		var label := "%d  %s" % [i + 1, CHAPTER_NAMES[i]]
+		var ly := 44.0 if (portrait or i % 2 == 0) else -30.0
+		var lx := -80.0
+		c.draw_string(font, p + Vector2(lx, ly), label, HORIZONTAL_ALIGNMENT_CENTER, 160.0, 17, Color(ink, 1.0 if (cleared or current) else 0.5))
+	# stances
+	var sy := r.position.y + ph - 92.0
+	var line := "Stances:  "
+	for i in STANCES.size():
+		var st: Dictionary = STANCES[i]
+		line += ("[%s]" if i == stance else "%s") % st.name if i <= best_chapter else "locked"
+		if i < STANCES.size() - 1:
+			line += "   "
+	c.draw_string(font, Vector2(r.position.x, sy), line, HORIZONTAL_ALIGNMENT_CENTER, pw, 20, ink)
+	if map_note != "":
+		c.draw_string(font, Vector2(r.position.x, sy + 30), map_note, HORIZONTAL_ALIGNMENT_CENTER, pw, 19, Color(0.62, 0.09, 0.07))
+	c.draw_string(font, Vector2(r.position.x, sy + 60), "Q or the stance chip switches stance.  Tap to close", HORIZONTAL_ALIGNMENT_CENTER, pw, 15, Color(ink, 0.6))
