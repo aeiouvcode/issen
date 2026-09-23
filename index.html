@@ -766,7 +766,7 @@ function tuftTexture(){
 function swathTexture(){
   const c=document.createElement('canvas'); c.width=256; c.height=128;
   const x=c.getContext('2d');
-  const dabs=52+Math.floor(Math.random()*18);
+  const dabs=60+Math.floor(Math.random()*20);
   for(let i=0;i<dabs;i++){
     // elliptical band footprint, density falls off with distance + noise
     const u=Math.random()*2-1, v=Math.random()*2-1;
@@ -777,9 +777,9 @@ function swathTexture(){
     const lean=(Math.random()-.5)*9;
     const tone=Math.random();
     const col=tone<.55?'46,41,32':tone<.85?'62,56,44':'80,74,60';
-    const al=.34+Math.random()*.34;
+    const al=.42+Math.random()*.36;
     // chisel dab: one tapered vertical stroke, soft at both ends
-    const w0=2.6+Math.random()*2.8;
+    const w0=3.2+Math.random()*3.2;
     x.strokeStyle=`rgba(${col},${al.toFixed(3)})`;
     x.lineCap='round';
     for(let seg=0;seg<3;seg++){
@@ -951,6 +951,19 @@ function buildBoss(){
     const up = capsule(.11, .5, M.robe); up.position.y = -.3; arm.add(up);
     const fore = capsule(.09, .45, M.dark); fore.position.y = -.75; arm.add(fore);
     J['arm'+(s<0?'L':'R')] = arm;
+  }
+  // obi sash - the reference's bold black graphic band at the waist (ref-8.5)
+  const obi = new THREE.Mesh(new THREE.CylinderGeometry(.55,.68,.24,12), M.hair);
+  obi.position.y = 1.52; body.add(obi); J.obi = obi;
+  // hakama brush marks - vertical ink dabs leaning on the skirt slope
+  for(let i=0;i<4;i++){
+    const a=i/4*Math.PI*2+.4;
+    const hold=new THREE.Group();
+    hold.position.set(Math.cos(a)*.66,.34,Math.sin(a)*.66);
+    hold.rotation.y=-a-Math.PI/2;
+    const dab=capsule(.06,.8,M.hair);
+    dab.rotation.x=.9;
+    hold.add(dab); body.add(hold);
   }
   // naginata in right hand
   const glaive = new THREE.Group(); glaive.position.set(0,-.95,.05); J.armR.add(glaive); J.glaive = glaive;
