@@ -37,6 +37,9 @@ Next cycle (M73): fresh audit first (390px-forced + desktop vs /tmp/refframes; r
 - Shader verification in compiled bundles: read material.fragmentShader at runtime from the live scene; string-searching document HTML fails (compiler rewrites numbers).
 - config-a lease viewport is not stable: it served 390x844 in M65 and 1280x713 in M66. Verify innerWidth before labeling a capture.
 - Instinct File preview wraps the game in an iframe: execute-js needs list-frames + --frame-id to reach the canvas; top-level querySelector('canvas') returns null.
-- screenshot --save --json returns the PNG path under .path (jq -r '.path'); save=false returns an inline JPEG for reasoning only.
+- screenshot --save --json returns the PNG path under .structured.path (jq -r '.structured.path'; top-level .path is null); save=false returns an inline JPEG for reasoning only.
 - inkMat positional args are getting long (11 params) - if more shader knobs are needed, switch to an options object before it gets error-prone.
 - files.instinct.com viewer page CSP blocks cross-origin fetch: the GitHub PAT bridge must run from an aeiouvcode.github.io tab, not from the File preview tab.
+- vault fill fails on offscreen or low-opacity injected inputs ("browser input failed"): make the PAT field visible (opacity 1, small, on-screen), re-find the ref AFTER restyling, fill, then hide+clear. Stale refs from before a DOM change also fail.
+- issen-file/src/game-css.ts and game-markup.ts are single-line escaped JS strings: patch them with literal \n escape sequences, never real newlines, or the File build fails with "Unterminated string literal" (game-main.ts is a normal multiline module).
+
