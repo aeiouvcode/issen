@@ -3438,7 +3438,7 @@ document.querySelectorAll('.stanceseal').forEach(seal=>{
     PROGRESS.stance=st; PROGRESS.save(); renderStances();
     line.textContent = CHAPTERS[PROGRESS.sel].line+' · '+STANCES[st].line;
   });
-}
+});
 renderChapters(); renderStances();
 el('endscreen').addEventListener('click', startOrRetry);
 
