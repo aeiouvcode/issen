@@ -216,12 +216,33 @@ def draw_hakama_leg(c, hip, knee, foot, shade):
 # ---------------------------------------------------------------- ronin
 RDIM = dict(thigh=44, shin=42, torso=58, neck=4, head=16, uarm=30, farm=28, pole=170)
 
+VARIANT = ''  # C26: '' kasa ronin, 'armor' lacquer plates, 'spear' yari, 'boss' Kageyama
+
 def draw_ronin(c, J, pose):
     rng = c.rng
     pole_a = J['f_farm_a'] + pose.get('pole', 0)
     # naginata behind body when held back
     def naginata():
         hnd = J['f_hand']
+        if VARIANT == 'spear':
+            # yari: longer straight shaft, small leaf head, a tassel ring below it
+            back = hnd - pvec(J, V(pole_a, 80)); tip = hnd + pvec(J, V(pole_a, RDIM['pole'] - 30))
+            c.stroke([tuple(back), tuple(hnd), tuple(tip)], w=3.2, dry=0.25, taper=(0.05, 0.05))
+            d = pvec(J, V(pole_a, 1.0)); d = d / (np.linalg.norm(d) + 1e-6); q = np.array([-d[1], d[0]])
+            hd = tip + d * 58
+            c.wash([tuple(tip), tuple(tip + d * 18 + q * 9), tuple(hd), tuple(tip + d * 18 - q * 9)], dens=0.95, edge=0.2, rag=0.5)
+            c.stroke([tuple(tip - q * 12), tuple(tip + q * 12)], w=3.4, dry=0.3)
+            for k in range(5):
+                c.stroke([tuple(tip - d * 6), tuple(tip - d * (22 + k * 3) + q * (k - 2) * 3)], w=1.6, dry=0.6, ink=0.85)
+            return hd
+        if VARIANT == 'boss':
+            # odachi-long naginata blade, heavier ink
+            back = hnd - pvec(J, V(pole_a, 60)); tip = hnd + pvec(J, V(pole_a, RDIM['pole'] - 70))
+            c.stroke([tuple(back), tuple(hnd), tuple(tip)], w=4.4, dry=0.25, taper=(0.05, 0.05))
+            bl = tip + pvec(J, V(pole_a, 58)) + perp(hnd, tip) * 10
+            c.wash([tuple(tip + perp(hnd, tip) * 4), tuple(lerp(tip, bl, 0.5) + perp(hnd, tip) * 14), tuple(bl), tuple(tip - perp(hnd, tip) * 3)], dens=0.95, edge=0.25, rag=0.8)
+            c.stroke([tuple(tip), tuple(lerp(tip, bl, 0.5) + perp(hnd, tip) * 13), tuple(bl)], w=2.8, dry=0.25)
+            return bl
         back = hnd - pvec(J, V(pole_a, 60)); tip = hnd + pvec(J, V(pole_a, RDIM['pole'] - 60))
         c.stroke([tuple(back), tuple(hnd), tuple(tip)], w=3.8, dry=0.3, taper=(0.05, 0.05))
         bl = tip + pvec(J, V(pole_a, 34)) + perp(hnd, tip) * 6
@@ -242,7 +263,42 @@ def draw_ronin(c, J, pose):
         p0 = lerp(hipL, hipR, k / 5) + np.array([0, 6])
         c.stroke([tuple(p0), tuple(p0 + np.array([rng.normal(-3, 2), 12 + rng.normal(0, 4)]))], w=4, dry=0.7, taper=(0.05, 0.7))
     c.stroke([tuple(shL), tuple(hipL + np.array([0, 10]))], w=4.4, dry=0.5)
+    if VARIANT == 'armor':
+        # do: four lacquer bands across the torso with paper gaps (the lacing), sode plates at the shoulder
+        for k in range(4):
+            a0, a1 = 0.08 + k * 0.22, 0.08 + k * 0.22 + 0.16
+            pl = [tuple(lerp(shL, hipL, a0) + n * 3), tuple(lerp(shR, hipR, a0) - n * 3), tuple(lerp(shR, hipR, a1) - n * 3), tuple(lerp(shL, hipL, a1) + n * 3)]
+            c.wash(pl, dens=0.97, edge=0.15, rag=0.6, texture=0.25)
+        fsh = J['f_sh']; d = np.array([0, 1.0])
+        for k in range(3):
+            o = d * (6 + k * 9)
+            c.wash([tuple(fsh - n * 14 + o), tuple(fsh + n * 12 + o), tuple(fsh + n * 13 + o + d * 7), tuple(fsh - n * 15 + o + d * 7)], dens=0.97, edge=0.15, rag=0.5)
+    if VARIANT == 'boss':
+        # haori tails streaming behind, heavier torso
+        back = -1.0 if pvec(J, np.array([1.0, 0.0]))[0] >= 0 else 1.0
+        for k in range(3):
+            p0 = lerp(J['sh'], J['hip'], 0.35 + k * 0.28)
+            tail = p0 + np.array([back * (64 + k * 16), 26 + k * 12 + rng.normal(0, 3)])
+            c.wash([tuple(p0 + np.array([0, -9])), tuple(lerp(p0, tail, 0.5) + np.array([0, -4])), tuple(tail), tuple(tail + np.array([back * -6, 12])), tuple(p0 + np.array([0, 12]))], dens=0.82, edge=0.4, rag=2.4, texture=0.5)
+        # heavy o-sode pauldrons widen the silhouette
+        for sh in (J['b_sh'], J['f_sh']):
+            c.wash([tuple(sh + np.array([-15, -2])), tuple(sh + np.array([15, -2])), tuple(sh + np.array([21, 22])), tuple(sh + np.array([-21, 22]))], dens=0.95, edge=0.2, rag=0.8, texture=0.3)
+        c.wash(body, dens=0.55, edge=0.3, rag=1.6, texture=0.4, streak_dir=1)
     draw_leg_dark(c, J['f_hip'], J['f_knee'], J['f_foot'], 0.4)
+    if VARIANT == 'boss':
+        # no kasa: bare head with a tall topknot, wild hair, and a red eye slit
+        h = J['head']
+        c.dab(*h, 15, ink=0.95)
+        for k in range(7):
+            a = math.radians(200 + k * 20)
+            c.stroke([tuple(h), tuple(h + np.array([math.cos(a) * 26, math.sin(a) * 22 - 4]))], w=3.2, dry=0.6, taper=(0.1, 0.8))
+        c.stroke([tuple(h + np.array([0, -12])), tuple(h + np.array([-4, -32])), tuple(h + np.array([-12, -40]))], w=5.5, dry=0.4, taper=(0.2, 0.6))
+        c.splatter(*(lerp(J['hip'], J['f_foot'], 0.8)), 14, 10, 2.6, ink=0.9)
+        draw_sleeve_dark(c, J['f_sh'], J['f_el'], J['f_hand'], 0.85)
+        tip = tipb
+        if pose.get('pole_behind', 0) <= 0.5: tip = naginata()
+        c.dab(*J['f_hand'], 4, ink=0.9)
+        return tip
     # kasa hat: wide low cone over head
     h = J['head']; lean = pose.get('lean', 0)
     fw = np.array([math.cos(math.radians(lean * 0.5)), math.sin(math.radians(lean * 0.5))])
