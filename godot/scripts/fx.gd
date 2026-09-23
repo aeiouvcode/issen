@@ -53,13 +53,23 @@ func _billboard(tex: Texture2D, px: float) -> Sprite3D:
 	return s
 
 func burst(pos: Vector3, dir: float, power := 1.0, red := 0.25) -> void:
-	# central bloom: a few big blots that swell and dry out
-	for i in int(10 + 8 * power):
-		var s := _billboard(blots[randi() % 6], 0.0055 * power * randf_range(0.6, 1.3))
+	# central bloom: a dense black cloud of many overlapping blots, clustered toward the
+	# middle, holding full ink before drying out (reference bloom is black, not grey)
+	for i in 3:
+		var w := _billboard(dab_tex, 0.02 * power * randf_range(0.8, 1.2))
+		w.modulate = Color(0.45, 0.43, 0.42, 0.55)
+		add_child(w)
+		w.global_position = pos + Vector3(randfn(0.0, 0.25) + dir * 0.3, randfn(0.0, 0.2), 0.08)
+		w.rotation.z = randf() * TAU
+		items.append({"node": w, "kind": "bloom", "t": 0.0, "dur": randf_range(0.5, 0.75), "s0": w.pixel_size})
+	for i in int(34 + 30 * power):
+		var s := _billboard(blots[3 + randi() % 3] if randf() < 0.6 else blots[randi() % 3], 0.0026 * power * randf_range(0.4, 1.2))
+		s.modulate = Color(0.55, 0.52, 0.5)
 		add_child(s)
-		s.global_position = pos + Vector3(randf_range(-1.0, 1.0), randf_range(-0.8, 0.9), 0.1)
+		var off := Vector2(randfn(0.0, 0.45), randfn(0.0, 0.4))
+		s.global_position = pos + Vector3(off.x + dir * 0.2, off.y, 0.1 + randf() * 0.05)
 		s.rotation.z = randf() * TAU
-		items.append({"node": s, "kind": "bloom", "t": 0.0, "dur": randf_range(0.35, 0.6), "s0": s.pixel_size})
+		items.append({"node": s, "kind": "bloom", "t": 0.0, "dur": randf_range(0.45, 0.8), "s0": s.pixel_size})
 	# flying ink: many fine specks, streaking drips aligned to their flight, a few fat drops.
 	# All land as stains, so a fight leaves a dense splattered floor like the reference.
 	for i in int(150 * power):
@@ -135,8 +145,8 @@ func _process(delta: float) -> void:
 			"bloom":
 				var k2: float = it["t"] / it["dur"]
 				var s: Sprite3D = n
-				s.pixel_size = it["s0"] * (1.0 + k2 * 0.7)
-				s.modulate.a = clampf(1.3 - k2 * 1.3, 0.0, 1.0)
+				s.pixel_size = it["s0"] * (1.0 + k2 * 0.45)
+				s.modulate.a = clampf(1.8 - k2 * 1.8, 0.0, 1.0)
 				if k2 >= 1.0:
 					n.queue_free(); continue
 			"drop", "drip":
