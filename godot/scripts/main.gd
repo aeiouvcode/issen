@@ -520,6 +520,11 @@ func _camera(delta: float) -> void:
 	var lead := Vector3(player.vel.x * 0.12, 0.0, player.vel.z * 0.3)
 	focus += lead.limit_length(1.8)
 	var tgt := _nearest(player.global_position, 7.0)
+	if tgt == null:
+		# F-26: keep a fresh kill in frame for its fall instead of snapping back to the player
+		for e in enemies:
+			if not e.alive() and e.state_t < 1.6 and (e.global_position - player.global_position).length() < 8.0:
+				tgt = e
 	var zoom := 1.0
 	if tgt:
 		# narrow screens: centre the pair and pull back when they spread wider than the frame
