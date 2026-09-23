@@ -437,7 +437,10 @@ func _camera(delta: float) -> void:
 	var vs := get_viewport().get_visible_rect().size
 	var portrait := vs.y > vs.x
 	var focus := player.global_position
-	var tgt := _nearest(focus, 7.0)
+	# lead the player's travel so running toward the camera doesn't outrun the follow
+	var lead := Vector3(player.vel.x * 0.12, 0.0, player.vel.z * 0.3)
+	focus += lead.limit_length(1.8)
+	var tgt := _nearest(player.global_position, 7.0)
 	var zoom := 1.0
 	if tgt:
 		# narrow screens: centre the pair and pull back when they spread wider than the frame
@@ -448,7 +451,12 @@ func _camera(delta: float) -> void:
 	cam.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
 	cam.fov = 50.0 if portrait else 40.0
 	var want := focus + off
-	cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-5.0 * delta)) if cam.global_position.length() > 0.1 else want
+	if cam.global_position.length() > 0.1:
+		var cp := cam.global_position.lerp(want, 1.0 - exp(-5.0 * delta))
+		cp.z = lerpf(cam.global_position.z, want.z, 1.0 - exp(-9.0 * delta))
+		cam.global_position = cp
+	else:
+		cam.global_position = want
 	# portrait: aim a little higher so the duel sits nearer the vertical middle, not above empty ground
 	cam.look_at(cam.global_position - off + Vector3(0, 2.7 if portrait else 1.2, 0), Vector3.UP)
 	if shake > 0.0:
@@ -555,6 +563,7 @@ func _layout() -> void:
 	pb.position = Vector2(vs.x * 0.5 - 75, vs.y - 60)
 	var plaque: Control = hud.get_node("Plaque")
 	plaque.position = Vector2(0, clampf(vs.y * 0.2, 50, 110))
+
 	banner.position = Vector2(vs.x * 0.5 - 200, vs.y * 0.4)
 	banner.size = Vector2(400, 40)
 	if touch_ui:
