@@ -1,11 +1,12 @@
-# CURRENT TASK — M83: progression (next cycle)
+# CURRENT TASK — M84: stances complete + boss-per-chapter variety (next cycle)
 
-M82 (sound pass) SHIPPED Sep 24 ~2:14 AM IST.
-- Live: https://aeiouvcode.github.io/issen/ md5 971de61990d4374b4e12f7d757f87dc4
-- File gen 43: https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX
+M83 (progression: chapters + persistence + iai stance) SHIPPED Sep 24 ~3:04 AM IST.
+- Live: https://aeiouvcode.github.io/issen/ md5 6a82252249998195ee3a3aefea6af92d
+- File gen 44: https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX
 
-## M83 scope (roadmap item 4; blade feel still leads on regressions)
-- Chapter map: chapters as duel sets (chapter = themed wave sequence + boss), progress persisted in localStorage
-- Stance unlocks: beating a chapter boss unlocks a stance (e.g. iai draw = faster first cut, iron stance = heavier posture dmg); stance select on start screen
-- Likely 2 cycles: M83 chapter shell + persistence, M84 stances + boss-per-chapter tie-in (roadmap item 3)
-- Standing: distance-to-reference audit (390px + desktop), 6-axis gauntlet + SOUND, security delta scan, state files, publish File gen 44, one final report
+## M84 scope
+- Stance system proper: stance picker on start screen (iai unlocked ch1; add 2nd: 鉄 TETSU iron stance - heavier posture damage, slower swing - unlock ch2). Stance stored in PROGRESS.
+- Boss-per-chapter variety: chapter bosses differ (ch1 boss = phase 1 only / lower hp; ch2 boss faster windups; ch3 full). Reuse phase mechanics, no new rigs needed.
+- Known polish from M83: endscreen note shows only the last unlock (chapter unlock overwrites iai note) - combine into one line.
+- File sandbox note: Instinct File iframe blocks localStorage - progress only persists on github.io; fails safe to ch1. Keep try/catch.
+- Standing: audit 390px+desktop, 6-axis gauntlet + SOUND, security delta, state files, File gen 45, one report.
