@@ -1,11 +1,11 @@
-# CURRENT TASK — M82: sound pass (next cycle)
+# CURRENT TASK — M83: progression (next cycle)
 
-M81 (armored shade + shield turn) SHIPPED Sep 24 ~1:28 AM IST.
-- Live: https://aeiouvcode.github.io/issen/ md5 2588fa1dc45fb9b14b3c074397dc7721
-- File gen 42: https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX
+M82 (sound pass) SHIPPED Sep 24 ~2:14 AM IST.
+- Live: https://aeiouvcode.github.io/issen/ md5 971de61990d4374b4e12f7d757f87dc4
+- File gen 43: https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX
 
-## M82 scope
-- Full SFX tune: every voice low level, softened highs, never harsh (user sound bar)
-- Sparse shamisen/taiko-style reactive loop tied to combat state (idle = near silence, duel = sparse plucks/taiko hits on parry/stagger/kill), synthesized in code, no assets
-- Leftover from backlog: robe mid-tone pooling + arc wash
-- Standing: distance-to-reference audit (phone 390px + desktop), 6-axis gauntlet, security delta scan, state files, publish File gen 43, one final report
+## M83 scope (roadmap item 4; blade feel still leads on regressions)
+- Chapter map: chapters as duel sets (chapter = themed wave sequence + boss), progress persisted in localStorage
+- Stance unlocks: beating a chapter boss unlocks a stance (e.g. iai draw = faster first cut, iron stance = heavier posture dmg); stance select on start screen
+- Likely 2 cycles: M83 chapter shell + persistence, M84 stances + boss-per-chapter tie-in (roadmap item 3)
+- Standing: distance-to-reference audit (390px + desktop), 6-axis gauntlet + SOUND, security delta scan, state files, publish File gen 44, one final report
