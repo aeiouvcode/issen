@@ -2,7 +2,7 @@
 
 ## Resume here
 
-Next cycle (M71): fresh audit first (390px-forced + desktop vs reference frames). M70 shipped the shade second duelist w/ own bar + AI, near-overhead duel camera, heavier vignette (live md5 1e5e2a40384aaccda5db45e5ff1b52df, File gen 31). Candidates in priority order: G-06 stage 2 - true enemy variety (ref-4.5 shield-spear bearer: distinct silhouette w/ shield + long spear, not a boss clone; design first); shade balance pass (hp70/dmg8/think3.2 are first-cut numbers, untuned vs real play); F-07 kasa close-range dominance; G-01 residual mid-tone weight vs reference's graphic contrast. Re-extract reference frames if /tmp/refframes is gone (cdn.syndication.twimg.com tweet-result?id=2100371695727198244 + ffmpeg).
+Next cycle (M72): fresh audit first (390px-forced + desktop vs /tmp/refframes). M71 shipped dense washi ground, true-black shade, ink shade arcs (live md5 7fd316f6b8640c7efb78d9b5b5d21590, File gen 32). Candidates in priority order: G-06 stage 2 - true enemy variety (ref-4.5 shield-spear bearer: round shield w/ spikes + long upright spear silhouette, thrust attack w/ longer reach, maybe a block state; design first, NOT a boss clone); shade balance pass (hp70/dmg8/think3.2 untuned); F-07 kasa close-range dominance; G-01 residual mid-tone on BOSS darks (shade solved in M71; boss robe stays pale by design per ref-2.5). The shade's slash arc itself was NOT frame-captured (rAF throttle defeats timed captures - verify arcs via scene state, not wall-clock sleeps). Re-extract reference frames if /tmp/refframes is gone.
 
 ## Blocked
 
@@ -19,6 +19,7 @@ Next cycle (M71): fresh audit first (390px-forced + desktop vs reference frames)
 | QA-driving attacks via key:'j' keyboard events | The handler reads e.code, not e.key - 'j' never fires; use code:'KeyJ' | 2026-09-23 |
 | Parking the boss for minion QA by setting pos far + state='idle' | Boss AI re-engages on its next think tick and walks back; only G.over or dead actually holds it | 2026-09-23 |
 | Continuing a minion kill loop after the player died in QA | updateMinion early-returns when G.over; mhp freezes mid-fight. Retry (resetFight) restores the shade to hp70 | 2026-09-23 |
+| Wall-clock sleep + screenshot to catch a .18s slash arc in a cloud tab | rAF throttling makes page stateT lag wall time badly (stateT froze at .52 over a 350ms sleep); per browser-automation notes, verify via scene state or freeze with hitstop timed off stateT, not sleeps | 2026-09-23 |
 
 ## Discoveries
 
