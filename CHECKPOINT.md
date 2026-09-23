@@ -1,11 +1,7 @@
-# CHECKPOINT — M83 shipped, verified live + File preview
-
-## M83 (Sep 24, live md5 6a822522 / File gen 44)
-- Chapters: 影 SHADE (shade + boss), 槍 SPEAR (+ lancer wave), 砕 IRON (+ armored shade). Wave spawns gated by CHAPTERS[G.chapter] at both kill-site triggers. Seal picker on start screen (circle seals, sel=ink-filled, locked=dashed/dim), tap stopPropagation, chapline flavor text.
-- Persistence: localStorage 'issen-progress' {beaten, iai, sel}. endGame(win) records chapter beaten, unlocks next, ch1 also unlocks iai stance; win-retry auto-advances to next chapter. Chapter kanji flashes at duel start.
-- iai stance stub: first cut after >2.5s stillness starts at stateT=dur*.16 (already drawn). Verified: stateT=0.067 exact.
-- Verified live: seals render/lock correctly fresh + after ch1 win; ch1 gate lancer._spawnT stays Infinity; ch3 spawns (4.0 - 1 tick decay); boss kill -> stored beaten{1}+iai true, endtime "chapter spear unlocked". File preview depth-1: seals + ch1 gate PASS.
-- File sandbox: localStorage blocked in File iframe (SecurityError) - caught by try/catch, fails safe to ch1, playable. Persistence is github.io-only.
-- Known polish: endscreen shows only chapter-unlock note (overwrites iai note).
-- Security delta: PASS (no secrets/outbound/sinks). Touch targets 44px at 390px.
-- Frames: desktop /downloads/cloud-browser-20260923-213239.png, 390px /downloads/cloud-browser-20260923-213249.png (preview-m83.png in File source).
+# CHECKPOINT - end of M84 (Sep 24 ~04:02 IST)
+Live: https://aeiouvcode.github.io/issen/ md5 e417d92ecc469033ce47896c9568340d (M84, verified LIVE-MATCH).
+File: file-01M326B85G08ZT1X3M6QWB72NX gen 45 (M84) https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX PRIVATE.
+M84 built: stance picker row (none/iai/tetsu, 34px seals, locked=dashed), STANCES def+flavor, PROGRESS gains tetsu+stance; tetsu stance (unlock ch2): posture dmg x1.5 all 3 sites (player._postMul), swing 13% slower (p._atkSpd=.87); boss-per-chapter (ch1 maxhp 140 _phaseLock, ch2 _wspeed 1.15, windup stateT scales by _wspeed); combined endGame unlock notes; ch2 win sets PROGRESS.tetsu.
+QA (live, numeric): fresh seals none-sel/iai+tetsu locked PASS; ch1 boss 140 phaseLock PASS; ch2 boss 185 wspeed 1.15, windup_spin stateT 0.575 after 30 steps = 1.15x PASS; tetsu posture 18 (12x1.5) + swing stateT .145 after 10 steps PASS; ch2-win combined note "stance tetsu · chapter iron unlocked" + persistence PASS; File preview smoke PASS (boss 140, posture 12, 3 seals).
+INCIDENT: first M84 deploy (md5 7ec1a42f) broke live ~6 min (3:48-3:55 AM) - stance forEach missing `});`; my syntax check used .js (CJS sloppy) which masked the module-goal error. Fixed + redeployed. Rule: syntax-check module script AS .mjs.
+Security delta scan: PASS.
