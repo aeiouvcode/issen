@@ -1,15 +1,14 @@
 # Handoff
 
 ## Resume here
-Cycle 7 done: F-16 (dash puff + dab trail), F-17 (red hit blot), F-15 (turned attacks). Open gaps, priority order:
-1. F-18 Slash PNGs are 128-colour quantized; posterization bands in close-up. Try 256 colours (push budget ~1 MB per page).
-2. F-19 Hit and death are still side view only.
-3. F-20 Ronin AI always settles to a lateral 2.9 m offset, so depth attacks are rare in play; let foes attack from depth sometimes.
-4. F-21 Player sheet is 4096 px wide: fine for WebGL2 on current phones, but check an older Android before Pages.
+Cycle 8 done: dodge dab fix, F-18 (256-level slash alpha), F-20 (ronin depth-lane attacks). Open gaps, priority order:
+1. F-19 Hit and death are still side view only (player and ronin); bake _f/_b hit/die rows.
+2. F-21 Player sheet is 4096 px wide, ronin 3840 px tall: fine for WebGL2 on current phones, check an older Android before Pages.
+3. F-22 Depth-lane foes sit 1.4 m off axis so both figures stay readable; if the reference wants straight-on depth clashes, revisit with a camera nudge instead.
 
 ## Capture method (use this, not Playwright timing)
 `printf '[display]\nwindow/size/window_width_override=1280\nwindow/size/window_height_override=720\n' > override.cfg` then
-`xvfb-run -a -s "-screen 0 1400x1000x24" $GODOT --path . --rendering-driver opengl3 --write-movie /tmp/mv/f.png --fixed-fps 30 --quit-after 125 -- --autoplay` (or `-- --autoplay-views` for the locomotion views timeline) and delete override.cfg (never commit it). Frames 30-60 cover the first combo.
+`xvfb-run -a -s "-screen 0 1400x1000x24" $GODOT --path . --rendering-driver opengl3 --write-movie /tmp/mv/f.png --fixed-fps 30 --quit-after 125 -- --autoplay` (or `-- --autoplay-views` / `--autoplay-depth` / `--autoplay-foe`) and delete override.cfg (never commit it). Frames 30-60 cover the first combo.
 
 ## Build
 - Godot 4.5.2 stable + web templates (nothreads variant, Pages-safe, no COOP/COEP needed).
