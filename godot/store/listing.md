@@ -35,7 +35,7 @@ ISSEN does not collect, store off-device, or share any personal information. The
 ## Assets in this folder
 - icon-512.png - 512x512 app icon (Play hi-res icon, 32-bit PNG, no alpha)
 - feature-1024x500.jpg - feature graphic (24-bit JPEG)
-- screenshots/ - 8 in-game frames (land-*.jpg 1920x1080, port-*.jpg 1080x1920) captured with Godot Movie Maker from the --autoplay-boss run; regenerate them the same way after art changes
+- screenshots/ - 8 in-game frames (land-*.jpg 1920x1080, port-*.jpg 1080x1920) captured with Godot Movie Maker from the --autoplay-boss, --autoplay-armor and --autoplay-spear runs (C28); regenerate them the same way after art changes
 
 ## Still open before v1.0
 - Owner contact email and a hosted privacy-policy URL

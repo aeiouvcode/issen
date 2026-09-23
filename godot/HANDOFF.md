@@ -47,3 +47,4 @@ Pages serves main root. The Godot preview lives in main:/godot/ (index.html, ind
 ## Discoveries
 - Godot Compatibility renderer: hint_screen_texture works in canvas_item post shaders; MODEL_MATRIX is per-instance in MultiMesh so Y-billboard grass works in a spatial shader.
 - Sprite3D flip: foot pixel sits 10 px left of centre, so offset.x must be 10 * facing.
+Cycle 28: store screenshots re-captured with new foe art + perfect-parry paper-white wash. Next: distance-to-reference gap list (blade feel first). Store submission still needs Naksh (Play Console account, contact email, privacy URL).
