@@ -2,6 +2,9 @@ shader_type canvas_item;
 #include "res://shaders/common.gdshaderinc"
 uniform sampler2D screen : hint_screen_texture, filter_linear_mipmap;
 uniform float hurt = 0.0;
+// C28 perfect parry: a paper-white wash rings out from the clash point
+uniform float flash = 0.0;
+uniform vec2 flash_at = vec2(0.5);
 void fragment() {
 	vec2 uv = SCREEN_UV;
 	vec3 c = texture(screen, uv).rgb;
@@ -20,5 +23,10 @@ void fragment() {
 	float s = smoothstep(0.62, 0.9, fbm(uv * 2.3 + 11.0));
 	c *= 1.0 - s * 0.07;
 	c = mix(c, c * vec3(1.0, 0.55, 0.5), hurt * (1.0 - v) * 0.35);
+	vec2 fd = (uv - flash_at) * vec2(sz.x / sz.y, 1.0);
+	float ring = length(fd);
+	float r0 = (1.0 - flash) * 0.9;
+	float wash = flash * smoothstep(r0 + 0.35, r0, ring);
+	c = mix(c, vec3(0.97, 0.95, 0.9), wash * 0.55);
 	COLOR = vec4(c, 1.0);
 }

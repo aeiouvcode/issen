@@ -97,6 +97,7 @@ var palette_test := false
 var armor_tex: Array[Texture2D] = []
 var spear_tex: Array[Texture2D] = []
 var boss_tex: Array[Texture2D] = []
+var parry_flash := 0.0
 var kick := Vector2.ZERO   # C25 blade feel: camera push along a heavy cut
 var strike_zdir := 0.0
 var strike_dz := 0.0
@@ -819,6 +820,10 @@ func _parry(e: Fighter, perfect := false) -> void:
 	hitstop = 0.16 if perfect else 0.1; shake = 0.14 if perfect else 0.08
 	clean_hits += 1
 	_slowmo(0.32 if perfect else 0.2, 0.3 if perfect else 0.5, 0.0)
+	if perfect:
+		var vs := get_viewport().get_visible_rect().size
+		post_mat.set_shader_parameter("flash_at", cam.unproject_position(mid) / vs)
+		parry_flash = 1.0
 
 func _finisher(e: Fighter, dir: float) -> void:
 	sfx.play("finisher", 0.0)
@@ -918,6 +923,8 @@ func _camera(delta: float) -> void:
 		cam.v_offset = randf_range(-1, 1) * shake * 0.5 + kick.y
 	else:
 		cam.h_offset = kick.x; cam.v_offset = kick.y
+	parry_flash = maxf(0.0, parry_flash - get_process_delta_time() / maxf(Engine.time_scale, 0.05) * 3.2)
+	post_mat.set_shader_parameter("flash", parry_flash)
 	var h: float = post_mat.get_shader_parameter("hurt")
 	post_mat.set_shader_parameter("hurt", maxf(0.0, h - delta * 2.0))
 
