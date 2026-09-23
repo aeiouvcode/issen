@@ -206,11 +206,15 @@ func _physics_process(delta: float) -> void:
 			e.queue_free(); enemies.remove_at(i)
 			ebars[i].queue_free(); ebars.remove_at(i)
 	var living: int = enemies.filter(func(x): return x.alive()).size()
+	if slow_t > 0.0:
+		spawn_t = maxf(spawn_t, 1.6)   # let a finisher breathe before the next foe walks in
 	if living < mini(1 + kills / 2, 3):
 		spawn_t -= delta
 		if spawn_t <= 0.0:
-			var a := randf() * TAU
-			_spawn(player.global_position + Vector3(cos(a) * 9.0, 0, sin(a) * 5.0 - 2.0))
+			# enter from the screen sides, never straight up or down the depth line through the player
+			var side := -1.0 if randf() < 0.5 else 1.0
+			var a := randf_range(-0.6, 0.6)
+			_spawn(player.global_position + Vector3(side * cos(a) * 9.0, 0, sin(a) * 5.0 - 1.0))
 			spawn_t = 2.5
 	_camera(delta)
 	_hud_update()
