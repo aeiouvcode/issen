@@ -1807,6 +1807,15 @@ const ATK = [
   {dur:.42, hitAt:.18, dmg:7,  post:12, arc:2.0, range:2.9},
   {dur:.55, hitAt:.34, dmg:11, post:20, arc:1.7, range:3.1},
 ];
+// a clean cut landed - five in a row and the duel leans in (slow beat + camera push)
+function cleanCutLanded(){
+  G.cleanStreak=(G.cleanStreak||0)+1;
+  if(G.cleanStreak>=5){
+    G.cleanStreak=0;
+    G.slowmo=Math.max(G.slowmo,.5); G.camPush=Math.max(G.camPush||0,.6);
+    sfx.parry();
+  }
+}
 function tryHitBoss(a){
   if(!boss.alive || !boss.root.visible) return;
   const d = dist2D(player.pos, boss.pos);
@@ -1839,6 +1848,7 @@ function tryHitBoss(a){
     sfx.crack();
   }
   boss.hp = Math.max(0, boss.hp - dmg);
+  cleanCutLanded();
   boss.posture = Math.max(0, boss.posture - a.post);
   const hitPos = boss.pos.clone(); hitPos.y = 1.6;
   inkBurst(hitPos, 40, 6.5, 2, .7); inkBurst(hitPos, 10, 4, 0, .5);
@@ -1902,6 +1912,7 @@ function tryHitMinion(a){
     sfx.crack();
   }
   minion.hp = Math.max(0, minion.hp - dmg);
+  cleanCutLanded();
   minion.posture = Math.max(0, minion.posture - a.post);
   const hitPos = minion.pos.clone(); hitPos.y = 1.4;
   inkBurst(hitPos, 30, 5.5, 2, .6); inkBurst(hitPos, 8, 4, 0, .5);
@@ -1909,6 +1920,7 @@ function tryHitMinion(a){
   G.hitstop = Math.max(G.hitstop, .06); G.camShake = Math.max(G.camShake||0, .1);
   sfx.hit();
   if(minion.hp<=0 && minion.alive){
+    const wasReeling = minion.state==='reel';
     minion.alive=false; minion.state='dead'; minion.stateT=0;
     if(!lancer.alive && !isFinite(lancer._spawnT)) lancer._spawnT=4.0; // wave two takes the field
     inkBurst(minion.pos.clone().setY(1.3), 50, 7, 2, .9); inkBurst(minion.pos.clone().setY(1.3), 16, 5, 0, .7);
@@ -1916,6 +1928,14 @@ function tryHitMinion(a){
     inkCloud(minion.pos, 16);
     G.slowmo = Math.max(G.slowmo, .35); G.camShake = Math.max(G.camShake||0, .4);
     kanjiFlash('\u5f71', .7); // 影 - the shade is cut down
+    if(wasReeling){
+      // finisher: cut through a broken guard - long slow beat, camera push, wide stroke, splat trail + deep pool
+      G.slowmo = Math.max(G.slowmo, .55); G.camPush = .6;
+      slashArc(minion.pos.clone().setY(1.2), player.yaw, 4.2, 2.6, .14, false, .9);
+      for(let i=1;i<=3;i++){ const tt=i/4; groundSplat(player.pos.x+(minion.pos.x-player.pos.x)*tt+(Math.random()-.5)*.4, player.pos.z+(minion.pos.z-player.pos.z)*tt+(Math.random()-.5)*.4, .8, 7, true); }
+      groundSplat(minion.pos.x, minion.pos.z, 3.9, 27);
+      kanjiFlash('\u65ad', .8); // 断 - severed clean
+    }
     sfx.big();
     setTimeout(()=>{ if(!minion.alive) minion.root.visible=false; }, 900);
   } else if(minion.posture<=0 && minion.state!=='stagger'){
@@ -1952,6 +1972,7 @@ function tryHitLancer(a){
     sfx.crack();
   }
   lancer.hp = Math.max(0, lancer.hp - dmg);
+  cleanCutLanded();
   lancer.posture = Math.max(0, lancer.posture - (guarded ? a.post*.5 : a.post));
   const hitPos = lancer.pos.clone(); hitPos.y = 1.4;
   if(guarded){
@@ -1964,12 +1985,21 @@ function tryHitLancer(a){
   }
   G.hitstop = Math.max(G.hitstop, .06); G.camShake = Math.max(G.camShake||0, .1);
   if(lancer.hp<=0 && lancer.alive){
+    const wasReeling = lancer.state==='reel';
     lancer.alive=false; lancer.state='dead'; lancer.stateT=0;
     inkBurst(lancer.pos.clone().setY(1.3), 50, 7, 2, .9); inkBurst(lancer.pos.clone().setY(1.3), 16, 5, 0, .7);
     groundSplat(lancer.pos.x, lancer.pos.z, 2.6, 18);
     inkCloud(lancer.pos, 16);
     G.slowmo = Math.max(G.slowmo, .35); G.camShake = Math.max(G.camShake||0, .4);
     kanjiFlash('\u76fe', .7); // 盾 - the shield-bearer falls
+    if(wasReeling){
+      // finisher: cut through a broken guard - long slow beat, camera push, wide stroke, splat trail + deep pool
+      G.slowmo = Math.max(G.slowmo, .55); G.camPush = .6;
+      slashArc(lancer.pos.clone().setY(1.2), player.yaw, 4.2, 2.6, .14, false, .9);
+      for(let i=1;i<=3;i++){ const tt=i/4; groundSplat(player.pos.x+(lancer.pos.x-player.pos.x)*tt+(Math.random()-.5)*.4, player.pos.z+(lancer.pos.z-player.pos.z)*tt+(Math.random()-.5)*.4, .8, 7, true); }
+      groundSplat(lancer.pos.x, lancer.pos.z, 3.9, 27);
+      kanjiFlash('\u65ad', .8); // 断 - severed clean
+    }
     sfx.big();
     setTimeout(()=>{ if(!lancer.alive) lancer.root.visible=false; }, 900);
   } else if(lancer.posture<=0 && lancer.state!=='stagger'){
@@ -2004,6 +2034,7 @@ function hurtPlayer(dmg, fromPos, src){ src = src||boss;
   }
   if(player.state==='dead' || G.over) return;
   player.hp = Math.max(0, player.hp - dmg);
+  G.cleanStreak=0; // the streak dies with the cut taken
   player.state='hit'; player.stateT=0;
   player.iframe = Math.max(player.iframe, .45); // post-hit poise: stacked simultaneous hits can't chain
   inkBurst(player.pos.clone().setY(1.2), 13, 4.5, 2, .55); inkBurst(player.pos.clone().setY(1.2), 5, 3, 0, .4);
@@ -3239,7 +3270,7 @@ el('endscreen').addEventListener('click', startOrRetry);
 function resetFight(){
   player.pos.set(0,0,3.5); player.yaw=Math.PI; player.hp=100; player.stam=100; player.pips=4;
   player.state='idle'; player.stateT=0; player.vel.set(0,0,0); player.iframe=0; player._lastAtkEnd=0; player.queuedAtk=false;
-  player.atkLog=[]; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; player.counterT=0; boss._parryCD=0; boss._counterHit=false; boss._bowed=false; boss._engaged=false; boss.phase=1; boss._wspeed=1; boss._iaiChain=false; boss.J.eyes.visible=false;
+  player.atkLog=[]; G.cleanStreak=0; G.camPush=0; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; player.counterT=0; boss._parryCD=0; boss._counterHit=false; boss._bowed=false; boss._engaged=false; boss.phase=1; boss._wspeed=1; boss._iaiChain=false; boss.J.eyes.visible=false;
   boss.pos.set(0,0,-7); boss.hp=185; boss.posture=130; boss.alive=true;
   minion.pos.set(3.4,0,-8.6); minion.hp=70; minion.posture=50; minion.alive=true; minion._hit=false;
   minion.root.visible=true; minion.state='idle'; minion.stateT=0; minion.thinkT=3.2;
@@ -3337,7 +3368,8 @@ function updateCamera(dt){
       G.camPitch += (target - G.camPitch) * Math.min(1, 1.6*dt);
     }
   }
-  const dist = (document.body.classList.contains('coarse')?10.6:9.0), h = 1.2 + Math.sin(G.camPitch)*8.0;
+  let dist = (document.body.classList.contains('coarse')?10.6:9.0), h = 1.2 + Math.sin(G.camPitch)*8.0;
+  if(G.camPush>0){ G.camPush-=dt; const pk=Math.min(1,G.camPush*2.2); dist*=(1-.16*pk); h-=1.2*pk; } // finisher: the camera leans in low
   const cx = player.pos.x - Math.sin(G.camYaw)*dist*Math.cos(G.camPitch);
   const cz = player.pos.z - Math.cos(G.camYaw)*dist*Math.cos(G.camPitch);
   let shakeX=0, shakeY=0;
