@@ -250,7 +250,7 @@ func _player(delta: float) -> void:
 			ghost_t -= delta
 			if ghost_t <= 0.0:
 				ghost_t = 0.05
-				fx.ghost(p.sprite, p.global_position)
+				fx.dash_mark(p.global_position)
 				fx.footprint(p.global_position)
 			p.vel = p.vel.lerp(Vector3.ZERO, 3.5 * delta)
 			if p.state_t > 0.34:
@@ -305,6 +305,7 @@ func _start_dodge(mv: Vector2) -> void:
 	p.vel = Vector3(d.x, 0, d.y).normalized() * 11.0
 	dodge_cd = 0.45
 	ghost_t = 0.0
+	fx.puff(p.global_position)
 
 func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	e.hp = maxf(0.0, e.hp - dmg)

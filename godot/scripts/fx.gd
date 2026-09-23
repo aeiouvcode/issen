@@ -7,6 +7,7 @@ var drips: Array[Texture2D] = []
 var specks: Array[Texture2D] = []
 var slash_tex: Array[Texture2D] = []
 var dab_tex: Texture2D
+var cloud_tex: Texture2D
 var slash_shader: Shader
 var quad: QuadMesh
 var items: Array = []   # {node, kind, t, life, vel, ...}
@@ -21,6 +22,7 @@ func _ready() -> void:
 		specks.append(load("res://art/speck%d.png" % i))
 	slash_tex = [load("res://art/slash0.png"), load("res://art/slash1.png")]
 	dab_tex = load("res://art/dab.png")
+	cloud_tex = load("res://art/cloud.png")
 	slash_shader = load("res://shaders/slash.gdshader")
 	quad = QuadMesh.new()
 	quad.size = Vector2(4.6, 2.3)
@@ -94,6 +96,23 @@ func burst(pos: Vector3, dir: float, power := 1.0, red := 0.25) -> void:
 		var v := Vector3(cos(a) * sp + dir * randf_range(0.5, 3.5), sin(a) * sp * 0.8 + 2.0, randf_range(-2.5, 2.5))
 		items.append({"node": s, "kind": kind, "t": 0.0, "vel": v})
 
+## Dash puff: an inked cloud left where the dodge started; swells and fades.
+func puff(pos: Vector3) -> void:
+	var s := _billboard(cloud_tex, 0.0062)
+	s.modulate = Color(1, 1, 1, 0.85)
+	add_child(s)
+	s.global_position = pos + Vector3(0, 0.7, -0.3)
+	items.append({"node": s, "kind": "puff", "t": 0.0, "dur": 0.9, "s0": s.pixel_size})
+
+## Dash trail: small upright black ink dabs stepping along the dodge path.
+func dash_mark(pos: Vector3) -> void:
+	var s := _billboard(blots[randi() % 3], randf_range(0.0032, 0.0042))
+	s.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+	s.scale = Vector3(0.8, 1.7, 1.0)
+	add_child(s)
+	s.global_position = pos + Vector3(randf_range(-0.1, 0.1), 0.22, 0.0)
+	items.append({"node": s, "kind": "mark", "t": 0.0, "dur": 1.6})
+
 func ghost(src: Sprite3D, pos: Vector3) -> void:
 	var s := Sprite3D.new()
 	s.texture = src.texture
@@ -162,6 +181,19 @@ func _process(delta: float) -> void:
 				if n.global_position.y <= 0.02:
 					var s2: Sprite3D = n
 					stain(n.global_position, s2.pixel_size * 1.1, s2.texture, Color(s2.modulate.r, s2.modulate.g, s2.modulate.b, 0.75))
+					n.queue_free(); continue
+			"puff":
+				var kp: float = it["t"] / it["dur"]
+				var sp_: Sprite3D = n
+				sp_.pixel_size = it["s0"] * (1.0 + kp * 0.5)
+				sp_.modulate.a = 0.85 * clampf(1.4 - kp * 1.4, 0.0, 1.0)
+				n.global_position.y += delta * 0.3
+				if kp >= 1.0:
+					n.queue_free(); continue
+			"mark":
+				var km: float = it["t"] / it["dur"]
+				(n as Sprite3D).modulate.a = clampf(1.6 - km * 1.6, 0.0, 1.0)
+				if km >= 1.0:
 					n.queue_free(); continue
 			"ghost":
 				var k3: float = it["t"] / it["dur"]

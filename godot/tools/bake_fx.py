@@ -142,6 +142,19 @@ def skill_icons():
     c.splatter(48, 48, 22, 18, 5)
     c.render().save(f'{OUT}/icon_burst.png', optimize=True)
 
+def cloud():
+    """Dash puff: a pale wash cloud with a lumpy dry-brush outline (reference dash smoke)."""
+    c = Canvas(256, 2, seed=950)
+    lumps = [(80, 150, 46), (128, 120, 56), (178, 146, 48), (110, 168, 40), (156, 172, 38)]
+    for (x, y, r) in lumps:
+        c.wash([(x + math.cos(t) * r, y + math.sin(t) * r * 0.8) for t in np.linspace(0, 2 * math.pi, 20, endpoint=False)], dens=0.12, edge=0.2, layer='fill', rag=1.0)
+    # outer contour only: each top lump inks the arc facing away from the cloud centre
+    for (x, y, r), (a0, a1) in zip(lumps[:3], ((0.75, 1.55), (1.2, 1.85), (1.45, 2.3))):
+        pts = [(x + math.cos(t) * r, y + math.sin(t) * r * 0.8) for t in np.linspace(math.pi * a0, math.pi * a1, 14)]
+        c.stroke(pts, w=3.4, dry=0.6, taper=(0.1, 0.5), ink=0.85)
+    c.stroke([(40, 186), (120, 196), (216, 186)], w=3.0, dry=0.7, taper=(0.2, 0.4), ink=0.8)
+    c.render().save(f'{OUT}/cloud.png', optimize=True)
+
 def barstroke():
     c = Canvas(512, 2, seed=700)
     c.stroke([(10, 256), (180, 253), (340, 257), (502, 255)], w=16, dry=0.35, taper=(0.03, 0.08))
@@ -150,5 +163,5 @@ def barstroke():
 if __name__ == '__main__':
     import os; os.makedirs(OUT, exist_ok=True)
     slash(f'{OUT}/slash0.png', 1); slash(f'{OUT}/slash1.png', 2)
-    blots(); drips(); grass(); footprint(); plaque(); icon_ring(); skill_icons(); barstroke()
+    blots(); drips(); grass(); footprint(); plaque(); icon_ring(); skill_icons(); cloud(); barstroke()
     print('fx ok')
