@@ -17,7 +17,7 @@ Close the gaps ISSEN can't: hand-animated brushwork silhouettes, ragged dry-brus
 3. A boss - one multi-phase duel per chapter (C22: Kageyama, 2 phases, every 8 kills)
 4. Progression - chapter map with unlockable blade stances (C23: map overlay, Kasumi/Tsubame/Iwa, saved)
 5. Sound - full SFX pass + sparse shamisen/taiko loop reacting to combat (code-synthesized, low levels, soft highs)
-6. Store-ready - Play listing, icon, screenshots, publishable v1.0
+6. Store-ready - Play listing, icon, screenshots, publishable v1.0 (C24: draft listing + art in godot/store; submission needs Naksh: Play Console account, contact email, privacy URL)
 
 ## Non-goals (until asked)
 - Replacing ISSEN on main
