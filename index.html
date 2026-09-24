@@ -128,14 +128,15 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   .thint{display:none;}
   body.coarse .thint{display:block;}
   body.coarse .kbhint{display:none;}
-  #mutebtn{position:fixed;top:14px;right:16px;width:42px;height:42px;border-radius:50%;
+  #mutebtn, #enginebtn{position:fixed;top:14px;right:16px;width:42px;height:42px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;font-size:19px;color:#2a2115;
     background:rgba(233,224,199,.6);border:none;cursor:pointer;
     z-index:30;user-select:none;-webkit-user-select:none;box-shadow:inset 0 0 6px rgba(58,45,26,.25), 0 1px 6px rgba(30,24,15,.18);
     transition:transform .12s, opacity .2s;}
-  #mutebtn::before{content:"";position:absolute;inset:-2px;border-radius:50%;
+  #enginebtn{right:70px;}
+  #mutebtn::before, #enginebtn::before{content:"";position:absolute;inset:-2px;border-radius:50%;
     border:1.8px solid rgba(42,33,21,.7);filter:url(#rough);pointer-events:none;}
-  #mutebtn:active{transform:scale(.92);}
+  #mutebtn:active, #enginebtn:active{transform:scale(.92);}
   #mutebtn.off{opacity:.42;}
   .tbtn{position:absolute;width:64px;height:64px;border-radius:50%;pointer-events:auto;
     border:none;background:rgba(236,225,194,.52);
@@ -180,6 +181,7 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
 
 <div id="timebox"><div class="lbl">Time:</div><div class="val" id="timeval">00:00.00</div></div>
 <div id="mutebtn" title="sound on/off (M)">音</div>
+<div id="enginebtn" title="the other issen - Godot build">換</div>
 
 <div id="bossbars">
   <div class="bartext" id="boss-hp-t">185/185</div>
@@ -263,7 +265,9 @@ const ARENA_R = 26;
 const canvas = document.getElementById('game');
 const QUALITY = (()=>{ try{ return localStorage.getItem('issen-ink') || 'rich'; }catch(e){ return 'rich'; } })(); // 濃 rich / 淡 light
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true, powerPreference:'high-performance'});
-renderer.setPixelRatio(QUALITY==='light' ? 1 : Math.min(devicePixelRatio, 2));
+const PR_CAP = QUALITY==='light' ? 1 : Math.min(devicePixelRatio||1, matchMedia('(pointer:coarse)').matches ? 1.5 : 2);
+let prNow = PR_CAP, prEma = 16, prT = 0;
+renderer.setPixelRatio(prNow);
 renderer.setSize(innerWidth, innerHeight);
 
 const scene = new THREE.Scene();
@@ -3410,6 +3414,10 @@ const muteBtn = el('mutebtn');
 function reflectMute(){ const m=sfx.isMuted(); muteBtn.textContent = m?'黙':'音'; muteBtn.classList.toggle('off', m); }
 muteBtn.addEventListener('click', e=>{ e.stopPropagation(); sfx.setMuted(!sfx.isMuted()); reflectMute(); });
 muteBtn.addEventListener('touchstart', e=>{ e.stopPropagation(); e.preventDefault(); sfx.setMuted(!sfx.isMuted()); reflectMute(); },{passive:false});
+const engBtn = el('enginebtn');
+const goGodot = e=>{ e.stopPropagation(); location.href = './godot/'; };
+engBtn.addEventListener('click', goGodot);
+engBtn.addEventListener('touchstart', e=>{ e.stopPropagation(); e.preventDefault(); goGodot(e); },{passive:false});
 addEventListener('keydown', e=>{ if(e.code==='KeyM' && !e.repeat){ sfx.setMuted(!sfx.isMuted()); reflectMute(); } });
 reflectMute();
 el('startscreen').addEventListener('click', startOrRetry);
@@ -3625,12 +3633,20 @@ function loop(now){
   updateShards(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
     sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
-  attack:doAttack, dodge:doDodge, heal:doHeal, koi, spawnKoi};
+  attack:doAttack, dodge:doDodge, heal:doHeal, koi, spawnKoi, prInfo:()=>({prNow, cap:PR_CAP, ema:+prEma.toFixed(1)})};
 window.QA_norender=false;
 requestAnimationFrame(loop);
   let dt = Math.min(.05, (now-last)/1000);
   last = now;
   const rawDt = dt;
+  // adaptive resolution: hold frame rate on weaker GPUs by stepping the pixel ratio
+  prEma = prEma*.95 + rawDt*1000*.05; prT += rawDt;
+  if(prT>2){
+    prT=0;
+    const fps = 1000/Math.max(prEma,1);
+    if(fps<45 && prNow>1){ prNow=Math.max(1, prNow-.25); renderer.setPixelRatio(prNow); }
+    else if(fps>57 && prNow<PR_CAP){ prNow=Math.min(PR_CAP, prNow+.25); renderer.setPixelRatio(prNow); }
+  }
   if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
   if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
   if(G.running){
@@ -3663,7 +3679,7 @@ window.QA = {player, boss, minion, lancer, G, arcs, ribbons, ghosts, decals, par
   updateShards(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
     sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
-  attack:doAttack, dodge:doDodge, heal:doHeal, koi, spawnKoi};
+  attack:doAttack, dodge:doDodge, heal:doHeal, koi, spawnKoi, prInfo:()=>({prNow, cap:PR_CAP, ema:+prEma.toFixed(1)})};
 window.QA_norender=false;
 loop(performance.now());
 </script>
