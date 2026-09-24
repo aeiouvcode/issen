@@ -20,45 +20,63 @@ def slash(path, seed, W=1024, H=512):
     dx, dy = x - cx, cy - y
     r = np.hypot(dx, dy) / (H * 0.98); th = np.arctan2(dx, dy)  # th: -pi/2..pi/2 left->right
     t = (th + 1.35) / 2.7  # 0 trailing (left) -> 1 leading (right)
-    # C44: broad faint wash sweeping wider than the ink band - the reference's layered
-    # grey under-stroke beneath the bold curtain
-    w0, w1 = 0.30, 1.02
+    # C59 (audit gap 1): MULTI-BAND parallel bristle sweep - the sibling reference's
+    # slash reads as 3-5 parallel dry-brush tracks spanning the screen, not one curtain.
+    # broad faint wash sweeping wider than the ink bands - the layered grey under-stroke
+    w0, w1 = 0.26, 1.02
     inw = (r > w0) & (r < w1 - 0.02 * _fbm(H, W, r_, 2, 16)) & (t > 0.02) & (t < 1)
-    wash = inw.astype(np.float32) * 0.16 * (0.45 + 0.55 * _fbm(H, W, r_, 3, 7)) * np.clip(t * 2.0, 0, 1)
-    # main ink band, widened (r0 0.52 -> 0.44) for the reference's bigger bolder read
-    r0, r1 = 0.44, 0.97
-    band = np.clip((r - r0) / (r1 - r0), 0, 1)
-    inb = (r > r0) & (r < r1) & (t > 0) & (t < 1)
-    # broad bristle bands (few, smooth): one wide dry-brush sweep with a grey body
-    knots = r_.random(22).astype(np.float32)
-    prof = np.interp(band, np.linspace(0, 1, 22), knots).astype(np.float32)
-    fine = np.interp(band, np.linspace(0, 1, 70), r_.random(70)).astype(np.float32)
-    fib = prof * 0.55 + fine * 0.15 + 0.3 * _fbm(H, W, r_, 3, 10)
-    # break fibers along the arc too
-    along = _fbm(H, W, r_, 3, 5)
-    fib = fib * (0.65 + 0.7 * along)
-    # C44: bold dense body over the leading two-thirds
-    body_t = np.clip((t - 0.30) / 0.25, 0, 1)
-    dens_body = np.clip((fib - 0.42) * 2.2, 0, 1) * (0.35 + 0.65 * body_t)
-    # C44: the tail frays into discrete dry-brush bristle strands that separate as t -> 0
-    nb = 6
-    sidx = np.clip((band * nb).astype(int), 0, nb - 1)
-    sgap = (band * nb) % 1.0
-    sphase = r_.random(nb).astype(np.float32)[sidx]
-    sharp = 1.0 - np.abs(sgap - 0.5) * 2.0  # 1 at strand centre, 0 at the gap
-    split = np.clip((0.45 - t) / 0.3, 0, 1)  # 0 at the body, 1 deep in the tail
-    gapmask = np.clip((sharp - (1.0 - split)) * 3.0, 0, 1)
-    tail_dry = np.clip(t / 0.28, 0, 1) ** 1.2
-    dens_tail = gapmask * (0.5 + 0.5 * sphase) * tail_dry * (0.6 + 0.4 * along) * 0.9
-    dens = np.clip(dens_body + dens_tail * (1.0 - 0.4 * body_t), 0, 1)
-    # outer edge dark wet rim, inner edge soft
-    rim = np.exp(-((band - 0.93) / 0.05) ** 2) * 0.9 * np.clip(t * 1.6, 0, 1)
-    inner = np.clip(band / 0.22, 0, 1)
-    lead = np.clip((1 - t) / 0.06, 0, 1)
-    a_ink = np.clip((dens * inner + rim) * lead, 0, 1) * inb
-    # ragged outer contour
-    a_ink *= (r < r1 - 0.03 * _fbm(H, W, r_, 3, 24))
+    wash = inw.astype(np.float32) * 0.15 * (0.45 + 0.55 * _fbm(H, W, r_, 3, 7)) * np.clip(t * 2.0, 0, 1)
+    # four parallel strands spread across a wide radial span; outer strands lead more
+    nst = 4
+    rcs = np.linspace(0.40, 0.94, nst)
+    hws = np.linspace(0.075, 0.055, nst)          # inner strands a touch broader
+    tlead = np.linspace(0.0, 0.10, nst)           # outer strands sweep slightly ahead
+    a_ink = np.zeros((H, W), np.float32)
+    for k in range(nst):
+        rc, hw = rcs[k], hws[k]
+        tk = np.clip(t - tlead[k] * (1.0 - t), 0, 1)  # strand-local sweep param
+        d = np.clip(1.0 - np.abs(r - rc) / hw, 0, 1)  # 1 at strand centre
+        instr = (d > 0) & (tk > 0) & (tk < 1)
+        # C59: streaky bristle noise in (t,d) param space - along-arc dry gaps kill
+        # the concentric-ring read (pixel-space noise is isotropic, rings follow the arc)
+        def _streak(nu, nv):
+            g = r_.random((nv + 1, nu + 1)).astype(np.float32)
+            fu = np.clip(tk * nu, 0, nu - 1e-6); fv = np.clip(d * nv, 0, nv - 1e-6)
+            iu = fu.astype(int); iv = fv.astype(int)
+            du = fu - iu; dv = fv - iv
+            return (g[iv, iu] * (1 - du) * (1 - dv) + g[iv, iu + 1] * du * (1 - dv)
+                    + g[iv + 1, iu] * (1 - du) * dv + g[iv + 1, iu + 1] * du * dv)
+        _nu = 48 + k * 26  # outer strands get finer along-arc cells (constant px size)
+        streak = 0.6 * _streak(_nu, 3) + 0.4 * _streak(_nu * 2 + 14, 7)
+        fib = 0.5 + 0.5 * _fbm(H, W, r_, 3, 6)
+        fib = fib * (0.25 + 1.35 * streak)
+        along = _fbm(H, W, r_, 3, 5)
+        # bold dense body over the leading two-thirds of each strand
+        body_t = np.clip((tk - 0.30) / 0.25, 0, 1)
+        dens_body = np.clip((fib - 0.47) * 2.2, 0, 1) * (0.35 + 0.65 * body_t)
+        # tail frays into discrete dry-brush bristlelets that separate as tk -> 0
+        nb = 9
+        sidx = np.clip((d * nb).astype(int), 0, nb - 1)
+        sgap = (d * nb) % 1.0
+        sphase = r_.random(nb).astype(np.float32)[sidx]
+        sharp = 1.0 - np.abs(sgap - 0.5) * 2.0
+        split = np.clip((0.45 - tk) / 0.3, 0, 1)
+        gapmask = np.clip((sharp - (1.0 - split)) * 3.0, 0, 1)
+        tail_dry = np.clip(tk / 0.28, 0, 1) ** 1.2
+        dens_tail = gapmask * (0.5 + 0.5 * sphase) * tail_dry * (0.6 + 0.4 * along) * 0.7
+        dens = np.clip(dens_body + dens_tail * (1.0 - 0.4 * body_t), 0, 1)
+        # wet dark rim on each strand's outer edge, soft inner edge
+        rim = np.exp(-((d - 0.85) / 0.10) ** 2) * 0.85 * np.clip(tk * 1.6, 0, 1)
+        inner = np.clip(d / 0.25, 0, 1)
+        lead = np.clip((1 - tk) / 0.06, 0, 1)
+        a_k = np.clip((dens * inner + rim) * lead, 0, 1) * instr
+        # ragged strand contour
+        a_k *= (d > 0.02 * _fbm(H, W, r_, 3, 24))
+        a_ink = np.maximum(a_ink, a_k)
     a = np.clip(a_ink + wash, 0, 1)
+    # C59: fade the top edge - at 3.1x scale the quad's top rim crosses the wash
+    # band (r~1.04 at top-centre) and a hard rectangular cut shows in-game
+    a *= np.clip(y / (0.12 * H), 0, 1)
     img = Image.fromarray((a * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8))
     save_ink(np.asarray(img, np.float32) / 255, path)
 
