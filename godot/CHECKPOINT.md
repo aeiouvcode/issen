@@ -1,5 +1,6 @@
 # Checkpoint
 
+- 2026-09-24 C57: spam-to-win counterplay (soulslike): stamina cost per swing with HUD sliver, foe windup/swing poise vs light cuts, whiff kills chain + 0.35s lock, foe posture break -> stagger. Verified headless QA + Movie Maker. Source-only; deploy held for Main's beat.
 - 2026-09-24 C55: fx particle sim runs in _physics_process (0 interpolation warnings, smoother ink at low render fps). Fresh audit vs sibling ISSEN line: gaps = slash banding/scale, kill eruption size, figure ink mass.
 - 2026-09-24 C54: fixed live-breaking stale CSP script hash (rehash after any index.html patch); added godot/perf.html (no-CSP debug harness page, mainPack set); ?lowres A/B: no fill win, harness now too erratic to trust - playtest is the only instrument left.
 - 2026-09-24 C53: HUD label texts written on change only (timer 10 Hz gate, player/boss HP ints, foe label string cache) - kills a guaranteed per-tick font re-raster + texture upload on web. Draws unchanged (47-49).
