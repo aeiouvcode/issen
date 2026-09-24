@@ -109,6 +109,7 @@ var parry_flash := 0.0
 var kick := Vector2.ZERO   # C25 blade feel: camera push along a heavy cut
 var strike_zdir := 0.0
 var strike_dz := 0.0
+var strike_issen := false  # C43: the striking cut was the issen dash (profile 4th cut)
 
 func _ready() -> void:
 	autoplay = "--autoplay" in OS.get_cmdline_user_args() or "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args()
@@ -549,6 +550,7 @@ func _player_strike() -> void:
 		fx.dash_mark(p.global_position, 0.0)
 		if autoplay:
 			print("QA issen cut px=%.2f fx=%.2f" % [p.global_position.x, enemies[0].global_position.x if enemies.size() > 0 else 0.0])
+	strike_issen = combo == 3 and zdir == 0.0
 	for e in enemies:
 		if not e.alive():
 			continue
@@ -656,6 +658,9 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 			# F-24: depth kills spray from behind the body and lighter, so the turned fall stays readable
 			fx.burst(hitpos + Vector3(0, 0.3, -0.7), dir, 1.1, 0.5)
 		fx.slash(e.global_position + Vector3(0, 0.2, 0.1), dir, 0.8, 0.4, 0.8, 1)
+		if strike_issen:
+			# C43 blade feel: layered echo cuts trail an issen kill
+			fx.echo(e.global_position + Vector3(0, 0.2, 0.1), dir)
 		var finisher := riposte or clean_hits >= FINISH_STREAK
 		get_tree().create_timer(0.14).timeout.connect(sfx.play.bind("patter", 0.08))
 		fx.kill_splash(e.global_position, dir if hv == "" else signf(e.vel.x), 1.5 if finisher else 1.0)

@@ -188,7 +188,11 @@ func _process(delta: float) -> void:
 		var n: Node3D = it["node"]
 		match it["kind"]:
 			"slash":
-				var k: float = it["t"] / it["dur"]
+				# C43: echoes hold at prog 0 until their delay passes
+				var td: float = it["t"] - float(it.get("delay", 0.0))
+				if td < 0.0:
+					keep.append(it); continue
+				var k: float = td / it["dur"]
 				var m: ShaderMaterial = it["mat"]
 				m.set_shader_parameter("prog", clampf(k * 1.8, 0.0, 1.0))
 				m.set_shader_parameter("life", clampf(1.0 - maxf(0.0, k - 0.45) / 0.9, 0.0, 1.0))
@@ -291,6 +295,13 @@ func clash(pos: Vector3, dir: float, power := 1.0) -> void:
 		items.append({"node": sp, "kind": "drop", "t": 0.0, "vel": v})
 	slash(pos + Vector3(0, -0.6, 0), dir, 0.7 * power, 0.22, 0.0, 0)
 	slash(pos + Vector3(0, -0.6, 0), -dir, 0.6 * power, 0.22, 0.0, 1)
+
+## C43 blade feel: an issen kill leaves layered echo cuts - two thinner curtains staggered
+## behind the main slash, so the one flash reads as several layered blades.
+func echo(pos: Vector3, facing: float, scale_k := 0.85) -> void:
+	for i in 2:
+		slash(pos + Vector3(facing * (0.35 + 0.45 * i), 0.12 + 0.1 * i, -0.06 * (i + 1)), facing, scale_k * (0.92 - 0.14 * i), 0.34, 0.0, 1 - (i % 2))
+		items[items.size() - 1]["delay"] = 0.07 + 0.08 * i
 
 ## C15 kill: ink thrown along the cut - a trail of ground splats that thins out with distance,
 ## plus a heavy pool under the body.
