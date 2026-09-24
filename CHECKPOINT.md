@@ -1,9 +1,9 @@
-# CHECKPOINT — 2026-09-25 2:41 AM IST
-Milestone: M106 SHIPPED (footstep ink + intro ghost-pass + bamboo depth haze).
-Live: https://aeiouvcode.github.io/issen/ serves md5 20360d6edcdb0c53a271395122250fe0 (= repo = local).
-File: file-01M326B85G08ZT1X3M6QWB72NX gen 67 published (rev filerevision-01M3AM2CNQPHRZYPBWR8FWRRS5, preview preview-m106.png). PRIVATE. URL https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX
-Working copies: /home/sandbox/issen/index.html and /home/sandbox/issen-file/src/game-main.ts (identical M106; module extracted and node --check'd).
-M106 techniques: intro-branch boss fade via boss._fadeMats (fI clamp .16-1 by camera-boss dist 1.6-3.4); stepDecals own array+cap (don't share the combat decals cap); inkStep displacement accumulator with alternating foot side; footstep rotation.z = yaw - PI/2 after rotation.x=-PI/2.
-QA: QA.step(dt,n) deterministic stepper beats wall-clock polling; rAF throttled. File preview leases last 15 min - remint on 'Content lease expired'. set-viewport is lease-wide; verify innerWidth after change; reload page to resize the canvas.
-Security: delta scan clean; CDN importmap untouched; no new outbound.
-Next cycle: M107 = distance-to-reference re-audit (see CURRENT_TASK.md leads).
+# CHECKPOINT — 2026-09-25 3:36 AM IST
+Milestone: M107 SHIPPED (shade readability + leap puff chain + puff life).
+Live: https://aeiouvcode.github.io/issen/ serves md5 fd8f3dc109b1535ca1aeb241eff7b3d9 (= repo = local).
+File: file-01M326B85G08ZT1X3M6QWB72NX gen 68 published (rev filerevision-01M3AQ7VV3NQ803BRRPFQX8DHK, preview preview-m107.png). PRIVATE. URL https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX
+Working copies: /home/sandbox/issen/index.html and /home/sandbox/issen-file/src/game-main.ts (both M107; node --check'd).
+M107 techniques: minion darkening = uPaper lerp toward 0x0d0a06 (was .82, now .62 - higher = flatter blob); leap puff chain hooked in the leap case with b._puffT accumulator; QA freeze trick: QA.G.timeScale=0 stops sim while screenshots still render.
+QA notes: force boss leap via QA.boss.state='windup_slam'; stateT=.55; _feint=false, then QA.step; raise QA.player.hp/maxhp to survive QA slams; timeScale=0 freeze before screenshots (screenshots force frames that advance the sim otherwise).
+Security: delta scan clean; importmap untouched.
+Next cycle: M108 = distance-to-reference re-audit (leads in CURRENT_TASK.md).
