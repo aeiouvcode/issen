@@ -662,6 +662,9 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 		if strike_issen:
 			# C43 blade feel: layered echo cuts trail an issen kill
 			fx.echo(e.global_position + Vector3(0, 0.2, 0.1), dir)
+		elif riposte:
+			# C48 blade feel: a riposte kill trails the same layered echo cuts
+			fx.echo(e.global_position + Vector3(0, 0.2, 0.1), dir)
 		var finisher := riposte or clean_hits >= FINISH_STREAK
 		get_tree().create_timer(0.14).timeout.connect(sfx.play.bind("patter", 0.08))
 		fx.kill_splash(e.global_position, dir if hv == "" else signf(e.vel.x), 1.5 if finisher else 1.0)
