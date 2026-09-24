@@ -339,6 +339,10 @@ void main(){
   float bn = fbm(vW.xz*3.1 + vW.y*2.4) - .5;
   float pools = smoothstep(.29,.37,ink+bn*.16)*.42 + smoothstep(.60,.70,ink+bn*.16)*.58;
   ink = mix(ink, pools, uBand);
+  // dry-brush silhouette: ragged bristle notches bite into the dark rim
+  float rim = smoothstep(.30,.80,fr);
+  float ragn = fbm(vW.xy*5.0 + vW.zx*7.0);
+  ink = clamp(ink - rim * smoothstep(.48,.82,ragn) * uDry * .55, 0., 1.);
   vec3 col = mix(uPaper, uInk, ink);
   // dry-brush highlights: pale streaks raked through the dark mass (two scales - broad rakes + fine splits)
   float dryn = fbm(vec2(vUv.x*6.0 + vW.y*1.6, vUv.y*1.7));
@@ -366,13 +370,13 @@ function inkMat(paper, ink, bias, floor=0, streakV=0, streakAmp=.5, hem=0, hatch
 // shared materials (keep program count tiny)
 const M = {
   skin:  inkMat(0xf3ecdc, 0x241f16, .62),
-  clothL:inkMat(0x5f5748, 0x100d07, 1.48, .36),
+  clothL:inkMat(0x5f5748, 0x100d07, 1.48, .36, 0, .5, 0, 0, 1, 0, .5),
   hair:  inkMat(0x6b6250, 0x0d0a06, 1.55, .58, 0, .5, 0, .8, 1, 1, .8),
-  pale:  inkMat(0xe9e2cc, 0x2a241a, 1.02, .12, .35, .55, .38, 1.05, 1.6),
+  pale:  inkMat(0xe9e2cc, 0x2a241a, 1.02, .12, .35, .55, .38, 1.05, 1.6, 0, .3),
   dark:  inkMat(0x9a917c, 0x171208, 1.26, .30, 0, .5, 0, .7, 1, 1, .7),
   wrap:  inkMat(0x7c7260, 0x14100a, 1.42, .5, 1, .5, 0, .8, 1, 1, .62),
   robe:  inkMat(0xe8e1ca, 0x14100a, 1.42, .15, 1, 2.35, 1.0, .55, 1.2, 1, 1.05),
-  kasa:  inkMat(0xd9d2bd, 0x14100a, 1.58, .30, 1, 1.1, .5, .7),
+  kasa:  inkMat(0xd9d2bd, 0x14100a, 1.58, .30, 1, 1.1, .5, .7, 1, 0, .5),
   blade: inkMat(0xd8d0b8, 0x100c07, 1.15, .25),
   red:   new THREE.MeshBasicMaterial({color:RED}),
   redGlow: new THREE.MeshBasicMaterial({color:0xff3120}),
@@ -1324,22 +1328,33 @@ function puffTexture(){
 }
 const puffTex = puffTexture();
 const puffs = [];
-function inkPuff(pos, scale=1){
-  const mat = new THREE.SpriteMaterial({map:puffTex, transparent:true, depthWrite:false, opacity:.95});
+function inkPuff(pos, scale=1, o={}){
+  const mat = new THREE.SpriteMaterial({map:puffTex, transparent:true, depthWrite:false, opacity:o.op??.95});
+  if(o.tint!==undefined) mat.color.setHex(o.tint);
   const sp = new THREE.Sprite(mat);
-  sp.position.set(pos.x, 1.1*scale, pos.z);
+  sp.position.set(pos.x, (o.y0??1.1)*scale, pos.z);
   sp.scale.set(2.6*scale, 1.5*scale, 1);
   sp.material.rotation = (Math.random()-.5)*.3;
   scene.add(sp);
-  puffs.push({sp, t:0, life:.85, s0:2.6*scale});
+  puffs.push({sp, t:0, life:o.life??.85, s0:2.6*scale, rise:o.rise??.6});
 }
 function updatePuffs(dt){
   for(let i=puffs.length-1;i>=0;i--){
     const p=puffs[i]; p.t+=dt/p.life;
     p.sp.scale.set(p.s0*(1+p.t*.8), p.s0*.58*(1+p.t*.8), 1);
-    p.sp.position.y += dt*.6;
+    p.sp.position.y += dt*(p.rise??.6);
     p.sp.material.opacity = .95*(1-p.t)*(1-p.t*.4);
     if(p.t>=1){ scene.remove(p.sp); p.sp.material.dispose(); puffs.splice(i,1); }
+  }
+}
+// dash smoke - soft pale cloud puffs trailing fast movement (reference: smoke bursts on dashes)
+function dashSmoke(pos, yaw, n=4){
+  for(let i=0;i<n;i++){
+    const back = i*.34 + Math.random()*.2;
+    inkPuff(new THREE.Vector3(
+      pos.x - Math.sin(yaw)*back + (Math.random()-.5)*.55, 0,
+      pos.z - Math.cos(yaw)*back + (Math.random()-.5)*.55),
+      .7+Math.random()*.6, {tint:0x6f6653, op:.62, life:1.6+Math.random()*.4, rise:.3, y0:.55});
   }
 }
 
@@ -2357,6 +2372,7 @@ function doDodge(){
   }
   p.yaw = p.moveYaw;
   inkBurst(p.pos.clone().setY(.5), 8, 2.5, 0, .4);
+  dashSmoke(p.pos, p.moveYaw, 4);
   sfx.dodge();
 }
 function doHeal(){
@@ -2638,6 +2654,7 @@ function updateBoss(dt){
       b.yaw = angLerp(b.yaw, toP, .06);
       if(b._feint && b.stateT>=.42){ b._feintFrom='spin'; bossSetState('feint_hold'); sfx.dodge(); break; }
       if(b.stateT>=.7){ bossSetState('spin');
+        dashSmoke(b.pos, b.yaw+Math.PI, 3);
         slashArc(b.pos.clone().setY(1.4), b.yaw, 3.9, 6.28, .45, false);
         sfx.whooshBig();
         // hit check mid-spin handled next state
@@ -2692,6 +2709,7 @@ function updateBoss(dt){
           clamp(player.pos.x + Math.sin(toP)*-overshoot, -ARENA_R+1.5, ARENA_R-1.5), 0,
           clamp(player.pos.z + Math.cos(toP)*-overshoot, -ARENA_R+1.5, ARENA_R-1.5));
         bossSetState('leap');
+        dashSmoke(b.pos, toP, 3);
       }
       break;
     case 'leap': {
@@ -3641,7 +3659,7 @@ function loop(now){
   updateShards(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
     sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
-  attack:doAttack, dodge:doDodge, heal:doHeal, koi, spawnKoi, prInfo:()=>({prNow, cap:PR_CAP, ema:+prEma.toFixed(1)})};
+  attack:doAttack, dodge:doDodge, heal:doHeal, koi, spawnKoi, prInfo:()=>({prNow, cap:PR_CAP, ema:+prEma.toFixed(1)}), puffCount:()=>puffs.length, st:()=>({ps:player.state, intro:G.intro, stam:player.stam, time:G.time})};
 window.QA_norender=false;
 requestAnimationFrame(loop);
   let dt = Math.min(.05, (now-last)/1000);
@@ -3687,7 +3705,7 @@ window.QA = {player, boss, minion, lancer, G, arcs, ribbons, ghosts, decals, par
   updateShards(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
     sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
-  attack:doAttack, dodge:doDodge, heal:doHeal, koi, spawnKoi, prInfo:()=>({prNow, cap:PR_CAP, ema:+prEma.toFixed(1)})};
+  attack:doAttack, dodge:doDodge, heal:doHeal, koi, spawnKoi, prInfo:()=>({prNow, cap:PR_CAP, ema:+prEma.toFixed(1)}), puffCount:()=>puffs.length, st:()=>({ps:player.state, intro:G.intro, stam:player.stam, time:G.time})};
 window.QA_norender=false;
 loop(performance.now());
 </script>
