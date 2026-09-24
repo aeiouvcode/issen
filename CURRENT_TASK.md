@@ -1,12 +1,14 @@
-# CURRENT TASK — M91 (done), next M92
+# CURRENT TASK — M92 (done), next M93
 
-## M91 shipped (Sep 24, ~12:17 PM IST)
-- Subject scale pass (the M90 lesson applied): player root 1.08, boss 1.10 (ch3 iron bulk stacks to
-  1.188), minion .88->.95, lancer .94->1.0. Models carry the larger read; camera untouched.
-- Verified live (md5 4b973aa7): scales read back via QA, frames desktop + 390px, no occlusion.
-- Security delta scan PASS. File gen 52 published; preview smoke PASS (playerScale 1.08 in the File build).
+## M92 shipped (Sep 24, ~1:10 PM IST)
+- Audit first: reach/range verified correct after the M91 scale-up (blade arc meets the boss at
+  d=2.6 when damage lands; no change needed). Soundscape moments already covered (stagger big,
+  awaken big+drum, kill big+drum).
+- The real gap found: characters sat mid-gray vs the reference's deep ink masses. Deepened
+  character ink: clothL 1.38->1.48, dark 1.15->1.26, wrap 1.3->1.42, robe 1.30->1.42 bias.
+  Hair and kasa untouched (already deep / needs to stay pale).
+- Security delta scan PASS. File gen 53 published; preview smoke PASS.
 
-## M92 candidates (pick by audit)
-- Watch for reach/range feel after the scale-up: blades grew visually, hit ranges unchanged (by design) -
-  if contact reads early/late in frames, nudge arc visuals not ranges.
+## M93 candidates (pick by audit)
+- Watch that deepened ink does not crush the pale robe's readability in dark scenes (ch3 cold hall).
 - Fresh reference audit may surface something higher.
