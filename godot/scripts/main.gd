@@ -22,10 +22,23 @@ var shake := 0.0
 var spawn_t := 1.2
 var kills := 0
 var hud: CanvasLayer
-var time_label: Label
-var php_fill: Control
-var php_label: Label
-var pstam_fill: ColorRect
+var d_plaque: HudCanvas
+var d_pb: HudCanvas
+var d_boss: HudCanvas
+var s_boss: HudCanvas
+var svc: SubViewportContainer
+var sv: SubViewport
+var s_root: Control
+var php_fill_i := -1
+var php_label_i := -1
+var php_fw := 0.0
+var pstam_fill_i := -1
+var boss_fill_i := -1
+var boss_label_i := -1
+var boss_fw := 0.0
+var qa_chips := false
+var arrow_mm: MultiMesh
+var arrow_mi: MultiMeshInstance3D
 var _hud_pstam := -1
 var pst_fill: Control
 var ebars: Array = []
@@ -36,15 +49,16 @@ var _hud_boss := -1  # C53: last boss hp/max key shown
 var post_mat: ShaderMaterial
 var _last_flash := -1.0
 var _hurt_v := 0.0
-var touch_ui: Control
-var chips: HBoxContainer
-var mute_btn: Button
+var touch_ui: HudCanvas
+var chips: ChipsCanvas
 var credits: Control
 var joy_id := -1
 var joy_origin := Vector2.ZERO
 var joy_vec := Vector2.ZERO
-var joy_knob: Control
-var joy_base: Control
+var atk_pos := Vector2.ZERO
+var dodge_pos := Vector2.ZERO
+var joy_pos := Vector2(40, 0)
+var knob_rel := Vector2(37, 37)
 var touch_atk := false
 var touch_dodge := false
 var hitstop := 0.0
@@ -87,7 +101,6 @@ const CHAPTER_KILLS := 8
 var boss: Fighter = null
 var boss_phase := 0
 var chapters := 0
-var boss_bar: Control
 var boss_test_hp := 0.0
 ## C23 progression: chapter map + blade stances unlocked by clearing chapters (saved)
 const SAVE_PATH := "user://issen_save.cfg"
@@ -100,7 +113,6 @@ const STANCES := [
 var best_chapter := 0     # chapters ever cleared (save data); stance i unlocks at best_chapter >= i
 var stance := 0
 var no_save := false
-var stance_btn: Button
 var map_layer: CanvasLayer
 var map_view: Control
 var map_note := ""
@@ -143,6 +155,9 @@ var strike_issen := false  # C43: the striking cut was the issen dash (profile 4
 
 func _ready() -> void:
 	perf_mode = "--perf" in OS.get_cmdline_user_args()
+	qa_chips = "--autoplay-chips" in OS.get_cmdline_user_args()
+	if "--probe-nohud" in OS.get_cmdline_user_args():
+		set_meta("probe_nohud", true)
 	if OS.has_feature("web"):
 		var q: String = str(JavaScriptBridge.eval("window.location.search"))
 		if "perf" in q: perf_mode = true
@@ -186,11 +201,28 @@ func _ready() -> void:
 	fx = InkFX.new()
 	add_child(fx)
 	fx.cam = cam
+	# C60: one MultiMesh for every arrow in flight
+	arrow_mm = MultiMesh.new()
+	arrow_mm.transform_format = MultiMesh.TRANSFORM_3D
+	var _bm := BoxMesh.new(); _bm.size = Vector3(0.95, 0.035, 0.035)
+	arrow_mm.mesh = _bm
+	arrow_mi = MultiMeshInstance3D.new()
+	var _am := StandardMaterial3D.new()
+	_am.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_am.albedo_color = Color(0.08, 0.07, 0.06)
+	arrow_mi.material_override = _am
+	arrow_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	arrow_mi.multimesh = arrow_mm
+	add_child(arrow_mi)
+	arrow_mm.instance_count = 1
+	arrow_mm.visible_instance_count = 0
 	player = Fighter.new()
 	add_child(player)
 	player.setup(player_tex, "res://art/player.json")
 	_hud()
 	_touch_ui()
+	if has_meta("probe_nohud"):
+		hud.visible = false
 	_load_save()
 	_menu_chips()
 	_map_ui()
@@ -429,6 +461,13 @@ func _physics_process(delta: float) -> void:
 		return
 	if player.alive():
 		elapsed += delta
+	if qa_chips:
+		if elapsed > 1.0 and not has_meta("qac1"):
+			set_meta("qac1", true); chips.callbacks[0].call(); print("QA chips sound toggled")
+		if elapsed > 2.0 and not has_meta("qac2"):
+			set_meta("qac2", true); chips.callbacks[1].call(); print("QA chips stance -> " + str(STANCES[stance].name))
+		if elapsed > 3.0 and not has_meta("qac3"):
+			set_meta("qac3", true); chips.callbacks[0].call(); print("QA chips sound restored")
 	_player(delta)
 	for e in enemies:
 		_enemy(e, delta)
@@ -662,10 +701,10 @@ func _player_strike() -> void:
 	var sk: float = [2.0, 1.95, 2.4, 3.1][combo] * float(STANCES[stance].sk)  # C59 gap1: 1.3x beyond C44, full-screen sweep
 	var sl := fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.46 if combo < 3 else 0.6, 0.0, combo)
 	if combo == 3 and zdir != 0.0:
-		# C33 directional finisher: the arc stands on end, a falling cut down the depth line
-		sl.rotation.z = -p.facing * PI * 0.5
-		sl.scale = Vector3(1.0, 1.25, 1.0) * sk
-		sl.global_position = p.global_position + Vector3(p.facing * 0.3, 1.2, zdir * 1.3 + 0.2)
+		# C33 directional finisher: a taller curtain dropped down the depth line
+		# (rotation.z was always a no-op - the slash shader billboards off MODEL_MATRIX)
+		sl["svk"] = 1.25
+		sl["pos"] = p.global_position + Vector3(p.facing * 0.3, 1.2, zdir * 1.3 + 0.2)
 	if combo == 3:
 		fx.dash_mark(p.global_position, 0.0)
 		if autoplay:
@@ -812,7 +851,7 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 			finisher = true
 			chapters += 1
 			boss = null; boss_phase = 0
-			boss_bar.visible = false
+			_boss_bar_show(false)
 			_flash_banner("Chapter %d cleared.  Kageyama falls" % chapters, 3.0)
 			spawn_t = 6.5
 			_chapter_cleared()
@@ -1020,36 +1059,29 @@ func _enemy(e: Fighter, delta: float) -> void:
 
 ## C33 arrows: a thin ink shaft flying down the lane at 15 m/s.
 func _loose_arrow(e: Fighter) -> void:
-	var mi := MeshInstance3D.new()
-	var bm := BoxMesh.new(); bm.size = Vector3(0.95, 0.035, 0.035)
-	mi.mesh = bm
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.albedo_color = Color(0.08, 0.07, 0.06)
-	mi.material_override = m
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mi)
-	mi.global_position = e.global_position + Vector3(e.facing * 0.9, 1.45, 0.12)
-	arrows.append({"node": mi, "dir": e.facing, "from": mi.global_position.x, "e": e})
+	# C60: arrows live in ONE MultiMesh (was a MeshInstance3D + own material per arrow)
+	var pos := e.global_position + Vector3(e.facing * 0.9, 1.45, 0.12)
+	arrows.append({"pos": pos, "dir": e.facing, "from": pos.x, "e": e})
 	sfx.play("dodge", 0.1)
 
 func _arrows(delta: float) -> void:
 	var p := player
 	for i in range(arrows.size() - 1, -1, -1):
 		var a: Dictionary = arrows[i]
-		var n: MeshInstance3D = a["node"]
 		var dir: float = a["dir"]
-		n.global_position.x += dir * 15.0 * delta
-		var dx := p.global_position.x - n.global_position.x
-		var dz := absf(p.global_position.z - (n.global_position.z - 0.12))
-		var gone := absf(n.global_position.x - float(a["from"])) > 16.0
+		var pos: Vector3 = a["pos"]
+		pos.x += dir * 15.0 * delta
+		a["pos"] = pos
+		var dx := p.global_position.x - pos.x
+		var dz := absf(p.global_position.z - (pos.z - 0.12))
+		var gone := absf(pos.x - float(a["from"])) > 16.0
 		if not gone and p.alive() and dz < 0.6 and dx * dir < 1.1 and dx * dir > -0.4:
 			if p.state == "attack" and p.facing == -dir and dx * dir > 0.2:
 				# cut out of the air
-				fx.clash(n.global_position, -dir, 0.7)
+				fx.clash(pos, -dir, 0.7)
 				sfx.play("parry")
 				hitstop = 0.05; shake = 0.06
-				fx.slash(n.global_position + Vector3(0, -0.2, 0), p.facing, 0.8, 0.3, 0.0, 1)
+				fx.slash(pos + Vector3(0, -0.2, 0), p.facing, 0.8, 0.3, 0.0, 1)
 				if autoplay and bow_test:
 					print("QA arrow cut")
 				gone = true
@@ -1059,7 +1091,12 @@ func _arrows(delta: float) -> void:
 					print("QA arrow hit")
 				gone = true
 		if gone:
-			n.queue_free(); arrows.remove_at(i)
+			arrows.remove_at(i)
+	# C60: sync the shared MultiMesh once per tick
+	arrow_mm.instance_count = maxi(arrows.size(), 1)
+	arrow_mm.visible_instance_count = arrows.size()
+	for i in arrows.size():
+		arrow_mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, arrows[i]["pos"]))
 
 func _player_hurt(dmg: float, dir: float, by: Fighter) -> void:
 	var p := player
@@ -1147,8 +1184,10 @@ func _spawn_boss(pos: Vector3) -> void:
 	e.sprite.scale = Vector3(1.08, 1.08, 1.0)
 	e.set_meta("cool", 1.4)
 	boss = e; boss_phase = 1
-	boss_bar.visible = true
-	(boss_bar.get_node("N") as Label).text = "Kageyama, chapter %d" % (chapters + 1)
+	_boss_bar_show(true)
+	s_boss.set_text(s_boss.get_meta("name_i"), "Kageyama, chapter %d" % (chapters + 1))
+	s_boss.commit()
+	_sv_update()
 	_flash_banner("Kageyama steps out of the grass", 2.2)
 	sfx.target = 1.0
 
@@ -1294,9 +1333,10 @@ func _process(delta: float) -> void:
 
 func _restart() -> void:
 	Engine.time_scale = 1.0; slow_t = 0.0; slow_zoom = 0.0; clean_hits = 0
-	for a in arrows:
-		(a["node"] as Node).queue_free()
-	arrows.clear(); issen_t = 0.0
+	arrows.clear()
+	if arrow_mm:
+		arrow_mm.visible_instance_count = 0
+	issen_t = 0.0
 	for e in enemies:
 		e.queue_free()
 	for b in ebars:
@@ -1305,7 +1345,7 @@ func _restart() -> void:
 	player.hp = 100.0; player.state = "idle"; player.play("idle", true)
 	player.global_position = Vector3.ZERO
 	elapsed = 0.0; kills = 0; spawn_t = 1.0; spawned = 0
-	boss = null; boss_phase = 0; chapters = 0; boss_bar.visible = false
+	boss = null; boss_phase = 0; chapters = 0; _boss_bar_show(false)
 	_set_palette(0, 1.0)
 	banner.visible = false
 
@@ -1389,33 +1429,34 @@ func _camera(delta: float) -> void:
 		post_mat.set_shader_parameter("hurt", h2)
 
 # ------------------------------------------------------------------ HUD
-func _bar_pair(w: float) -> Control:
-	var root := Control.new()
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lab := Label.new()
-	lab.name = "L"
-	lab.add_theme_color_override("font_color", Color(0.93, 0.9, 0.84))
-	lab.add_theme_color_override("font_outline_color", Color(0.12, 0.1, 0.08))
-	lab.add_theme_constant_override("outline_size", 4)
-	lab.add_theme_font_size_override("font_size", 14)
-	lab.position = Vector2(w * 0.5 - 20, -16)
-	root.add_child(lab)
-	var bg := TextureRect.new()
-	bg.texture = load("res://art/bar.png")
-	bg.stretch_mode = TextureRect.STRETCH_SCALE
-	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	bg.size = Vector2(w, 9); bg.position = Vector2(0, 0)
-	root.add_child(bg)
-	var fill := ColorRect.new()
-	fill.name = "F"
-	fill.color = Color(0.78, 0.07, 0.08)
-	fill.position = Vector2(w * 0.08, 2.5); fill.size = Vector2(w * 0.84, 4)
-	fill.set_meta("w", w * 0.84)
-	root.add_child(fill)
-	var bg2 := bg.duplicate()
-	bg2.position = Vector2(w * 0.1, 11); bg2.size = Vector2(w * 0.8, 5)
-	root.add_child(bg2)
+func _sv_update() -> void:
+	if sv:
+		sv.render_target_update_mode = SubViewport.UPDATE_ONCE  # re-render the static bake once, then it sleeps again
+
+func _boss_bar_show(v: bool) -> void:
+	s_boss.visible = v
+	d_boss.visible = v
+	_sv_update()
+
+func _bar_pair_into(c: HudCanvas, w: float, off: Vector2) -> Array:
+	var lab_i := c.text(off + Vector2(w * 0.5 - 20, -16), "", 14, Color(0.93, 0.9, 0.84), 4, Color(0.12, 0.1, 0.08))
+	c.quad(load("res://art/bar.png"), Rect2(off.x, off.y, w, 9))
+	var fw := w * 0.84
+	var fill_i := c.fill_rect(Rect2(off.x + w * 0.08, off.y + 2.5, fw, 4), Color(0.78, 0.07, 0.08))
+	c.quad(load("res://art/bar.png"), Rect2(off.x + w * 0.1, off.y + 11, w * 0.8, 5))
+	return [fill_i, lab_i, fw]
+
+## C60: standalone foe hp bar as ONE canvas item (was 4: Label + 2 TextureRects + ColorRect)
+func _bar_pair(w: float) -> HudCanvas:
+	var root := HudCanvas.new()
+	var ids := _bar_pair_into(root, w, Vector2.ZERO)
+	root.set_meta("fill_i", ids[0]); root.set_meta("label_i", ids[1]); root.set_meta("fw", ids[2])
+	root.size = Vector2(w, 16)
+	root.commit()
 	return root
+
+func _bar_fill(b: HudCanvas, fill_i: int, fw: float, frac: float) -> void:
+	b.set_fill_x(fill_i, fw * frac)
 
 func _hud() -> void:
 	var post := CanvasLayer.new(); post.layer = 1
@@ -1430,64 +1471,63 @@ func _hud() -> void:
 	post.add_child(pr)
 	hud = CanvasLayer.new(); hud.layer = 2
 	add_child(hud)
-	var plaque := TextureRect.new()
+	# C60 phase C: static chrome lives in an offscreen SubViewport that renders ONCE
+	# per layout/state change (1 draw per frame on screen); only fills, labels and the
+	# timer redraw per frame. Compatibility canvas has no batching - every draw command
+	# is a GL call, and GL calls are the web frame-time cost (C51).
+	svc = SubViewportContainer.new()
+	svc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	svc.mouse_filter = Control.MOUSE_FILTER_PASS
+	svc.focus_mode = Control.FOCUS_NONE
+	hud.add_child(svc)
+	sv = SubViewport.new()
+	sv.transparent_bg = true
+	sv.disable_3d = true
+	sv.render_target_update_mode = SubViewport.UPDATE_ONCE
+	sv.size = Vector2i(1152, 648)  # _layout sets the real size
+	svc.add_child(sv)
+	s_root = Control.new()
+	s_root.mouse_filter = Control.MOUSE_FILTER_PASS
+	s_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sv.add_child(s_root)
+	# static plaque (texture + "Time:"); the timer digits stay dynamic
+	var plaque := HudCanvas.new()
 	plaque.name = "Plaque"
-	plaque.texture = load("res://art/plaque.png")
-	plaque.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	plaque.quad(load("res://art/plaque.png"), Rect2(0, 0, 150, 53))
+	plaque.text(Vector2(12, 4), "Time:", 17, Color(0.12, 0.1, 0.08))
 	plaque.size = Vector2(150, 53)
 	plaque.position = Vector2(0, 70)
-	plaque.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud.add_child(plaque)
-	var t1 := Label.new(); t1.text = "Time:"
-	t1.position = Vector2(12, 4)
-	for l in [t1]:
-		l.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
-		l.add_theme_font_size_override("font_size", 17)
-	plaque.add_child(t1)
-	time_label = Label.new()
-	time_label.position = Vector2(10, 19)
-	time_label.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
-	time_label.add_theme_font_size_override("font_size", 23)
-	plaque.add_child(time_label)
-	var pb := Control.new(); pb.name = "PlayerBars"
-	pb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud.add_child(pb)
+	plaque.commit()
+	s_root.add_child(plaque)
+	d_plaque = HudCanvas.new()
+	d_plaque.name = "PlaqueD"
+	d_plaque.set_meta("time_i", d_plaque.text(Vector2(10, 19), "", 23, Color(0.12, 0.1, 0.08)))
+	d_plaque.size = Vector2(150, 53)
+	d_plaque.commit()
+	hud.add_child(d_plaque)
+	# static player chrome (rings + icons + bar frames + stamina frame)
+	var pb := HudCanvas.new()
+	pb.name = "PlayerBarsS"
+	s_root.add_child(pb)
 	for i in 3:
-		var r := TextureRect.new()
-		r.texture = load("res://art/ring.png")
-		r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		r.size = Vector2(24, 24); r.position = Vector2(34 + i * 28, -8)
-		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		r.name = "R%d" % i
-		pb.add_child(r)
-		var glyph := TextureRect.new()
-		glyph.texture = load("res://art/icon_%s.png" % ["cut", "evade", "burst"][i])
-		glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		glyph.size = Vector2(16, 16); glyph.position = Vector2(4, 4)
-		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		r.add_child(glyph)
-	var bars := _bar_pair(150.0)
-	bars.position = Vector2(0, 34)
-	pb.add_child(bars)
-	php_fill = bars.get_node("F"); php_label = bars.get_node("L")
-	# C57 stamina bar: a thin ink sliver under the hp bar so the swing cost is visible
-	var stam := Control.new()
-	stam.position = Vector2(0, 46)
-	stam.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pb.add_child(stam)
-	var stbg := TextureRect.new()
-	stbg.texture = load("res://art/bar.png")
-	stbg.stretch_mode = TextureRect.STRETCH_SCALE
-	stbg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	stbg.size = Vector2(150, 6)
-	stbg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stam.add_child(stbg)
-	pstam_fill = ColorRect.new()
-	pstam_fill.color = Color(0.16, 0.14, 0.12)
-	pstam_fill.position = Vector2(12, 2)
-	pstam_fill.size = Vector2(126, 2.5)
-	pstam_fill.set_meta("w", 126.0)
-	stam.add_child(pstam_fill)
+		pb.quad(load("res://art/ring.png"), Rect2(34 + i * 28, -8, 24, 24))
+		pb.quad(load("res://art/icon_%s.png" % ["cut", "evade", "burst"][i]), Rect2(34 + i * 28 + 4, -8 + 4, 16, 16))
+	pb.quad(load("res://art/bar.png"), Rect2(0, 34, 150, 9))
+	pb.quad(load("res://art/bar.png"), Rect2(15, 45, 120, 5))
+	pb.quad(load("res://art/bar.png"), Rect2(0, 46, 150, 6))
+	pb.size = Vector2(150, 60)
+	pb.commit()
+	# dynamic player bits: hp fill + label + stamina sliver
+	d_pb = HudCanvas.new()
+	d_pb.name = "PlayerBarsD"
+	php_fill_i = d_pb.fill_rect(Rect2(12, 36.5, 126, 4), Color(0.78, 0.07, 0.08))
+	php_label_i = d_pb.text(Vector2(55, 18), "", 14, Color(0.93, 0.9, 0.84), 4, Color(0.12, 0.1, 0.08))
+	pstam_fill_i = d_pb.fill_rect(Rect2(12, 48, 126, 2.5), Color(0.16, 0.14, 0.12))
+	php_fw = 126.0
+	d_pb.set_meta("pstam_fw", 126.0)
+	d_pb.size = Vector2(150, 60)
+	d_pb.commit()
+	hud.add_child(d_pb)
 	banner = Label.new()
 	banner.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
 	banner.add_theme_font_size_override("font_size", 28)
@@ -1505,21 +1545,26 @@ func _hud() -> void:
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	banner.visible = false
 	hud.add_child(banner)
-	boss_bar = Control.new()
-	boss_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	boss_bar.visible = false
-	var bn := Label.new(); bn.name = "N"
-	bn.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
+	# C60 phase C: boss chrome static (name + bar frames), fill + label dynamic
+	s_boss = HudCanvas.new()
+	s_boss.name = "BossS"
+	s_boss.visible = false
 	# C41: paper outline keeps the name readable when the boss sprite passes behind it
-	bn.add_theme_color_override("font_outline_color", Color(0.93, 0.9, 0.84))
-	bn.add_theme_constant_override("outline_size", 6)
-	bn.add_theme_font_size_override("font_size", 22)
-	bn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	bn.size = Vector2(360, 28); bn.position = Vector2(0, -56)
-	boss_bar.add_child(bn)
-	var bb := _bar_pair(360.0); bb.name = "B"
-	boss_bar.add_child(bb)
-	hud.add_child(boss_bar)
+	s_boss.set_meta("name_i", s_boss.text(Vector2(0, -56), "", 22, Color(0.12, 0.1, 0.08), 6, Color(0.93, 0.9, 0.84), 360.0))
+	s_boss.quad(load("res://art/bar.png"), Rect2(0, 0, 360, 9))
+	s_boss.quad(load("res://art/bar.png"), Rect2(36, 11, 288, 5))
+	s_boss.size = Vector2(360, 16)
+	s_boss.commit()
+	s_root.add_child(s_boss)
+	d_boss = HudCanvas.new()
+	d_boss.name = "BossD"
+	d_boss.visible = false
+	boss_fill_i = d_boss.fill_rect(Rect2(28.8, 2.5, 302.4, 4), Color(0.78, 0.07, 0.08))
+	boss_label_i = d_boss.text(Vector2(160, -16), "", 14, Color(0.93, 0.9, 0.84), 4, Color(0.12, 0.1, 0.08))
+	boss_fw = 302.4
+	d_boss.size = Vector2(360, 16)
+	d_boss.commit()
+	hud.add_child(d_boss)
 
 func pb_scale() -> Vector2:
 	var vs := get_viewport().get_visible_rect().size
@@ -1529,39 +1574,45 @@ func _layout() -> void:
 	var vs := get_viewport().get_visible_rect().size
 	# narrow screens: HUD scales up so bars, rings and timer stay readable on a phone
 	var k := pb_scale().x
-	var pb: Control = hud.get_node("PlayerBars")
-	pb.scale = Vector2(k, k)
-	pb.position = Vector2(vs.x * 0.5 - 75 * k, vs.y - 60 * k)
-	var plaque: Control = hud.get_node("Plaque")
-	plaque.scale = Vector2(k, k)
-	plaque.position = Vector2(0, clampf(vs.y * 0.2, 50, 110))
+	for pb in [s_root.get_node("PlayerBarsS"), d_pb]:
+		pb.scale = Vector2(k, k)
+		pb.position = Vector2(vs.x * 0.5 - 75 * k, vs.y - 60 * k)
+	for plaque in [s_root.get_node("Plaque"), d_plaque]:
+		plaque.scale = Vector2(k, k)
+		plaque.position = Vector2(0, clampf(vs.y * 0.2, 50, 110))
 
-	if boss_bar:
+	if s_boss:
 		var bk := minf(k, (vs.x - 20.0) / 360.0)
-		boss_bar.scale = Vector2(bk, bk)
-		boss_bar.position = Vector2(vs.x * 0.5 - 180.0 * bk, 40.0 * k + 44.0)
+		for bb in [s_boss, d_boss]:
+			bb.scale = Vector2(bk, bk)
+			bb.position = Vector2(vs.x * 0.5 - 180.0 * bk, 40.0 * k + 44.0)
 	banner.size = Vector2(minf(400.0, vs.x / k - 20.0), 96)
 	banner.scale = Vector2(k, k)
 	banner.position = Vector2(vs.x * 0.5 - banner.size.x * k * 0.5, vs.y * (0.24 if vs.y > vs.x else 0.3))
 	var ck := k
 	if chips:
-		chips.size = chips.get_combined_minimum_size()
 		ck = minf(k, (vs.x - 20.0) / chips.size.x)
 		chips.scale = Vector2(ck, ck)
 		chips.position = Vector2(vs.x - chips.size.x * ck - 10, 10)
-	if boss_bar and chips:
-		var bk2 := boss_bar.scale.x
-		boss_bar.position.y = maxf(boss_bar.position.y, 10.0 + 30.0 * ck + 6.0 + 56.0 * bk2)
+	if s_boss and chips:
+		var bk2 := s_boss.scale.x
+		var bby := maxf(s_boss.position.y, 10.0 + 30.0 * ck + 6.0 + 56.0 * bk2)
+		s_boss.position.y = bby
+		d_boss.position.y = bby
 		if vs.y > vs.x:
-			plaque.position.y = maxf(plaque.position.y, boss_bar.position.y + 24.0 * bk2)
+			for plaque in [s_root.get_node("Plaque"), d_plaque]:
+				plaque.position.y = maxf(plaque.position.y, bby + 24.0 * bk2)
 	if credits:
 		credits.size = vs
 	if touch_ui:
 		touch_ui.size = vs
-		var a: Control = touch_ui.get_node("Atk"); var d: Control = touch_ui.get_node("Dodge")
-		a.position = Vector2(vs.x - 110, vs.y - 150)
-		d.position = Vector2(vs.x - 170, vs.y - 90)
-		joy_base.position = Vector2(40, vs.y - 170)
+		atk_pos = Vector2(vs.x - 110, vs.y - 150)
+		dodge_pos = Vector2(vs.x - 170, vs.y - 90)
+		joy_pos = Vector2(40, vs.y - 170)
+		_touch_redraw()
+	if sv:
+		sv.size = Vector2i(maxi(2, int(vs.x)), maxi(2, int(vs.y)))
+	_sv_update()
 
 ## C20: how heated the field is, for the music
 func _music_target() -> float:
@@ -1580,27 +1631,29 @@ func _music_target() -> float:
 
 func _hud_update() -> void:
 	sfx.target = _music_target()
-	if boss and boss_bar.visible:
-		var bf: ColorRect = boss_bar.get_node("B/F")
-		bf.size.x = bf.get_meta("w") * boss.hp / boss.max_hp
+	if boss and d_boss.visible:
+		_bar_fill(d_boss, boss_fill_i, boss_fw, boss.hp / boss.max_hp)
 		var bkey := int(ceil(boss.hp)) * 100000 + int(boss.max_hp)  # C53: text set only on change
 		if bkey != _hud_boss:
 			_hud_boss = bkey
-			(boss_bar.get_node("B/L") as Label).text = "%d/%d" % [int(ceil(boss.hp)), int(boss.max_hp)]
+			d_boss.set_text(boss_label_i, "%d/%d" % [int(ceil(boss.hp)), int(boss.max_hp)])
+		d_boss.commit()
 	var t10 := int(elapsed * 10.0)  # C53: 10 Hz is plenty for the centisecond read; kills a per-tick text re-raster
 	if t10 != _hud_t10:
 		_hud_t10 = t10
 		var m := int(elapsed / 60.0); var s := fmod(elapsed, 60.0)
-		time_label.text = "%02d:%05.2f" % [m, s]
-	php_fill.size.x = php_fill.get_meta("w") * player.hp / player.max_hp
+		d_plaque.set_text(d_plaque.get_meta("time_i"), "%02d:%05.2f" % [m, s])
+		d_plaque.commit()
+	_bar_fill(d_pb, php_fill_i, php_fw, player.hp / player.max_hp)
 	var pst := int(player.posture)
 	if pst != _hud_pstam:
 		_hud_pstam = pst
-		pstam_fill.size.x = pstam_fill.get_meta("w") * player.posture / 100.0
+		d_pb.set_fill_x(pstam_fill_i, d_pb.get_meta("pstam_fw") * player.posture / 100.0)
 	var phpv := int(ceil(player.hp))
 	if phpv != _hud_php:
 		_hud_php = phpv
-		php_label.text = "%d/100" % phpv
+		d_pb.set_text(php_label_i, "%d/100" % phpv)
+		d_pb.commit()
 	for i in enemies.size():
 		var e: Fighter = enemies[i]
 		var b: Control = ebars[i]
@@ -1613,48 +1666,35 @@ func _hud_update() -> void:
 			# C41: the label rides 16 px above the bar; include it in the chips-clearance test
 			if chips and chips.visible and chips.get_global_rect().grow(6.0).intersects(Rect2(b.position + Vector2(0, -18) * b.scale, Vector2(90, 38) * b.scale)):
 				b.position.y = chips.get_global_rect().end.y + 8.0
-			var f: ColorRect = b.get_node("F")
-			f.size.x = f.get_meta("w") * e.hp / e.max_hp
+			_bar_fill(b, b.get_meta("fill_i"), b.get_meta("fw"), e.hp / e.max_hp)
 			var ar := int(e.get_meta("armor", 0))
 			var lt: String = ("spear  " if e.get_meta("spear", false) else "") + ("twin  " if e.get_meta("twin", false) else "") + ("bow  " if e.get_meta("bow", false) else "") + ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
 			if _ebars_txt.size() != ebars.size():
 				_ebars_txt.resize(ebars.size())  # C53: realign after spawns/removals; null slots are dirty
 			if _ebars_txt[i] != lt:
 				_ebars_txt[i] = lt
-				(b.get_node("L") as Label).text = lt
+				b.set_text(b.get_meta("label_i"), lt)
+			b.commit()
 
 # ------------------------------------------------------------------ touch
-func _ring(sz: float, glyph: String) -> TextureRect:
-	var r := TextureRect.new()
-	r.texture = load("res://art/ring.png")
-	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	r.size = Vector2(sz, sz)
-	r.modulate = Color(1, 1, 1, 0.8)
-	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if glyph != "":
-		var g := TextureRect.new()
-		g.texture = load("res://art/icon_%s.png" % glyph)
-		g.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		g.size = Vector2(sz * 0.6, sz * 0.6); g.position = Vector2(sz * 0.2, sz * 0.2)
-		g.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		r.add_child(g)
-	return r
-
+## C60: touch controls as ONE canvas item (rings + joystick were 6 canvas items)
 func _touch_ui() -> void:
-	touch_ui = Control.new()
-	touch_ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	touch_ui = HudCanvas.new()
 	touch_ui.visible = DisplayServer.is_touchscreen_available()
 	hud.add_child(touch_ui)
-	var a := _ring(84, "cut"); a.name = "Atk"; touch_ui.add_child(a)
-	var d := _ring(60, "evade"); d.name = "Dodge"; touch_ui.add_child(d)
-	joy_base = _ring(120, ""); joy_base.modulate.a = 0.35; touch_ui.add_child(joy_base)
-	joy_knob = TextureRect.new()
-	joy_knob.texture = load("res://art/blot0.png")
-	joy_knob.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	joy_knob.size = Vector2(46, 46); joy_knob.position = Vector2(37, 37)
-	joy_knob.modulate = Color(1, 1, 1, 0.6)
-	joy_knob.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	joy_base.add_child(joy_knob)
+
+func _touch_redraw() -> void:
+	if not touch_ui:
+		return
+	touch_ui.reset()
+	var ring: Texture2D = load("res://art/ring.png")
+	touch_ui.quad(ring, Rect2(atk_pos, Vector2(84, 84)), Color(1, 1, 1, 0.8))
+	touch_ui.quad(load("res://art/icon_cut.png"), Rect2(atk_pos + Vector2(84 * 0.2, 84 * 0.2), Vector2(84 * 0.6, 84 * 0.6)))
+	touch_ui.quad(ring, Rect2(dodge_pos, Vector2(60, 60)), Color(1, 1, 1, 0.8))
+	touch_ui.quad(load("res://art/icon_evade.png"), Rect2(dodge_pos + Vector2(60 * 0.2, 60 * 0.2), Vector2(60 * 0.6, 60 * 0.6)))
+	touch_ui.quad(ring, Rect2(joy_pos, Vector2(120, 120)), Color(1, 1, 1, 0.35))
+	touch_ui.quad(load("res://art/blot0.png"), Rect2(joy_pos + knob_rel, Vector2(46, 46)), Color(1, 1, 1, 0.6))
+	touch_ui.commit()
 
 func _input(ev: InputEvent) -> void:
 	if not (ev is InputEventScreenTouch or ev is InputEventScreenDrag):
@@ -1682,23 +1722,25 @@ func _input(ev: InputEvent) -> void:
 		if ev.pressed:
 			if ev.position.x < vs.x * 0.45 and joy_id == -1:
 				joy_id = ev.index; joy_origin = ev.position
-				joy_base.position = ev.position - Vector2(60, 60)
+				joy_pos = ev.position - Vector2(60, 60)
+				_touch_redraw()
 			else:
-				var a: Control = touch_ui.get_node("Atk"); var d: Control = touch_ui.get_node("Dodge")
-				if ev.position.distance_to(d.position + d.size * 0.5) < 46.0:
+				if ev.position.distance_to(dodge_pos + Vector2(30, 30)) < 46.0:
 					touch_dodge = true
 				else:
 					touch_atk = true
 					atk_press_t = elapsed
 		elif ev.index == joy_id:
 			joy_id = -1; joy_vec = Vector2.ZERO
-			joy_knob.position = Vector2(37, 37)
+			knob_rel = Vector2(37, 37)
+			_touch_redraw()
 	elif ev is InputEventScreenDrag and ev.index == joy_id:
 		var v: Vector2 = (ev.position - joy_origin) / 50.0
 		if v.length() > 1.0:
 			v = v.normalized()
 		joy_vec = v
-		joy_knob.position = Vector2(37, 37) + v * 36.0
+		knob_rel = Vector2(37, 37) + v * 36.0
+		_touch_redraw()
 
 func _autoplay(delta: float) -> void:
 	auto_t += delta
@@ -1718,7 +1760,7 @@ func _autoplay(delta: float) -> void:
 				atk_buf = 0.3; atk_press_t = elapsed
 	if bow_test and auto_t > 6.0:
 		for a in arrows:
-			var ax: float = (a["node"] as Node3D).global_position.x
+			var ax: float = (a["pos"] as Vector3).x
 			if (player.global_position.x - ax) * float(a["dir"]) > 0.0 and absf(player.global_position.x - ax) < 1.9 and player.state != "attack":
 				atk_buf = 0.3; atk_press_t = elapsed
 	while auto_steps.size() > 0 and auto_t >= float(auto_steps[0][0]):
@@ -1735,31 +1777,6 @@ func _autoplay(delta: float) -> void:
 
 ## F-27 + mute: two small ink chips top-right. "sound" mutes the master bus (also the M key),
 ## "credits" opens the licenses the export has to carry (engine, font, Android libraries).
-func _menu_chips() -> void:
-	chips = HBoxContainer.new()
-	chips.add_theme_constant_override("separation", 8)
-	chips.process_mode = Node.PROCESS_MODE_ALWAYS
-	var top := CanvasLayer.new(); top.layer = 3; top.name = "Top"
-	add_child(top)
-	top.add_child(chips)
-	mute_btn = _chip("sound: on")
-	mute_btn.pressed.connect(_toggle_mute)
-	chips.add_child(mute_btn)
-	stance_btn = _chip("stance: Kasumi")
-	stance_btn.pressed.connect(_cycle_stance)
-	chips.add_child(stance_btn)
-	var mb := _chip("map")
-	mb.pressed.connect(_show_map.bind(0.0))
-	chips.add_child(mb)
-	var cb := _chip("credits")
-	cb.pressed.connect(_show_credits.bind(true))
-	chips.add_child(cb)
-	# C49 engine switcher: jump back to the hand-built web ISSEN (opens a new tab).
-	var wb := _chip("web")
-	wb.pressed.connect(func() -> void: OS.shell_open("https://aeiouvcode.github.io/issen/"))
-	chips.add_child(wb)
-	chips.size = chips.get_combined_minimum_size()
-
 func _chip(text: String) -> Button:
 	var b := Button.new()
 	b.text = text
@@ -1777,10 +1794,20 @@ func _chip(text: String) -> Button:
 	b.add_theme_font_size_override("font_size", 16)
 	return b
 
+func _menu_chips() -> void:
+	chips = ChipsCanvas.new()
+	s_root.add_child(chips)
+	# C49 engine switcher: jump back to the hand-built web ISSEN (opens a new tab).
+	chips.setup(["sound: on", "stance: Kasumi", "map", "credits", "web"],
+		[_toggle_mute, _cycle_stance, _show_map.bind(0.0), _show_credits.bind(true),
+		 func() -> void: OS.shell_open("https://aeiouvcode.github.io/issen/")])
+
+
 func _toggle_mute() -> void:
 	var m := not AudioServer.is_bus_mute(0)
 	AudioServer.set_bus_mute(0, m)
-	mute_btn.text = "sound: off" if m else "sound: on"
+	chips.set_label(0, "sound: off" if m else "sound: on")
+	_sv_update()
 
 func _show_credits(on: bool) -> void:
 	if credits == null:
@@ -1848,8 +1875,9 @@ func _write_save() -> void:
 	cf.save(SAVE_PATH)
 
 func _stance_label() -> void:
-	if stance_btn:
-		stance_btn.text = "stance: " + str(STANCES[stance].name)
+	if chips:
+		chips.set_label(1, "stance: " + str(STANCES[stance].name))
+		_sv_update()
 		_layout()
 
 func _cycle_stance() -> void:
