@@ -91,3 +91,5 @@
 - 2026-09-24 C49 engine switcher: chip row gains "web" (OS.shell_open -> https://aeiouvcode.github.io/issen/, new tab), in-style. Verified 1280x720 --autoplay capture, chip renders top-right, 0 errors. Live deploy of /issen/godot/ with this change authorized by Naksh via parent.
 
 - 2026-09-24 C50 part 1 perf: --perf QA mode (avg_fps/p99/worst每12s), ground fbm->fbm2 for broad terms (visual unchanged), physics interpolation on. llvmpipe attribution: ground ~46ms/frame, grass ~0; octave cut no local gain (llvmpipe is draw/setup bound). Real-pipeline measurement + scaling_3d next.
+
+- 2026-09-24 C50 part 2 perf: post grain hash+fbm2, scaling_3d=0.85, web ?perf beacon + instrumentation (phys/draws/prims), URL debug toggles. Fill-bound confirmed (SwiftShader 720p ~115ms fill + ~30ms fixed; 320x180 -> 29fps warm). Cold A/B masked by ~60s shader-compile warmup. Deployed with parent 6:43 approval.
