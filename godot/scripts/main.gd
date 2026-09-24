@@ -60,6 +60,15 @@ var slow_zoom := 0.0
 var auto_parry := false
 var atk_buf := 0.0
 var whiff_cd := 0.0  # C57: a whiffed cut delays the next swing
+# C58 mirror boss: what Kageyama learns about you - opener cadence, chain appetite, dodge side
+var habit := {"open_t": [], "last_open": -1.0, "chain_n": 0, "chain2_n": 0, "dodge_l": 0, "dodge_r": 0}
+var read_cd := 0.0
+var player_atk_t := -1.0
+var pattern_test := false
+var pattern_mash := false
+var pattern_t := 0.0
+var pattern_n := 0
+var press_t := []  # C58: recent cut attempts, landed or stuffed - the aggression he reads
 var dodge_buf := 0.0
 # Desktop QA only: `godot -- --autoplay` drives a fixed input timeline for Movie Maker captures.
 # Web builds never receive user args, so this path is inert on Pages.
@@ -252,6 +261,27 @@ func _ready() -> void:
 		boss_test_hp = 150.0
 		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
 		kills = CHAPTER_KILLS; spawn_t = 0.3
+	if "--autoplay-pattern" in OS.get_cmdline_user_args():
+		# QA C58: a metronome opener rhythm with always-left dodges vs a short boss, so
+		# the habit reads (phase 3 counters, phase 4 prediction) can be seen triggering.
+		# --mash switches the bot to flat 0.16 s mashing (the spam case).
+		autoplay = true; auto_steps = []; pattern_test = true
+		pattern_mash = "--mash" in OS.get_cmdline_user_args()
+		boss_test_hp = 220.0
+		if "--phase4" in OS.get_cmdline_user_args():
+			# QA: jump the read tier straight in (he keeps 400 HP so the window stays open)
+			boss_test_hp = 400.0
+			get_tree().create_timer(1.2).timeout.connect(func(): boss_phase = 4)
+			if "--seed" in OS.get_cmdline_user_args():
+				# QA capture: habits pre-formed so a read lands inside a short Movie Maker window
+				get_tree().create_timer(1.4).timeout.connect(func():
+					habit.open_t = [0.7, 0.7, 0.7, 0.7]
+					press_t = [elapsed - 3.0, elapsed - 2.5, elapsed - 2.0, elapsed - 1.5, elapsed - 1.0, elapsed - 0.5])
+		if "--phase3" in OS.get_cmdline_user_args():
+			boss_test_hp = 400.0
+			get_tree().create_timer(1.2).timeout.connect(func(): boss_phase = 3)
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		kills = CHAPTER_KILLS; spawn_t = 0.3
 	if "--autoplay-map" in OS.get_cmdline_user_args():
 		# QA: chapter 1 already cleared in memory (no save written), Iwa stance, a short boss, then the map
 		autoplay = true; auto_parry = true; auto_steps = []; no_save = true
@@ -259,7 +289,7 @@ func _ready() -> void:
 		if "--fresh" in OS.get_cmdline_user_args():
 			# C31: first-ever clear, so the map shows the path inking in from an untouched map
 			best_chapter = 0; stance = 0; _stance_label()
-		boss_test_hp = 60.0
+		boss_test_hp = 220.0
 		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
 		kills = CHAPTER_KILLS; spawn_t = 0.3
 	if "--autoplay-palettes" in OS.get_cmdline_user_args():
@@ -462,6 +492,11 @@ func _player(delta: float) -> void:
 				atk_buf = 0.0
 				combo = 0
 				_start_attack()
+			elif want_atk and (press_t.is_empty() or elapsed - float(press_t[-1]) > 0.25):
+				# a stuffed swing still tells him you are mashing
+				press_t.append(elapsed)
+				if press_t.size() > 8:
+					press_t.pop_front()
 			elif mv.length() > 0.1:
 				p.state = "run"
 				# pick the view from travel direction (screen-down = toward camera)
@@ -540,6 +575,36 @@ func _player(delta: float) -> void:
 		p.posture = minf(100.0, p.posture + 14.0 * delta)
 	p.tick_anim(delta * (float(STANCES[stance].speed) * (1.35 if combo == 3 else 1.0) if p.state == "attack" else 1.0))
 
+## C58 habit reads: side you always dodge to (0 when no habit), whether you chain on
+## autopilot, and your opener cadence when it is eerily regular (0 when it isn't).
+func _habit_dodge_side() -> float:
+	var n: int = habit.dodge_l + habit.dodge_r
+	if n < 5:
+		return 0.0
+	var k := float(habit.dodge_r - habit.dodge_l) / float(n)
+	return signf(k) if absf(k) >= 0.55 else 0.0
+
+func _habit_chainy() -> bool:
+	# you swing on a metronome - landed cuts and stuffed attempts both count;
+	# a deliberate pause clears his read in about four seconds
+	if press_t.size() < 6:
+		return false
+	return elapsed - float(press_t[press_t.size() - 6]) < 4.0
+
+func _habit_cadence() -> float:
+	var a: Array = habit.open_t
+	if a.size() < 4:
+		return 0.0
+	var m := 0.0
+	for t in a:
+		m += t
+	m /= a.size()
+	var v := 0.0
+	for t in a:
+		v += (t - m) * (t - m)
+	v /= a.size()
+	return m if m > 0.05 and sqrt(v) / m < 0.3 else 0.0
+
 ## C57 soulslike counterplay: every swing spends posture. Mashing drains the bar in four
 ## cuts; the chain stops when the bar can't pay. Regen pauses mid-swing and mid-dodge.
 func _atk_cost(c: int) -> float:
@@ -548,6 +613,20 @@ func _atk_cost(c: int) -> float:
 func _start_attack() -> void:
 	var p := player
 	p.posture = maxf(0.0, p.posture - _atk_cost(combo))
+	player_atk_t = elapsed
+	press_t.append(elapsed)
+	if press_t.size() > 8:
+		press_t.pop_front()
+	if combo == 0:
+		# an opener: note the rhythm he will learn
+		if float(habit.last_open) >= 0.0:
+			habit.open_t.append(elapsed - float(habit.last_open))
+			if habit.open_t.size() > 6:
+				habit.open_t.pop_front()
+		habit.last_open = elapsed
+		habit.chain_n += 1
+	else:
+		habit.chain2_n += 1
 	if autoplay:
 		print("QA atk combo=%d posture=%.0f" % [combo, p.posture])
 	var tgt := _nearest(p.global_position, 4.5)
@@ -625,6 +704,11 @@ func _start_dodge(mv: Vector2) -> void:
 	p.state = "dodge"; p.state_t = 0.0; p.play("dodge", true)
 	sfx.play("dodge")
 	p.vel = Vector3(d.x, 0, d.y).normalized() * 11.0
+	if absf(p.vel.x) > 0.5:
+		if p.vel.x < 0.0:
+			habit.dodge_l += 1
+		else:
+			habit.dodge_r += 1
 	dodge_cd = 0.45
 	ghost_t = 0.0
 	fx.puff(p.global_position)
@@ -671,8 +755,15 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 		dmg *= 0.6
 	clean_hits += 1
 	e.hp = maxf(0.0, e.hp - dmg)
-	if e == boss and boss_phase == 1 and e.hp > 0.0 and e.hp <= e.max_hp * 0.5:
-		_boss_phase2(e)
+	if e == boss and e.hp > 0.0:
+		# C58: four phases - he gets better and better as the fight goes on
+		var bfrac := e.hp / e.max_hp
+		if boss_phase == 1 and bfrac <= 0.7:
+			_boss_phase2(e)
+		elif boss_phase == 2 and bfrac <= 0.45:
+			_boss_phase3(e)
+		elif boss_phase == 3 and bfrac <= 0.2:
+			_boss_phase4(e)
 	if autoplay and (armor_test or spear_test):
 		print("QA flesh hit hp=%d" % e.hp)
 	e.posture = maxf(0.0, e.posture - dmg * 1.6)
@@ -753,6 +844,18 @@ func _enemy(e: Fighter, delta: float) -> void:
 	var p := player
 	var d: Vector3 = p.global_position - e.global_position
 	var dist := Vector2(d.x, d.z * 1.6).length()
+	if e == boss:
+		read_cd = maxf(0.0, read_cd - delta)
+		if boss_phase >= 4 and e.state == "approach" and read_cd <= 0.0 and p.alive() and dist < 5.0:
+			var cad := _habit_cadence()
+			if autoplay and int(elapsed * 2.0) != int((elapsed - delta) * 2.0):
+				print("QA read? cad=%.2f eta=%.2f dist=%.1f cd=%.1f st=%s" % [cad, float(habit.last_open) + cad - elapsed, dist, read_cd, e.state])
+			if cad > 0.0:
+				var eta: float = float(habit.last_open) + cad - elapsed
+				if eta < 0.45 and eta > -0.25:
+					# the predicted opener is due - he stills himself and waits for it
+					_boss_read(e)
+					return
 	match e.state:
 		"approach":
 			var lane: int = int(e.get_meta("lane"))
@@ -785,8 +888,35 @@ func _enemy(e: Fighter, delta: float) -> void:
 					var vw := "" if lane == 0 else ("_b" if d.z < 0.0 else "_f")
 					e.set_meta("vw", vw)
 					e.state = "windup"; e.state_t = 0.0; e.play("windup" + vw, true)
+		"read":
+			e.vel = e.vel.lerp(Vector3.ZERO, 10.0 * delta)
+			if p.alive() and player_atk_t >= float(e.get_meta("read_t0")) and dist < 4.6:
+				# predicted: the cut he waited for meets his own - your opener, turned on you
+				var mid := (e.global_position + p.global_position) * 0.5 + Vector3(0, 1.5, 0.3)
+				fx.clash(mid, -e.facing, 1.0)
+				sfx.play("parry")
+				hitstop = 0.1; shake = 0.2
+				read_cd = 7.0
+				if autoplay:
+					print("QA read PUNISH")
+				_player_hurt(8.0, e.facing, e)
+				e.set_meta("vw", _face_view(e, p))
+				e.state = "windup"; e.state_t = 0.34; e.play("windup" + str(e.get_meta("vw")), true)
+			elif e.state_t > 0.55:
+				# baited: the read whiffs and he is wide open
+				read_cd = 5.0
+				e.state = "stagger"; e.state_t = 0.0
+				e.set_meta("stag_len", 0.85); e.set_meta("riposte_k", 1.5)
+				e.play("hit" + _face_view(e, p), true)
+				if autoplay:
+					print("QA read whiffed")
 		"windup":
 			e.vel = e.vel.lerp(Vector3.ZERO, 10.0 * delta)
+			if e == boss and boss_phase >= 3 and p.state == "dodge":
+				var hs := _habit_dodge_side()
+				if hs != 0.0:
+					# C58 phase 3: he shades toward the side you always dodge to
+					e.vel.x = hs * 1.6
 			# parry tell: glint as the window opens (a hair early to cover reaction time)
 			var open_t := 0.62 + 2.0 / 18.0 - _pwin() - 0.06
 			if e.state_t >= open_t and e.state_t - delta < open_t:
@@ -847,8 +977,8 @@ func _enemy(e: Fighter, delta: float) -> void:
 			if e.anim_done and e.state_t > 0.5:
 				e.state = "approach"; e.set_meta("cool", randf_range(0.8, 1.8))
 				if e == boss:
-					e.set_meta("cool", randf_range(0.35, 0.8) if boss_phase == 2 else randf_range(0.5, 1.1))
-					if boss_phase == 2:
+					e.set_meta("cool", randf_range(0.35, 0.8) if boss_phase >= 2 else randf_range(0.5, 1.1))
+					if boss_phase >= 2:
 						e.set_meta("spear", randf() < 0.5)
 				if randf() < 0.5 and not e.get_meta("spear", false):
 					e.set_meta("lane", _pick_lane())
@@ -856,7 +986,16 @@ func _enemy(e: Fighter, delta: float) -> void:
 			# deflected: reeling and open, cuts land double (C15 parry)
 			e.vel = e.vel.lerp(Vector3.ZERO, 5.0 * delta)
 			if e.state_t > float(e.get_meta("stag_len", 0.95)):
-				e.state = "approach"; e.set_meta("cool", randf_range(0.6, 1.2)); e.set_meta("second", false)
+				if autoplay and e == boss:
+					print("QA stagger exit phase=%d dist=%.1f chainy=%s openers=%d cont=%d" % [boss_phase, dist, _habit_chainy(), habit.chain_n, habit.chain2_n])
+				if e == boss and boss_phase >= 3 and p.alive() and dist < 3.8 and _habit_chainy():
+					# C58 mirror cut: your autopilot chain answered at your own tempo
+					e.set_meta("vw", _face_view(e, p))
+					e.state = "windup"; e.state_t = 0.34; e.play("windup" + str(e.get_meta("vw")), true)
+					if autoplay:
+						print("QA mirror counter")
+				else:
+					e.state = "approach"; e.set_meta("cool", randf_range(0.6, 1.2)); e.set_meta("second", false)
 		"hit":
 			e.vel = e.vel.lerp(Vector3.ZERO, 7.0 * delta)
 			if e.state_t > 0.38:
@@ -1022,6 +1161,45 @@ func _boss_phase2(e: Fighter) -> void:
 	sfx.play("finisher", 0.0)
 	e.set_meta("stag_len", 0.4)
 	_flash_banner("Kageyama draws a second breath", 2.0)
+
+## C58 phase 3: he starts reading - counters your autopilot chains and shades toward
+## the side you always dodge to.
+func _boss_phase3(e: Fighter) -> void:
+	boss_phase = 3
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), 1.0, 1.6, 0.2)
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), -1.0, 1.6, 0.2)
+	_slowmo(0.6, 0.3, 0.5)
+	shake = 0.25
+	sfx.play("finisher", 0.0)
+	e.set_meta("stag_len", 0.35)
+	_flash_banner("Kageyama watches your hands", 2.2)
+	if autoplay:
+		print("QA boss phase 3")
+
+## C58 phase 4: he knows your rhythm - a stillness tell, then he punishes the opener
+## he predicted. Bait the read and he is the one left open.
+func _boss_phase4(e: Fighter) -> void:
+	boss_phase = 4
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), 1.0, 1.8, 0.2)
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), -1.0, 1.8, 0.2)
+	_slowmo(0.7, 0.3, 0.6)
+	shake = 0.3
+	sfx.play("finisher", 0.0)
+	e.set_meta("stag_len", 0.3)
+	_flash_banner("Kageyama knows your rhythm", 2.2)
+	if autoplay:
+		print("QA boss phase 4")
+
+func _boss_read(e: Fighter) -> void:
+	e.state = "read"; e.state_t = 0.0
+	e.set_meta("read_t0", elapsed)
+	e.vel = Vector3.ZERO
+	e.play("idle" + _face_view(e, player))
+	# the tell: stillness, a glint over the kasa, ink settling at his feet
+	fx.glint(e, e.global_position + Vector3(0, 2.4, 0.3))
+	fx.puff(e.global_position)
+	if autoplay:
+		print("QA read start cad=%.2f" % _habit_cadence())
 
 func _flash_banner(text: String, secs: float) -> void:
 	banner.text = text
@@ -1528,6 +1706,15 @@ func _autoplay(delta: float) -> void:
 		# QA bot: cut 0.1 s before every foe blade lands, then keep cutting the staggered foe
 		for e in enemies:
 			if e.alive() and ((int(elapsed / 4.0) % 2 == 1 and e.state == "windup" and absf(e.state_t - 0.56) < delta * 0.6) or (int(elapsed / 4.0) % 2 == 0 and e.state == "swing" and not e.get_meta("struck") and absf(e.state_t - 0.04) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.12) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.4) < delta * 0.6)):
+				atk_buf = 0.3; atk_press_t = elapsed
+	if pattern_test:
+		pattern_t -= delta
+		if pattern_t <= 0.0:
+			pattern_t = 0.16 if pattern_mash else 0.7
+			pattern_n += 1
+			if pattern_n % 4 == 0 and not pattern_mash:
+				dodge_buf = 0.3  # always the same side - a habit he can read
+			else:
 				atk_buf = 0.3; atk_press_t = elapsed
 	if bow_test and auto_t > 6.0:
 		for a in arrows:
