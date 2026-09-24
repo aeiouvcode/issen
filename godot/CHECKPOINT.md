@@ -89,3 +89,5 @@
 - 2026-09-24 C48 blade feel: riposte kills trail layered echo cuts - kill branch gains elif riposte -> fx.echo (same staggered pair as the C43 issen read). Verified at 1280x720 --autoplay-parry with a temp 30-HP foe (enemies[0].hp = 30.0 in the parry QA block, applied and fully reverted): the stagger cut lands the kill and layered curtains sweep over it next to the finisher wash; 0 errors.
 
 - 2026-09-24 C49 engine switcher: chip row gains "web" (OS.shell_open -> https://aeiouvcode.github.io/issen/, new tab), in-style. Verified 1280x720 --autoplay capture, chip renders top-right, 0 errors. Live deploy of /issen/godot/ with this change authorized by Naksh via parent.
+
+- 2026-09-24 C50 part 1 perf: --perf QA mode (avg_fps/p99/worst每12s), ground fbm->fbm2 for broad terms (visual unchanged), physics interpolation on. llvmpipe attribution: ground ~46ms/frame, grass ~0; octave cut no local gain (llvmpipe is draw/setup bound). Real-pipeline measurement + scaling_3d next.
