@@ -1,5 +1,8 @@
 # Checkpoint
 
+- 2026-09-25 C60 DONE+verified: perf phase 2 complete. Phase A HUD collapse (HudCanvas/ChipsCanvas, arrows MultiMesh), phase B slash MultiMesh pools, phase C static chrome SubViewport bake. Draws 45-67 -> 25-44, nodes 93-131 -> 57-75 (GL --autoplay-boss --perf). Full QA + Movie Maker parity PASS. Local only; push unblocked ~1:00 AM (GitHub web login in vault).
+- 2026-09-25 C59: audit gap 1 - slash rebake to 4 parallel bristle strands ((t,d)-space streak noise, top-edge fade), strike scale 1.3x ([2.0,1.95,2.4,3.1]). Movie Maker verified vs reference. Local only (GitHub auth blocker); deploy held for Main's beat.
+- 2026-09-24 C58: Kageyama mirror AI - 4 hp phases; habit model (press aggression, opener cadence, dodge side); P3 mirror cut + dodge-side shade; P4 cadence read with stillness/glint tell, clash punish, baitable whiff-stagger. QA bots --autoplay-pattern(--mash/--phase3/--phase4/--seed). Source-only; deploy held for Main's beat.
 - 2026-09-24 C57: spam-to-win counterplay (soulslike): stamina cost per swing with HUD sliver, foe windup/swing poise vs light cuts, whiff kills chain + 0.35s lock, foe posture break -> stagger. Verified headless QA + Movie Maker. Source-only; deploy held for Main's beat.
 - 2026-09-24 C55: fx particle sim runs in _physics_process (0 interpolation warnings, smoother ink at low render fps). Fresh audit vs sibling ISSEN line: gaps = slash banding/scale, kill eruption size, figure ink mass.
 - 2026-09-24 C54: fixed live-breaking stale CSP script hash (rehash after any index.html patch); added godot/perf.html (no-CSP debug harness page, mainPack set); ?lowres A/B: no fill win, harness now too erratic to trust - playtest is the only instrument left.
