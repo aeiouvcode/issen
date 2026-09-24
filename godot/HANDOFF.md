@@ -52,3 +52,4 @@ Cycle 29: hit shiver on struck foes (runs through hit-stop). Next gap list: long
 Cycle 30: four-cut combo ending in the issen dash-through. Next gaps: chapter-to-chapter map flow, enemy variety, then a directional (up/down) finisher variant. Store submission still needs Naksh.
 Cycle 31: map travel animation + chapter title card, and the noto sheath sound after a boss. Next gaps: enemy variety (a new foe type per chapter), directional finisher variant, then another reference audit. Store submission still needs Naksh.
 Cycle 32: twin-blade foe + issen afterimages. Next gaps: directional finisher for 3/4 views, a bow/ranged foe for later chapters, then a fresh reference audit. Store submission still needs Naksh.
+Cycle 33: directional falling finisher for 3/4 views + archer foe. Roster now: kasa ronin, armored, spear, twin-blade, archer, boss. Next: fresh distance-to-reference audit with side-by-side frames, then fix the top gaps. Store submission still needs Naksh.
