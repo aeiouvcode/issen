@@ -664,6 +664,8 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 		var finisher := riposte or clean_hits >= FINISH_STREAK
 		get_tree().create_timer(0.14).timeout.connect(sfx.play.bind("patter", 0.08))
 		fx.kill_splash(e.global_position, dir if hv == "" else signf(e.vel.x), 1.5 if finisher else 1.0)
+		# C45 blade feel: the slain foe breaks into flying ink
+		fx.body_break(e.global_position, dir if hv == "" else signf(e.vel.x), 1.3 if finisher else 1.0)
 		fx.blade_drip(player, 1.1 if finisher else 0.8)
 		if e == boss:
 			finisher = true

@@ -397,6 +397,25 @@ func thrust(pos: Vector3, dir: float) -> void:
 		d.global_position = pos + Vector3(dir * 4.0, 0, 0)
 		items.append({"node": d, "kind": "drop", "t": 0.0, "vel": Vector3(dir * randf_range(1.0, 3.0), randf_range(0.5, 2.5), randf_range(-0.5, 0.5))})
 
+## C45 blade feel: a slain foe breaks into ink - body-sized blots flung from head, chest
+## and legs along the cut, so the figure reads as becoming ink instead of only falling.
+func body_break(pos: Vector3, dir: float, power := 1.0) -> void:
+	var d := dir if dir != 0.0 else 1.0
+	var heights := [1.45, 1.1, 0.75, 0.4]
+	for h0 in heights:
+		for j in 2:
+			var sz := randf_range(0.007, 0.012) * power
+			var sp := _billboard(blots[randi() % 6], sz)
+			sp.modulate = Color(1, 1, 1, 0.95)
+			add_child(sp)
+			sp.global_position = pos + Vector3(randfn(0.0, 0.1), h0, 0.18)
+			var k := randf_range(0.5, 1.0)
+			var at := pos + Vector3(d * (0.7 + k * 1.8 * power) + randfn(0.0, 0.2), 0.0, 0.3 + randf_range(0.0, 0.35))
+			var t := 0.16 + k * 0.26
+			var v := (at - sp.global_position) / t
+			v.y = (0.02 - h0 + 8.0 * t * t) / t
+			items.append({"node": sp, "kind": "fling", "t": 0.0, "vel": v, "sz": sz, "a": 0.85, "rot": INF})
+
 ## C27 blade feel: after a kill the blade sheds ink - drops fall from the sword tip for a moment and stain the grass
 func blade_drip(f: Node3D, dur := 0.8) -> void:
 	var holder := Node3D.new()
