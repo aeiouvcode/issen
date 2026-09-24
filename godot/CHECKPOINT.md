@@ -87,3 +87,5 @@
 - 2026-09-24 C47: grass density (audit residual) - _grass(): swath bands 26 -> 44, clumps per band 8-22 -> 14-30, band length +-6 -> +-8 with size falloff /9 -> /11, so the field reads as the reference's dense drifting dash-field bands. Duel centre unchanged (c.length() < 6.0 skip). Verified at 1280x720 (standoff and combat frames: swaths ring the fight, never intrude) and 390x844; 0 errors.
 
 - 2026-09-24 C48 blade feel: riposte kills trail layered echo cuts - kill branch gains elif riposte -> fx.echo (same staggered pair as the C43 issen read). Verified at 1280x720 --autoplay-parry with a temp 30-HP foe (enemies[0].hp = 30.0 in the parry QA block, applied and fully reverted): the stagger cut lands the kill and layered curtains sweep over it next to the finisher wash; 0 errors.
+
+- 2026-09-24 C49 engine switcher: chip row gains "web" (OS.shell_open -> https://aeiouvcode.github.io/issen/, new tab), in-style. Verified 1280x720 --autoplay capture, chip renders top-right, 0 errors. Live deploy of /issen/godot/ with this change authorized by Naksh via parent.
