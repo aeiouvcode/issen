@@ -49,3 +49,4 @@ Pages serves main root. The Godot preview lives in main:/godot/ (index.html, ind
 - Sprite3D flip: foot pixel sits 10 px left of centre, so offset.x must be 10 * facing.
 Cycle 28: store screenshots re-captured with new foe art + perfect-parry paper-white wash. Next: distance-to-reference gap list (blade feel first). Store submission still needs Naksh (Play Console account, contact email, privacy URL).
 Cycle 29: hit shiver on struck foes (runs through hit-stop). Next gap list: longer combo chains (4th cut / directional finisher), chapter-to-chapter map flow, then enemy variety. Store submission still needs Naksh.
+Cycle 30: four-cut combo ending in the issen dash-through. Next gaps: chapter-to-chapter map flow, enemy variety, then a directional (up/down) finisher variant. Store submission still needs Naksh.

@@ -57,3 +57,4 @@
 - 2026-09-24 C28: store screenshots re-captured with the new foe art (land-1..4 from boss/armor runs, port-1..4 from boss/spear runs), old frame-numbered files removed.
 - 2026-09-24 C28 blade feel: perfect parry fires a paper-white wash ring in post.gdshader (flash/flash_at), decaying over ~0.3s real time.
 - 2026-09-24 C29 blade feel: _hit_jitter - a struck foe's sprite shivers along x (0.07 m, decaying over 0.1 s, 0.16 s on heavy cuts) and keeps shivering through the hit-stop freeze, so cuts read as biting in.
+- 2026-09-24 C30 blade feel: fourth combo cut "issen" - a fast draw (atk1 pose at 1.35x, 30 dmg, 1.9 slash, heavy) that dashes the player clean through the foe's line (15 m/s held 0.3 s, spacing push off for 0.45 s, foe knockback damped so it isn't shoved ahead). Profile view only; in 3/4 views it stays a normal lunge so the player never runs at the camera. QA: --autoplay-combo (one held-back foe on the player's lane, bot mashes cut).
