@@ -283,18 +283,19 @@ func _grass() -> void:
 		mm.mesh = q
 		var xs: Array = []
 		# swaths: long bands of clumps, like the reference's drifting grass
-		for band in 26:
+		# C47: reference grass reads as dense dash-field bands - more, longer swaths
+		for band in 44:
 			var c := Vector2(rng.randf_range(-45, 45), rng.randf_range(-45, 30))
 			if c.length() < 6.0:
 				continue
 			var ang := rng.randf_range(-0.35, 0.35)
-			var n := rng.randi_range(8, 22)
+			var n := rng.randi_range(14, 30)
 			for i in n:
 				if rng.randi() % 3 != v:
 					continue
-				var along := rng.randf_range(-6.0, 6.0)
+				var along := rng.randf_range(-8.0, 8.0)
 				var p := c + Vector2(cos(ang), sin(ang)) * along + Vector2(rng.randf_range(-0.5, 0.5), rng.randf_range(-1.0, 1.0))
-				var s := rng.randf_range(0.7, 1.3) * (1.0 - absf(along) / 9.0)
+				var s := rng.randf_range(0.7, 1.3) * (1.0 - absf(along) / 11.0)
 				xs.append(Transform3D(Basis().scaled(Vector3(s, s, s)), Vector3(p.x, 0, p.y)))
 		mm.instance_count = xs.size()
 		for i in xs.size():
