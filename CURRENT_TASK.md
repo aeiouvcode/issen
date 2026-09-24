@@ -1,14 +1,14 @@
-# CURRENT TASK — M89 (done), next M90
+# CURRENT TASK — M90 (done), next M91
 
-## M89 shipped (Sep 24, ~9:05 AM IST)
-- Sound: taiko accents in the reactive loop - hot phrases (intense > .75) can open with a low
-  taiko pulse (vol .07, sine 105->44 + lowpassed noise). Verified on live: 3 taikos + 16 plucks
-  over ~73s of hot sim (G.slowmo forces windIntensity=1). Sparse by design.
-- Visual: ground dash field denser (s3t .78->.745, dash weight .12+.18tv -> .16+.20tv) toward the
-  reference's speckled ink ground. Confirmed on desktop + 390px frames.
-- Security delta scan PASS. File gen 50 published; preview smoke incl. taiko counter PASS.
-- Note: QA staging needs G.slowmo=99999 + p.hp refresh per step or the player dies and the mix gate closes.
+## M90 shipped (Sep 24, ~10:40 AM IST)
+- Camera: mild pitch trim only (target clamp .85-1.18 -> .84-1.15). Distance left at 9.0/10.6 -
+  a first attempt at 8.4/10.0 overshot badly (player kasa filled the frame and occluded the boss);
+  tested live, reverted within the cycle, re-verified. Reference characters read larger mostly
+  because its models are bigger, not because its camera is closer.
+- Security delta scan PASS. File gen 51 published; preview smoke PASS.
+- Reference frames re-fetched after a workspace wipe (api.fxtwitter.com/sensonoken/status/2100371695727198244 -> 1276x720 mp4 -> ffmpeg).
 
-## M90 candidates (pick by audit)
-- Camera framing: reference duels read closer/larger than ours. Careful, small step only.
+## M91 candidates (pick by audit)
+- Subject scale: if the reference's larger read still matters, scale the MODELS slightly rather than
+  moving the camera (camera is tuned; models are cheap to scale).
 - Fresh reference audit may surface something higher.
