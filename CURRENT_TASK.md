@@ -1,20 +1,21 @@
-# CURRENT TASK — M95 (done), next M96
+# CURRENT TASK — M96 (done), next M97
 
-## M95 shipped (Sep 24, ~4:45 PM IST)
-- Audit first: M94 camera + ground changes verified holding in real fights at desktop + 390px.
-  Arena-wall watch-item at phone width: PASS. Burned down a recurring "white-out" scare:
-  (a) one lease had a genuinely lost WebGL context, (b) screenshots right after long
-  synchronous sims catch un-presented frames. Not a code bug; gl.isContextLost() separates them.
-- Fix: HUD bars now brush strokes. `.brushbar .fill` mask gradient replaced with a tapered
-  clip-path polygon (thin at both ends, thick middle) like the reference's hand-painted bars.
-  Verified live at desktop (1440) + 390px: partial and full bars read as painted strokes.
-- Security delta scan PASS (one CSS block changed; no scripts, no outbound, no sinks).
-  File details panel confirms "External services: None".
-- File gen 56 published; preview smoke PASS (QA boots in the revision frame, fight runs,
-  tapered bars present).
+## M96 shipped (Sep 24, ~5:31 PM IST)
+- Audit first: side-by-side vs the reference showed the biggest remaining gap is figure
+  interior brushwork. Reference fighters (light AND dark) carry visible dry-brush streaks
+  inside their silhouettes; our dark masses (boss robe, hair, wraps) read too solid.
+- Fix: two-scale dry-brush in the ink shader - broad raking streaks (uv.x*6) plus the
+  existing fine splits, combined with max(); uDry raised robe .65->1.05, hair .5->.8,
+  dark .45->.7, wrap .4->.62. The boss's kasa and robe now rake pale strokes through the
+  ink mass like the reference's dark fighter.
+- Verified live: desktop close-up (kasa streaks read hand-painted), 390px in-fight
+  (touch buttons confirmed: body.coarse + in-fight shows #touchui; a mid-session viewport
+  switch without reload hides them - test artifact, not a bug).
+- Security delta scan PASS (shader lines + 4 material constants only).
+- File gen 57 published; preview smoke PASS (bundle carries the new shader; fight runs).
 
-## M96 candidates (pick by audit)
-- Figure interior brushwork (dry-brush streaks inside silhouettes) - deep shader work;
-  assess risk first, prototype behind a uniform.
-- Arena-wall horizon line polish at phone width.
+## M97 candidates (pick by audit)
+- Figure streak DIRECTION: reference streaks follow the garment flow (curved, parallel);
+  ours are fbm blotches. Consider anisotropic streak field aligned to UV/limb direction.
+- Grass tufts: reference has clumped brush-dab grass bands; ours are sparse. Density pass.
 - Fresh distance-to-reference audit may surface something higher.
