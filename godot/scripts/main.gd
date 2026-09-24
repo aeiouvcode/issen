@@ -1214,6 +1214,9 @@ func _hud() -> void:
 	boss_bar.visible = false
 	var bn := Label.new(); bn.name = "N"
 	bn.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
+	# C41: paper outline keeps the name readable when the boss sprite passes behind it
+	bn.add_theme_color_override("font_outline_color", Color(0.93, 0.9, 0.84))
+	bn.add_theme_constant_override("outline_size", 6)
 	bn.add_theme_font_size_override("font_size", 22)
 	bn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	bn.size = Vector2(360, 28); bn.position = Vector2(0, -56)
@@ -1298,7 +1301,8 @@ func _hud_update() -> void:
 			var sp := cam.unproject_position(wp)
 			b.scale = pb_scale()
 			b.position = Vector2(sp.x - 45.0 * b.scale.x, maxf(sp.y - 16.0 * (b.scale.y - 1.0), 24.0))
-			if chips and chips.visible and chips.get_global_rect().grow(6.0).intersects(Rect2(b.position, Vector2(90, 20) * b.scale)):
+			# C41: the label rides 16 px above the bar; include it in the chips-clearance test
+			if chips and chips.visible and chips.get_global_rect().grow(6.0).intersects(Rect2(b.position + Vector2(0, -18) * b.scale, Vector2(90, 38) * b.scale)):
 				b.position.y = chips.get_global_rect().end.y + 8.0
 			var f: ColorRect = b.get_node("F")
 			f.size.x = f.get_meta("w") * e.hp / e.max_hp
