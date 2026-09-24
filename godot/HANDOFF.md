@@ -1,6 +1,7 @@
 # Handoff
 
 ## Resume here
+Cycle 38: gap 4 done - fx.burst: main cluster 34+30p -> 40+32p tighter (spread 0.45/0.4 -> 0.36/0.32, sizes up 0.4-1.2 -> 0.5-1.3) plus a new mid-size blot ring hugging the hit (12+10p, 0.0042 px, stddev 0.18). Verified at 1280x720 + 390x844. Next: fresh full reference audit (the C34 list is now all closed - re-grade everything against the footage), then F-07 (boss kasa dominates at close range). Store submission still needs Naksh.
 Cycle 37: gap 3 done - post.gdshader vignette band widened (0.10->0.14) and warmed (0.80/0.66/0.50 -> 0.74/0.58/0.40), plus a burnt umber corner term (0.62/0.46/0.29 over a 0.32 ragged radius). Verified at 1280x720 + 390x844. Next: gap 4 (splatter density around hits - more mid-size blots near the burst centre), then a fresh full reference audit. Store submission still needs Naksh.
 Cycle 36: ronin + variants ink-wash rebake (gap 2 done) - robes paler (body dens 0.7->0.3, sleeves -0.28), bold near-black hem band + collar cross + cuff accents, dry paper chest highlight; all six sheets rebaked (shared helpers, one pass). Verified at 1280x720 --autoplay. Next: gap 3 (stronger/warmer vignette corners), then gap 4 (splatter density around hits). Store submission still needs Naksh.
 Cycle 35: player ink-wash rebake (gap 2, player first) - pale wash with texture/streaks and gradient pooling kept, bold near-black accents added at hakama hems and sleeve cuffs, dry paper highlight strokes, wet edge now breaks dry-brush when streak_dir is set, new wash(grad) + stroke(layer='fill') brush ops. Verified vs reference at 1280x720, 390x844 and --autoplay-depth (turned views clean). Next: same rebake for the ronin + variants (draw_ronin, draw_sleeve_dark, draw_leg_dark - reference robes are paler with bolder hem/collar accents), then gap 3 (warmer/darker vignette corners). Store submission still needs Naksh.
@@ -62,6 +63,6 @@ Cycle 34: fresh distance-to-reference audit (yt-dlp frames vs Movie Maker captur
 1. [done C34] Ground: was a uniform horizontal dash hatch everywhere; reference is clean parchment with sparse round stipple in patches. Fixed in shaders/ground.gdshader.
 2. [done C35+C36] Figure rendering: flat fills -> ink-wash. Player (C35) and ronin + all variants (C36) rebaked: pale washes with texture/pooling, bold near-black accents at hems/cuffs/collar, dry paper highlights, ragged dry edges. Residual: authored animation fluidity is out of scope (non-goal).
 3. [done C37] Parchment vignette: wider/warmer tea-stain band + burnt umber corners in post.gdshader.
-4. Splatter: reference bursts sit denser around the hit with more mid-size blots; ours are close since C20/C34.
+4. [done C38] Splatter: burst cluster tightened and a mid-size blot ring added around the hit centre.
 5. UI: reference carries three ink pips + a brush HP stroke under each fighter and a scroll timer plaque; ours adapts this (top-left plaque, bottom bar, skill rings) - acceptable divergence for playability.
 6. Camera: reference holds a fixed side view; ours matches in landscape and adapts in portrait. OK.
