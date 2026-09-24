@@ -53,3 +53,12 @@ Cycle 30: four-cut combo ending in the issen dash-through. Next gaps: chapter-to
 Cycle 31: map travel animation + chapter title card, and the noto sheath sound after a boss. Next gaps: enemy variety (a new foe type per chapter), directional finisher variant, then another reference audit. Store submission still needs Naksh.
 Cycle 32: twin-blade foe + issen afterimages. Next gaps: directional finisher for 3/4 views, a bow/ranged foe for later chapters, then a fresh reference audit. Store submission still needs Naksh.
 Cycle 33: directional falling finisher for 3/4 views + archer foe. Roster now: kasa ronin, armored, spear, twin-blade, archer, boss. Next: fresh distance-to-reference audit with side-by-side frames, then fix the top gaps. Store submission still needs Naksh.
+Cycle 34: fresh distance-to-reference audit (yt-dlp frames vs Movie Maker captures at 1920x1080 + 390x844). Fixed top gap: ground stipple reworked from an all-over squashed-dash hatch to sparse round dots in drifting patches over clean parchment. Blade feel: heavy/riposte cuts scar the parchment (flat slash stroke, dries with the stains). Next: gap list below, top item first. Store submission still needs Naksh.
+
+## Distance-to-reference gap list (C34 audit, ranked)
+1. [done C34] Ground: was a uniform horizontal dash hatch everywhere; reference is clean parchment with sparse round stipple in patches. Fixed in shaders/ground.gdshader.
+2. Figure rendering: ours are flat fills with smooth vector edges; reference figures are grey ink-wash with dry-brush ragged edges, interior wash gradients and white highlights. Largest remaining gap, also the hardest (rebake rigs with wash fills + ragged outlines).
+3. Parchment vignette: reference has stronger burnt/umber edges and corners; ours is close but the corners could go darker and warmer.
+4. Splatter: reference bursts sit denser around the hit with more mid-size blots; ours are close since C20/C34.
+5. UI: reference carries three ink pips + a brush HP stroke under each fighter and a scroll timer plaque; ours adapts this (top-left plaque, bottom bar, skill rings) - acceptable divergence for playability.
+6. Camera: reference holds a fixed side view; ours matches in landscape and adapts in portrait. OK.
