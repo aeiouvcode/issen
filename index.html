@@ -23,7 +23,7 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   /* ---- aged paper vignette ---- */
   #vignette{position:fixed;inset:0;pointer-events:none;z-index:5;
     background:
-      radial-gradient(ellipse 115% 88% at 50% 42%, rgba(0,0,0,0) 30%, rgba(58,45,26,.62) 70%, rgba(24,16,8,.94) 100%),
+      radial-gradient(ellipse 115% 88% at 50% 42%, rgba(0,0,0,0) 26%, rgba(58,45,26,.70) 68%, rgba(24,16,8,.95) 100%),
       radial-gradient(ellipse 140% 120% at 50% 110%, rgba(0,0,0,0) 55%, rgba(60,44,20,.38) 100%),
       radial-gradient(ellipse 90% 60% at 8% 12%, rgba(48,36,18,.30) 0%, rgba(0,0,0,0) 60%),
       radial-gradient(ellipse 80% 55% at 94% 88%, rgba(48,36,18,.28) 0%, rgba(0,0,0,0) 60%);
@@ -137,6 +137,14 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   #mutebtn::before, #enginebtn::before{content:"";position:absolute;inset:-2px;border-radius:50%;
     border:1.8px solid rgba(42,33,21,.7);filter:url(#rough);pointer-events:none;}
   #mutebtn:active, #enginebtn:active{transform:scale(.92);}
+  @media (pointer:coarse){
+    #mutebtn, #enginebtn{width:48px;height:48px;font-size:21px;}
+    #enginebtn{right:76px;}
+    .chapseal{width:52px;height:52px;font-size:26px;}
+    .stanceseal{width:44px;height:44px;font-size:20px;}
+    .chaprow{gap:22px;}
+    .stancerow{gap:18px;}
+  }
   #mutebtn.off{opacity:.42;}
   .tbtn{position:absolute;width:84px;height:84px;border-radius:50%;pointer-events:auto;
     border:none;background:rgba(236,225,194,.52);
@@ -246,7 +254,7 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
 </div>
 
 <script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"},"integrity":{"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js":"sha384-61S/Nu32S3E5+n+KpCOTb2eRYps6fVKm+9Gz1QBvSePFthb46f063Aa/qe/lykFZ"}}
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js"},"integrity":{"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js":"sha384-8/hf5tabFfIo0BPku31TKUvGIKpWGYaMwNtlSNqNyZzXgZCMd4lnOGWbJElML9dv"}}
 </script>
 <script type="module">
 import * as THREE from 'three';
