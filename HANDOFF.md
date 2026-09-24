@@ -4,3 +4,4 @@ Large downloads from page (canvas dataURLs): execute-js return caps - slice in 6
 WebGL exhaustion: after many heavy 3D sessions in one lease, webgl2 starts failing session-wide (fresh tabs too) - release and reacquire the lease.
 Icon fonts: sandbox has NO CJK fonts - generate kanji art in the browser (Mincho available), not PIL.
 Workspace may be wiped between cycles: restore index.html from live URL, state from raw.githubusercontent, File via tools file checkout, notes re-clone, ref frames via api.fxtwitter.com + ffmpeg.
+White-out screenshots after long synchronous sims are usually a present-timing artifact, not a bug: run a <=80-step batch before shooting. Check gl.isContextLost() to separate true GL death (release/reacquire lease) from artifacts. startOrRetry needs a REAL click (cloud_browser click/click-at on the found ref); synthetic .click() silently no-ops. Game-over removes the HUD element entirely, so bar assertions must run mid-fight.
