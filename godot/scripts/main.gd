@@ -27,6 +27,10 @@ var php_fill: Control
 var php_label: Label
 var pst_fill: Control
 var ebars: Array = []
+var _ebars_txt: Array = []  # C53: last label string per bar; text sets only on change
+var _hud_t10 := -1  # C53: last decisecond shown on the timer
+var _hud_php := -1  # C53: last player-hp int shown
+var _hud_boss := -1  # C53: last boss hp/max key shown
 var post_mat: ShaderMaterial
 var _last_flash := -1.0
 var _hurt_v := 0.0
@@ -1353,11 +1357,20 @@ func _hud_update() -> void:
 	if boss and boss_bar.visible:
 		var bf: ColorRect = boss_bar.get_node("B/F")
 		bf.size.x = bf.get_meta("w") * boss.hp / boss.max_hp
-		(boss_bar.get_node("B/L") as Label).text = "%d/%d" % [int(ceil(boss.hp)), int(boss.max_hp)]
-	var m := int(elapsed / 60.0); var s := fmod(elapsed, 60.0)
-	time_label.text = "%02d:%05.2f" % [m, s]
+		var bkey := int(ceil(boss.hp)) * 100000 + int(boss.max_hp)  # C53: text set only on change
+		if bkey != _hud_boss:
+			_hud_boss = bkey
+			(boss_bar.get_node("B/L") as Label).text = "%d/%d" % [int(ceil(boss.hp)), int(boss.max_hp)]
+	var t10 := int(elapsed * 10.0)  # C53: 10 Hz is plenty for the centisecond read; kills a per-tick text re-raster
+	if t10 != _hud_t10:
+		_hud_t10 = t10
+		var m := int(elapsed / 60.0); var s := fmod(elapsed, 60.0)
+		time_label.text = "%02d:%05.2f" % [m, s]
 	php_fill.size.x = php_fill.get_meta("w") * player.hp / player.max_hp
-	php_label.text = "%d/100" % int(ceil(player.hp))
+	var phpv := int(ceil(player.hp))
+	if phpv != _hud_php:
+		_hud_php = phpv
+		php_label.text = "%d/100" % phpv
 	for i in enemies.size():
 		var e: Fighter = enemies[i]
 		var b: Control = ebars[i]
@@ -1373,7 +1386,12 @@ func _hud_update() -> void:
 			var f: ColorRect = b.get_node("F")
 			f.size.x = f.get_meta("w") * e.hp / e.max_hp
 			var ar := int(e.get_meta("armor", 0))
-			(b.get_node("L") as Label).text = ("spear  " if e.get_meta("spear", false) else "") + ("twin  " if e.get_meta("twin", false) else "") + ("bow  " if e.get_meta("bow", false) else "") + ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
+			var lt: String = ("spear  " if e.get_meta("spear", false) else "") + ("twin  " if e.get_meta("twin", false) else "") + ("bow  " if e.get_meta("bow", false) else "") + ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
+			if _ebars_txt.size() != ebars.size():
+				_ebars_txt.resize(ebars.size())  # C53: realign after spawns/removals; null slots are dirty
+			if _ebars_txt[i] != lt:
+				_ebars_txt[i] = lt
+				(b.get_node("L") as Label).text = lt
 
 # ------------------------------------------------------------------ touch
 func _ring(sz: float, glyph: String) -> TextureRect:
