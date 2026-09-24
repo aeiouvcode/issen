@@ -9,3 +9,9 @@ float fbm(vec2 p) {
 	for (int i = 0; i < 4; i++) { s += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; }
 	return s / 0.9375;
 }
+
+// C50 perf: 2-octave fbm for broad low-frequency terms (phone GPUs)
+float fbm2(vec2 p) {
+	float s = 0.5 * vnoise(p); p = p * 2.03 + 17.1;
+	return (s + 0.25 * vnoise(p)) / 0.75;
+}

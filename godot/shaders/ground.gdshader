@@ -10,7 +10,7 @@ void vertex() {
 }
 void fragment() {
 	vec2 p = wpos.xz;
-	float stain = fbm(p * 0.06) * 0.6 + fbm(p * 0.45 + 3.0) * 0.4;
+	float stain = fbm2(p * 0.06) * 0.6 + fbm2(p * 0.45 + 3.0) * 0.4;
 	vec3 col = paper * (0.9 + 0.14 * stain);
 	// stippled flecks: one dab per cell, squashed horizontally like dry brush taps
 	// C34: reference ground is mostly clean parchment - sparse round stipple dots that
@@ -18,7 +18,7 @@ void fragment() {
 	vec2 q = p * 4.2;
 	vec2 id = floor(q); vec2 f = fract(q);
 	// C46: reference speckle is denser and varied - dots mixed with tiny lying dashes
-	float dens = smoothstep(0.35, 0.75, fbm(p * 0.09 + 9.0));
+	float dens = smoothstep(0.35, 0.75, fbm2(p * 0.09 + 9.0));
 	float dab = 0.0;
 	for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
 		vec2 n = vec2(float(i), float(j));
@@ -36,10 +36,10 @@ void fragment() {
 	float haze = smoothstep(10.0, 34.0, dist);
 	col = mix(col, fleck, dab * 0.8 * (1.0 - haze * 0.85));
 	// faint broad wash patches
-	col *= 1.0 - 0.08 * smoothstep(0.55, 0.8, fbm(p * 0.035 + 4.0));
+	col *= 1.0 - 0.08 * smoothstep(0.55, 0.8, fbm2(p * 0.035 + 4.0));
 	// C46: soft mottled blotches - big faint darker and paler patches like the reference
-	col *= 1.0 - 0.10 * smoothstep(0.58, 0.85, fbm(p * 0.5 + 7.0)) * (1.0 - haze);
-	col = mix(col, paper * 1.06, 0.09 * smoothstep(0.6, 0.85, fbm(p * 0.33 + 21.0)) * (1.0 - haze));
+	col *= 1.0 - 0.10 * smoothstep(0.58, 0.85, fbm2(p * 0.5 + 7.0)) * (1.0 - haze);
+	col = mix(col, paper * 1.06, 0.09 * smoothstep(0.6, 0.85, fbm2(p * 0.33 + 21.0)) * (1.0 - haze));
 	col = mix(col, paper * 1.05, haze * 0.75);
 	ALBEDO = col;
 }

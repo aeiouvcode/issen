@@ -98,6 +98,11 @@ const PALETTES := [
 ]
 var ground_mat: ShaderMaterial
 var grass_mats: Array[ShaderMaterial] = []
+var perf_mode := false
+var perf_t := 0.0
+var perf_n := 0
+var perf_worst := 0.0
+var perf_arr: Array = []
 var palette_i := 0
 var palette_test := false
 var armor_tex: Array[Texture2D] = []
@@ -112,6 +117,7 @@ var strike_dz := 0.0
 var strike_issen := false  # C43: the striking cut was the issen dash (profile 4th cut)
 
 func _ready() -> void:
+	perf_mode = "--perf" in OS.get_cmdline_user_args()
 	autoplay = "--autoplay" in OS.get_cmdline_user_args() or "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args()
 	if "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args():
 		# locomotion views: toward camera, away, then sideways
@@ -1020,6 +1026,15 @@ func _slowmo(dur: float, scale: float, zoom: float) -> void:
 	set_meta("slow_dur", slow_t)
 
 func _process(delta: float) -> void:
+	if perf_mode:
+		perf_t += delta; perf_n += 1
+		if delta > perf_worst: perf_worst = delta
+		perf_arr.push_back(delta)
+		if perf_t >= 12.0:
+			perf_arr.sort()
+			var p99: float = perf_arr[int(perf_arr.size() * 0.99)]
+			print("PERF avg_fps=%.1f p99_ms=%.1f worst_ms=%.1f frames=%d" % [perf_n / perf_t, p99 * 1000.0, perf_worst * 1000.0, perf_n])
+			perf_t = 0.0; perf_n = 0; perf_arr.clear(); perf_worst = 0.0
 	if slow_t <= 0.0:
 		return
 	var real := delta / maxf(Engine.time_scale, 0.01)
