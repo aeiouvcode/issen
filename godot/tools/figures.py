@@ -292,7 +292,13 @@ def draw_ronin(c, J, pose):
     hipL = J['hip'] + n * 19; hipR = J['hip'] - n * 19
     shL = J['sh'] + n * 17; shR = J['sh'] - n * 17
     body = [tuple(shL), tuple(shR), tuple(hipR - n * 3 + np.array([0, 10])), tuple(hipL + n * 4 + np.array([0, 12]))]
-    c.wash(body, dens=0.7, edge=0.35, rag=2.4, texture=0.55, streak_dir=1)
+    c.wash(body, dens=0.3, edge=0.4, rag=2.4, texture=0.65, streak_dir=1, grad=0.22)
+    # bold near-black accents: hem band + collar cross (the reference's graphic read)
+    c.wash([tuple(lerp(shL, hipL, 0.68)), tuple(lerp(shR, hipR, 0.68)), tuple(hipR - n * 3 + np.array([0, 10])), tuple(hipL + n * 4 + np.array([0, 12]))], dens=0.85, edge=0.3, rag=2.4, texture=0.55, streak_dir=1)
+    c.stroke([tuple(J['neck'] + n * 8), tuple(lerp(J['neck'], J['hip'], 0.5) - n * 6)], w=5.5, dry=0.5)
+    c.stroke([tuple(J['neck'] - n * 8), tuple(lerp(J['neck'], J['hip'], 0.45) + n * 6)], w=4.5, dry=0.55)
+    # dry paper highlight across the chest
+    c.stroke([tuple(lerp(J['sh'], J['chest'], 0.15) - n * 8), tuple(lerp(J['sh'], J['chest'], 0.85) - n * 7)], w=5.0, dry=0.85, taper=(0.15, 0.7), layer='fill')
     # tattered robe hem strokes
     for k in range(6):
         p0 = lerp(hipL, hipR, k / 5) + np.array([0, 6])
@@ -382,7 +388,9 @@ def draw_sleeve_dark(c, sh, el, hand, dens):
     drop = np.array([0, 1.0])
     p = perp(sh, el)
     poly = [tuple(sh + p * 9), tuple(el + p * 10 + drop * 12), tuple(lerp(el, hand, 0.4) + drop * 6), tuple(el - p * 9), tuple(sh - p * 9)]
-    c.wash(poly, dens=dens, edge=0.4, rag=2.0, texture=0.55, streak_dir=1)
+    c.wash(poly, dens=max(0.25, dens - 0.28), edge=0.4, rag=2.0, texture=0.6, streak_dir=1, grad=0.2)
+    # bold dark cuff accent
+    c.wash([tuple(el + p * 10 + drop * 12), tuple(lerp(el, hand, 0.4) + drop * 6), tuple(el - p * 9), tuple(el + p * 2 + drop * 7)], dens=0.85, edge=0.3, rag=2.0, texture=0.5, streak_dir=1)
     c.stroke([tuple(sh + p * 9), tuple(el + p * 10 + drop * 12)], w=3.6, dry=0.6)
     c.stroke([tuple(el), tuple(hand)], w=5, dry=0.4, ink=0.9)
 
