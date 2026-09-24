@@ -1,5 +1,6 @@
 # CHECKPOINT
-- Live site: M103 (md5 068396b06f587611eaac7d4d25586003), deployed Sep 24 11:22 PM IST via GitHub web editor (signed-in cloud browser session).
-- File: file-01M326B85G08ZT1X3M6QWB72NX gen 64 (PRIVATE), https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX
-- GitHub: signed in as aeiouvcode (read lease L-krn-7e4tl3iiw4xvrc5ppfrawfp5im; may not persist past lease).
-- Deploy method: web EDITOR only (/edit/main/index.html). Drive the doc via cm-content.cmTile.view dispatch (synthetic paste unreliable; stale generated scripts bite - regenerate from the current file every time). Upload widget mangles names with N- prefixes - do not use.
+Live site aeiouvcode.github.io/issen = M104, md5 43492f2d3b3fd010086e74a752c02de1 (verified repo+live 12:14 AM).
+Instinct File file-01M326B85G08ZT1X3M6QWB72NX gen 65 published (M104).
+M104 evidence: leap trail frame /downloads/cloud-browser-20260924-184104.png (390px).
+Deploy path: GitHub web editor, signed-in session lease L-krn-7e4tl3iiw4xvrc5ppfrawfp5im (read/persist=false; session may not survive).
+QA hooks: QA.G.timeScale, QA.attack(), QA.boss/.player writable, QA.st(), puffCount(); leap force: QA.boss.state='windup_slam', stateT=.6 with player parked far.
