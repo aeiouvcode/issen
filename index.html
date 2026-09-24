@@ -3565,11 +3565,11 @@ function updateCamera(dt){
     // cinematic pitch: low and close during the duel, high when separated
     if(G.running && boss.root.visible){
       const d = dist2D(player.pos, boss.pos);
-      const target = clamp(.82 + (d-3.5)*.09, .82, 1.12);
+      const target = clamp(.84 + (d-3.5)*.09, .84, 1.15);
       G.camPitch += (target - G.camPitch) * Math.min(1, 1.6*dt);
     }
   }
-  let dist = (document.body.classList.contains('coarse')?10.0:8.4), h = 1.2 + Math.sin(G.camPitch)*8.0;
+  let dist = (document.body.classList.contains('coarse')?10.6:9.0), h = 1.2 + Math.sin(G.camPitch)*8.0;
   h += Math.sin(G.time*.55)*.07; G.camYaw += Math.sin(G.time*.31)*.00035; // the camera breathes between exchanges
   if(G.camPush>0){ G.camPush-=dt; const pk=Math.min(1,G.camPush*2.2); dist*=(1-.16*pk); h-=1.2*pk; } // finisher: the camera leans in low
   if(G.camNudge>0){ G.camNudge-=dt*3.2; const nk=Math.min(1,Math.max(0,G.camNudge*4.5)); dist*=(1-.055*nk); } // connect: the camera settles into the cut
