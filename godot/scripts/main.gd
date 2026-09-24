@@ -83,6 +83,8 @@ var stance_btn: Button
 var map_layer: CanvasLayer
 var map_view: Control
 var map_note := ""
+var map_anim := -1      # C31: segment being inked in on the map after a clear (-1 = none)
+var map_anim_t := 1.0
 ## C25: each chapter has its own field palette (paper, flecks, grass ink, grass far tone, grass density)
 const PALETTES := [
 	{"paper": Color(0.886, 0.816, 0.69), "fleck": Color(0.30, 0.25, 0.20), "ink": Color(1, 1, 1), "far": Color(0.56, 0.53, 0.49), "dens": 1.0},
@@ -201,6 +203,9 @@ func _ready() -> void:
 		# QA: chapter 1 already cleared in memory (no save written), Iwa stance, a short boss, then the map
 		autoplay = true; auto_parry = true; auto_steps = []; no_save = true
 		best_chapter = 2; stance = 2; _stance_label()
+		if "--fresh" in OS.get_cmdline_user_args():
+			# C31: first-ever clear, so the map shows the path inking in from an untouched map
+			best_chapter = 0; stance = 0; _stance_label()
 		boss_test_hp = 60.0
 		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
 		kills = CHAPTER_KILLS; spawn_t = 0.3
@@ -1394,8 +1399,24 @@ func _chapter_cleared() -> void:
 			var st: Dictionary = STANCES[best_chapter]
 			map_note = "New stance: %s  (%s)" % [st.name, st.sub]
 	_write_save()
-	get_tree().create_timer(2.2, true, false, true).timeout.connect(_show_map.bind(3.6))
+	get_tree().create_timer(2.2, true, false, true).timeout.connect(_show_map_travel.bind(chapters - 1))
 	get_tree().create_timer(5.9, true, false, true).timeout.connect(_set_palette.bind(chapters % PALETTES.size(), 2.5))
+	# C31: the next chapter opens with a title card as its palette blends in
+	var nxt := chapters % CHAPTER_NAMES.size()
+	get_tree().create_timer(6.3, true, false, true).timeout.connect(_flash_banner.bind("Chapter %d\n%s" % [nxt + 1, CHAPTER_NAMES[nxt]], 2.4))
+
+## C31 map flow: after a clear the map opens and the path from the cleared stop to the next one
+## inks in with a red brush tip travelling along it, then the next stop's ring closes.
+func _show_map_travel(seg: int) -> void:
+	map_anim = seg if seg >= 0 and seg < CHAPTER_NAMES.size() - 1 else -1
+	map_anim_t = 0.0
+	_show_map(3.6)
+	var tw := map_view.create_tween()
+	tw.tween_interval(0.5)
+	tw.tween_method(func(v: float):
+		map_anim_t = v
+		map_view.queue_redraw(), 0.0, 1.0, 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_callback(func(): map_anim = -1)
 
 func _show_map(secs: float) -> void:
 	map_layer.visible = true
@@ -1445,21 +1466,36 @@ func _draw_map() -> void:
 	for i in n - 1:
 		var a := pts[i]; var b := pts[i + 1]
 		var done := i < best_chapter
+		var anim := i == map_anim
 		var steps := 18
 		for k in steps:
 			var t0 := float(k) / steps; var t1 := float(k + 1) / steps
 			var mid := (a + b) * 0.5 + (b - a).orthogonal().normalized() * 18.0
 			var q0 := a.lerp(mid, t0).lerp(mid.lerp(b, t0), t0)
 			var q1 := a.lerp(mid, t1).lerp(mid.lerp(b, t1), t1)
-			if not done and k % 2 == 1:
+			var inked := done and (not anim or t1 <= map_anim_t)
+			var jit := rng.randf_range(-0.6, 0.6)
+			if not inked and k % 2 == 1:
 				continue
-			var w := (5.0 if done else 2.5) * (1.0 - 0.5 * t0) + rng.randf_range(-0.6, 0.6)
-			c.draw_line(q0, q1, Color(ink, 0.9 if done else 0.45), w, true)
+			var w := (5.0 if inked else 2.5) * (1.0 - 0.5 * t0) + jit
+			c.draw_line(q0, q1, Color(ink, 0.9 if inked else 0.45), w, true)
+		if anim and map_anim_t < 1.0:
+			var mid2 := (a + b) * 0.5 + (b - a).orthogonal().normalized() * 18.0
+			var tt := map_anim_t
+			var tip := a.lerp(mid2, tt).lerp(mid2.lerp(b, tt), tt)
+			c.draw_circle(tip, 7.0, ink)
+			c.draw_circle(tip, 4.0, Color(0.72, 0.1, 0.08))
 	for i in n:
 		var p := pts[i]
 		var cleared := i < best_chapter
 		var current := i == mini(chapters, n - 1)
-		if cleared:
+		if current and map_anim == i - 1 and map_anim_t < 1.0:
+			# the ring closes as the brush tip arrives
+			var k2 := clampf((map_anim_t - 0.6) / 0.4, 0.0, 1.0)
+			c.draw_arc(p, 14.0, 0.0, TAU, 28, Color(ink, 0.35), 2.0, true)
+			if k2 > 0.0:
+				c.draw_arc(p, 18.0, 0.3, 0.3 + (TAU - 0.5) * k2, 32, ink, 4.0, true)
+		elif cleared:
 			c.draw_circle(p, 17.0, ink)
 			c.draw_circle(p + Vector2(4, -3), 6.0, Color(0.72, 0.1, 0.08))
 		elif current:
