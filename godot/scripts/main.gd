@@ -62,6 +62,8 @@ var spawned := 0
 var armor_test := false
 var spear_test := false
 var twin_test := false
+var bow_test := false
+var arrows: Array = []   # C33: {node, dir, from, e}
 ## C22 boss: one per chapter (every 8 kills)
 const CHAPTER_KILLS := 8
 var boss: Fighter = null
@@ -101,6 +103,7 @@ var palette_test := false
 var armor_tex: Array[Texture2D] = []
 var spear_tex: Array[Texture2D] = []
 var twin_tex: Array[Texture2D] = []
+var bow_tex: Array[Texture2D] = []
 var boss_tex: Array[Texture2D] = []
 var parry_flash := 0.0
 var kick := Vector2.ZERO   # C25 blade feel: camera push along a heavy cut
@@ -124,6 +127,7 @@ func _ready() -> void:
 	armor_tex = _pages("ronin_armor")
 	spear_tex = _pages("ronin_spear")
 	twin_tex = _pages("ronin_twin")
+	bow_tex = _pages("ronin_bow")
 	boss_tex = _pages("boss")
 	cam = Camera3D.new()
 	cam.fov = 38.0
@@ -207,6 +211,11 @@ func _ready() -> void:
 		get_tree().create_timer(5.5).timeout.connect(func(): auto_parry = true)
 		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
 		_spawn(Vector3(5.5, 0, player.global_position.z))
+	if "--autoplay-bow" in OS.get_cmdline_user_args():
+		# QA C33: archers only on the player's lane; the first arrows land, then the bot cuts them
+		bow_test = true; autoplay = true; auto_steps = []
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		_spawn(Vector3(8.0, 0, player.global_position.z))
 	if "--autoplay-boss" in OS.get_cmdline_user_args():
 		# QA: straight to the chapter boss (150 HP so both phases fit a capture), parry bot plays
 		autoplay = true; auto_parry = true; auto_steps = []
@@ -323,6 +332,13 @@ func _spawn(pos: Vector3) -> void:
 		e.set_meta("lane", 0)
 		e.reskin(spear_tex, "res://art/ronin_spear.json")
 		e.tint = Color(0.94, 0.9, 0.86)
+	elif (spawned >= 8 and spawned % 5 == 3) or bow_test:
+		# C33 archer: keeps its distance and looses arrows down the lane - cut the arrow as it
+		# arrives (face it and swing), step off the lane in depth, or dodge through it
+		e.set_meta("bow", true)
+		e.set_meta("lane", 0)
+		e.reskin(bow_tex, "res://art/ronin_bow.json")
+		e.tint = Color(0.93, 0.9, 0.87)
 	elif (spawned >= 6 and spawned % 4 == 2) or twin_test:
 		# C32 twin-blade foe: two short swords, cuts twice - a second, quicker swing follows the
 		# first, so each blade needs its own parry (or a dodge that clears both)
@@ -353,6 +369,7 @@ func _physics_process(delta: float) -> void:
 	_player(delta)
 	for e in enemies:
 		_enemy(e, delta)
+	_arrows(delta)
 	# retire dead foes, keep the duel going
 	for i in range(enemies.size() - 1, -1, -1):
 		var e: Fighter = enemies[i]
@@ -675,7 +692,13 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.facing = signf(d.x)
 			if not p.alive():
 				e.play("idle"); e.vel = e.vel.lerp(Vector3.ZERO, 6.0 * delta)
-			elif (lane == 0 and dist > 3.0) or (lane != 0 and (absf(d.z) > 3.0 or absf(d.x) > DEPTH_SIDE + 0.5)):
+			elif e.get_meta("bow", false) and (dist > 7.0 or dist < 4.8):
+				# archer holds a 4.8-7 m standoff on the player's lane, backing off when pressed
+				var bgoal := p.global_position - Vector3(e.facing * 6.0, 0, 0)
+				var bdir := (bgoal - e.global_position); bdir.y = 0
+				e.vel = bdir.normalized() * (2.2 if dist > 7.0 else 3.0)
+				e.play("walk")
+			elif not e.get_meta("bow", false) and ((lane == 0 and dist > 3.0) or (lane != 0 and (absf(d.z) > 3.0 or absf(d.x) > DEPTH_SIDE + 0.5))):
 				var goal := p.global_position - Vector3(e.facing * 2.9, 0, 0) if lane == 0 else p.global_position + Vector3(-e.facing * DEPTH_SIDE, 0, lane * 2.6)
 				var dir := (goal - e.global_position); dir.y = 0
 				e.vel = dir.normalized() * 2.6
@@ -706,7 +729,12 @@ func _enemy(e: Fighter, delta: float) -> void:
 			var ew: String = e.get_meta("vw")
 			var zd := 0.0 if ew == "" else signf(d.z)
 			var spear: bool = e.get_meta("spear", false)
-			if spear:
+			if e.get_meta("bow", false):
+				e.vel = e.vel.lerp(Vector3.ZERO, 10.0 * delta)
+				if not e.get_meta("struck") and e.frame >= 2:
+					e.set_meta("struck", true)
+					_loose_arrow(e)
+			elif spear:
 				# C21 thrust: a fast straight lunge along its facing, stopping just short of the player
 				e.vel = Vector3(e.facing * (7.5 if e.frame <= 3 else 0.5), 0, 0)
 				if absf(d.x) < 1.2 or (absf(d.x) < 1.8 and absf(d.z) < 1.4):
@@ -719,7 +747,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 				e.vel = e.vel.lerp(Vector3(0, 0, zd * 1.2), 6.0 * delta)
 				if absf(d.z) < 1.7:
 					e.vel.z = 0.0
-			if not e.get_meta("struck") and e.frame >= 2:
+			if not e.get_meta("struck") and e.frame >= 2 and not e.get_meta("bow", false):
 				e.set_meta("struck", true)
 				var dd: Vector3 = p.global_position - e.global_position
 				var hit_ok := absf(dd.z) < 1.3 and dd.x * e.facing > -0.5 and absf(dd.x) < 3.7
@@ -780,6 +808,49 @@ func _enemy(e: Fighter, delta: float) -> void:
 	e.global_position += e.vel * delta
 	e.posture = minf(100.0, e.posture + 8.0 * delta)
 	e.tick_anim(delta)
+
+## C33 arrows: a thin ink shaft flying down the lane at 15 m/s.
+func _loose_arrow(e: Fighter) -> void:
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new(); bm.size = Vector3(0.95, 0.035, 0.035)
+	mi.mesh = bm
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = Color(0.08, 0.07, 0.06)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
+	mi.global_position = e.global_position + Vector3(e.facing * 0.9, 1.45, 0.12)
+	arrows.append({"node": mi, "dir": e.facing, "from": mi.global_position.x, "e": e})
+	sfx.play("dodge", 0.1)
+
+func _arrows(delta: float) -> void:
+	var p := player
+	for i in range(arrows.size() - 1, -1, -1):
+		var a: Dictionary = arrows[i]
+		var n: MeshInstance3D = a["node"]
+		var dir: float = a["dir"]
+		n.global_position.x += dir * 15.0 * delta
+		var dx := p.global_position.x - n.global_position.x
+		var dz := absf(p.global_position.z - (n.global_position.z - 0.12))
+		var gone := absf(n.global_position.x - float(a["from"])) > 16.0
+		if not gone and p.alive() and dz < 0.6 and dx * dir < 1.1 and dx * dir > -0.4:
+			if p.state == "attack" and p.facing == -dir and dx * dir > 0.2:
+				# cut out of the air
+				fx.clash(n.global_position, -dir, 0.7)
+				sfx.play("parry")
+				hitstop = 0.05; shake = 0.06
+				fx.slash(n.global_position + Vector3(0, -0.2, 0), p.facing, 0.8, 0.3, 0.0, 1)
+				if autoplay and bow_test:
+					print("QA arrow cut")
+				gone = true
+			elif p.state != "dodge" and dx * dir < 0.4 and is_instance_valid(a["e"]):
+				_player_hurt(14.0, dir, a["e"])
+				if autoplay and bow_test:
+					print("QA arrow hit")
+				gone = true
+		if gone:
+			n.queue_free(); arrows.remove_at(i)
 
 func _player_hurt(dmg: float, dir: float, by: Fighter) -> void:
 	var p := player
@@ -947,7 +1018,10 @@ func _process(delta: float) -> void:
 		Engine.time_scale = 1.0; slow_zoom = 0.0
 
 func _restart() -> void:
-	Engine.time_scale = 1.0; slow_t = 0.0; slow_zoom = 0.0; clean_hits = 0; issen_t = 0.0
+	Engine.time_scale = 1.0; slow_t = 0.0; slow_zoom = 0.0; clean_hits = 0
+	for a in arrows:
+		(a["node"] as Node).queue_free()
+	arrows.clear(); issen_t = 0.0
 	for e in enemies:
 		e.queue_free()
 	for b in ebars:
@@ -983,13 +1057,21 @@ func _camera(delta: float) -> void:
 		for e in enemies:
 			if not e.alive() and e.state_t < 1.6 and (e.global_position - player.global_position).length() < 8.0:
 				tgt = e
+	if tgt == null:
+		# C33: an archer at its standoff sits past the melee radius; keep it framed
+		for e in enemies:
+			if e.alive() and e.get_meta("bow", false) and (e.global_position - player.global_position).length() < 10.0:
+				tgt = e
 	var zoom := 1.0
+	var bow_frame: bool = tgt != null and bool(tgt.get_meta("bow", false))
 	if tgt:
 		# narrow screens: centre the pair and pull back when they spread wider than the frame
-		focus = focus.lerp(tgt.global_position, 0.5 if portrait else 0.35)
+		focus = focus.lerp(tgt.global_position, 0.5 if (portrait or bow_frame) else 0.35)
 		if portrait:
 			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 3.6, 1.0, 1.35)
-	var off := Vector3(0, 3.6, 6.0) if not portrait else Vector3(0, 5.4, 4.3) * zoom
+		elif bow_frame:
+			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 5.0, 1.0, 1.3)
+	var off := Vector3(0, 3.6, 6.0) * (zoom if bow_frame else 1.0) if not portrait else Vector3(0, 5.4, 4.3) * zoom
 	# F-22: a foe lined up in depth hides behind (or in front of) the player; swing the camera
 	# toward the foe's side so the line of sight opens a gap between the two figures
 	var side := 0.0
@@ -1215,7 +1297,7 @@ func _hud_update() -> void:
 			var f: ColorRect = b.get_node("F")
 			f.size.x = f.get_meta("w") * e.hp / e.max_hp
 			var ar := int(e.get_meta("armor", 0))
-			(b.get_node("L") as Label).text = ("spear  " if e.get_meta("spear", false) else "") + ("twin  " if e.get_meta("twin", false) else "") + ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
+			(b.get_node("L") as Label).text = ("spear  " if e.get_meta("spear", false) else "") + ("twin  " if e.get_meta("twin", false) else "") + ("bow  " if e.get_meta("bow", false) else "") + ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
 
 # ------------------------------------------------------------------ touch
 func _ring(sz: float, glyph: String) -> TextureRect:
@@ -1300,6 +1382,11 @@ func _autoplay(delta: float) -> void:
 		# QA bot: cut 0.1 s before every foe blade lands, then keep cutting the staggered foe
 		for e in enemies:
 			if e.alive() and ((int(elapsed / 4.0) % 2 == 1 and e.state == "windup" and absf(e.state_t - 0.56) < delta * 0.6) or (int(elapsed / 4.0) % 2 == 0 and e.state == "swing" and not e.get_meta("struck") and absf(e.state_t - 0.04) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.12) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.4) < delta * 0.6)):
+				atk_buf = 0.3; atk_press_t = elapsed
+	if bow_test and auto_t > 6.0:
+		for a in arrows:
+			var ax: float = (a["node"] as Node3D).global_position.x
+			if (player.global_position.x - ax) * float(a["dir"]) > 0.0 and absf(player.global_position.x - ax) < 1.9 and player.state != "attack":
 				atk_buf = 0.3; atk_press_t = elapsed
 	while auto_steps.size() > 0 and auto_t >= float(auto_steps[0][0]):
 		var st: Array = auto_steps.pop_front()

@@ -216,7 +216,7 @@ def draw_hakama_leg(c, hip, knee, foot, shade):
 # ---------------------------------------------------------------- ronin
 RDIM = dict(thigh=44, shin=42, torso=58, neck=4, head=16, uarm=30, farm=28, pole=170)
 
-VARIANT = ''  # C26: '' kasa ronin, 'armor' lacquer plates, 'spear' yari, 'boss' Kageyama; C32 'twin' two short blades
+VARIANT = ''  # C26: '' kasa ronin, 'armor' lacquer plates, 'spear' yari, 'boss' Kageyama; C32 'twin' two short blades; C33 'bow' yumi archer
 
 def draw_ronin(c, J, pose):
     rng = c.rng
@@ -235,6 +235,19 @@ def draw_ronin(c, J, pose):
             for k in range(5):
                 c.stroke([tuple(tip - d * 6), tuple(tip - d * (22 + k * 3) + q * (k - 2) * 3)], w=1.6, dry=0.6, ink=0.85)
             return hd
+        if VARIANT == 'bow':
+            # C33: a tall asymmetric yumi held upright in the lead hand (grip below centre), string
+            # drawn back toward the chest; returns the arrow tip so tips/aim follow the bow hand
+            d = pvec(J, V(pole_a, 1.0)); d = d / (np.linalg.norm(d) + 1e-6); q = np.array([-d[1], d[0]])
+            up = q if q[1] < 0 else -q
+            top = hnd + up * 118 + d * 14; bot = hnd - up * 64 + d * 8
+            c.stroke([tuple(bot), tuple(hnd + d * 16 - up * 20), tuple(hnd + d * 18 + up * 40), tuple(top)], w=3.0, dry=0.3, taper=(0.3, 0.3))
+            c.stroke([tuple(hnd), tuple(hnd - d * 3)], w=5.0, dry=0.2)
+            nock = lerp(J['chest'], hnd, 0.35)
+            c.stroke([tuple(top), tuple(nock), tuple(bot)], w=1.0, dry=0.5, ink=0.7)
+            tip = hnd + d * 34
+            c.stroke([tuple(nock), tuple(tip)], w=1.8, dry=0.3)
+            return tip
         if VARIANT == 'twin':
             # C32: a short uchigatana in the lead hand, a slight curve, no pole behind the grip
             tip = hnd + pvec(J, V(pole_a, 92))
