@@ -102,8 +102,8 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
   #endscreen{justify-content:flex-start;padding-top:9vh;}
   #endscreen .kanji-big{flex:none;}
   #endscreen .prompt{margin-top:auto;margin-bottom:8vh;}
-  body.prestart #timebox, body.prestart #bossbars, body.prestart #playerhud, body.prestart #touchui{display:none!important;}
-  body.endui #timebox, body.endui #bossbars, body.endui #playerhud, body.endui #touchui{display:none!important;}
+  body.prestart #timebox, body.prestart #bossbars, body.prestart #minbars, body.prestart #playerhud, body.prestart #touchui{display:none!important;}
+  body.endui #timebox, body.endui #bossbars, body.endui #minbars, body.endui #playerhud, body.endui #touchui{display:none!important;}
   .qtoggle{margin-top:16px;font-size:13px;opacity:.55;letter-spacing:.08em;cursor:pointer;}
   .kanji-big{font-size:min(34vmin,180px);line-height:1;color:var(--ink);
     font-family:'Hiragino Mincho ProN','Yu Mincho','MS Mincho',serif;
