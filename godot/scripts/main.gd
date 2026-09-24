@@ -160,6 +160,7 @@ func _ready() -> void:
 	gm.shader = load("res://shaders/ground.gdshader")
 	ground.material_override = gm
 	ground_mat = gm
+	gm.set_shader_parameter("noise_tex", load("res://art/noise.png"))
 	add_child(ground)
 	_grass()
 	sfx = Sfx.new()
@@ -1056,11 +1057,14 @@ func _process(delta: float) -> void:
 			perf_arr.sort()
 			var p99: float = perf_arr[int(perf_arr.size() * 0.99)]
 			var dc := RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+			var tproc := Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+			var tphys := Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+			var nodes := Performance.get_monitor(Performance.OBJECT_NODE_COUNT)
 			var prims := RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
-			print("PERF avg_fps=%.1f p99_ms=%.1f worst_ms=%.1f frames=%d phys_ms=%.2f draws=%d prims=%d" % [perf_n / perf_t, p99 * 1000.0, perf_worst * 1000.0, perf_n, perf_phys_us / 1000.0 / maxf(1.0, perf_n), dc, prims])
+			print("PERF avg_fps=%.1f p99_ms=%.1f worst_ms=%.1f frames=%d phys_ms=%.2f draws=%d prims=%d tproc=%.1f tphys=%.1f nodes=%d" % [perf_n / perf_t, p99 * 1000.0, perf_worst * 1000.0, perf_n, perf_phys_us / 1000.0 / maxf(1.0, perf_n), dc, prims, tproc, tphys, nodes])
 			if OS.has_feature("web"):
 				JavaScriptBridge.eval("document.title = 'PERF fps=%.1f p99=%.1f'" % [perf_n / perf_t, p99 * 1000.0])
-				JavaScriptBridge.eval("fetch('/perf?fps=%.1f&p99=%.1f&phys=%.2f&draws=%d&prims=%d').catch(function(){})" % [perf_n / perf_t, p99 * 1000.0, perf_phys_us / 1000.0 / maxf(1.0, perf_n), dc, prims])
+				JavaScriptBridge.eval("fetch('/perf?fps=%.1f&p99=%.1f&phys=%.2f&draws=%d&prims=%d&tproc=%.1f&tphys=%.1f&nodes=%d').catch(function(){})" % [perf_n / perf_t, p99 * 1000.0, perf_phys_us / 1000.0 / maxf(1.0, perf_n), dc, prims, tproc, tphys, nodes])
 			perf_t = 0.0; perf_n = 0; perf_arr.clear(); perf_worst = 0.0; perf_phys_us = 0
 	if slow_t <= 0.0:
 		return
