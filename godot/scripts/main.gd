@@ -96,6 +96,9 @@ const PALETTES := [
 	{"paper": Color(0.93, 0.93, 0.92), "fleck": Color(0.36, 0.40, 0.46), "ink": Color(0.95, 1.0, 1.1), "far": Color(0.66, 0.69, 0.74), "dens": 0.45},
 	{"paper": Color(0.87, 0.75, 0.63), "fleck": Color(0.32, 0.13, 0.09), "ink": Color(1.1, 0.9, 0.85), "far": Color(0.52, 0.41, 0.37), "dens": 0.85},
 ]
+var ground_node: MeshInstance3D
+var post_rect: ColorRect
+var grass_nodes: Array[MultiMeshInstance3D] = []
 var ground_mat: ShaderMaterial
 var grass_mats: Array[ShaderMaterial] = []
 var perf_mode := false
@@ -103,6 +106,10 @@ var perf_t := 0.0
 var perf_n := 0
 var perf_worst := 0.0
 var perf_arr: Array = []
+var perf_phys_us := 0
+var _pt0 := 0
+var web_q := ""
+var web_toggles_done := false
 var palette_i := 0
 var palette_test := false
 var armor_tex: Array[Texture2D] = []
@@ -118,6 +125,10 @@ var strike_issen := false  # C43: the striking cut was the issen dash (profile 4
 
 func _ready() -> void:
 	perf_mode = "--perf" in OS.get_cmdline_user_args()
+	if OS.has_feature("web"):
+		var q: String = str(JavaScriptBridge.eval("window.location.search"))
+		if "perf" in q: perf_mode = true
+		web_q = q
 	autoplay = "--autoplay" in OS.get_cmdline_user_args() or "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args()
 	if "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args():
 		# locomotion views: toward camera, away, then sideways
@@ -141,6 +152,7 @@ func _ready() -> void:
 	cam.far = 120.0
 	add_child(cam)
 	var ground := MeshInstance3D.new()
+	ground_node = ground
 	var pm := PlaneMesh.new()
 	pm.size = Vector2(160, 160)
 	ground.mesh = pm
@@ -313,6 +325,7 @@ func _grass() -> void:
 		m.set_shader_parameter("tex", load("res://art/grass%d.png" % v))
 		mi.material_override = m
 		grass_mats.append(m)
+		grass_nodes.append(mi)
 		add_child(mi)
 
 ## Where a foe squares up: 0 beside the player (profile duel), +1 in front of the player
@@ -366,6 +379,7 @@ func _spawn(pos: Vector3) -> void:
 
 # ------------------------------------------------------------------ loop
 func _physics_process(delta: float) -> void:
+	_pt0 = Time.get_ticks_usec()
 	if autoplay:
 		_autoplay(delta)
 	_hit_jitter(delta)
@@ -1026,15 +1040,28 @@ func _slowmo(dur: float, scale: float, zoom: float) -> void:
 	set_meta("slow_dur", slow_t)
 
 func _process(delta: float) -> void:
+	if not web_toggles_done and web_q != "":
+		web_toggles_done = true
+		if "nopost" in web_q and post_rect: post_rect.visible = false
+		if "noground" in web_q and ground_node: ground_node.visible = false
+		if "nograss" in web_q:
+			for mi in grass_nodes: mi.visible = false
+	var _pt1 := Time.get_ticks_usec()  # noqa
+	perf_phys_us += _pt1 - _pt0
 	if perf_mode:
 		perf_t += delta; perf_n += 1
 		if delta > perf_worst: perf_worst = delta
 		perf_arr.push_back(delta)
-		if perf_t >= 12.0:
+		if perf_t >= (6.0 if OS.has_feature("web") else 12.0):
 			perf_arr.sort()
 			var p99: float = perf_arr[int(perf_arr.size() * 0.99)]
-			print("PERF avg_fps=%.1f p99_ms=%.1f worst_ms=%.1f frames=%d" % [perf_n / perf_t, p99 * 1000.0, perf_worst * 1000.0, perf_n])
-			perf_t = 0.0; perf_n = 0; perf_arr.clear(); perf_worst = 0.0
+			var dc := RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+			var prims := RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
+			print("PERF avg_fps=%.1f p99_ms=%.1f worst_ms=%.1f frames=%d phys_ms=%.2f draws=%d prims=%d" % [perf_n / perf_t, p99 * 1000.0, perf_worst * 1000.0, perf_n, perf_phys_us / 1000.0 / maxf(1.0, perf_n), dc, prims])
+			if OS.has_feature("web"):
+				JavaScriptBridge.eval("document.title = 'PERF fps=%.1f p99=%.1f'" % [perf_n / perf_t, p99 * 1000.0])
+				JavaScriptBridge.eval("fetch('/perf?fps=%.1f&p99=%.1f&phys=%.2f&draws=%d&prims=%d').catch(function(){})" % [perf_n / perf_t, p99 * 1000.0, perf_phys_us / 1000.0 / maxf(1.0, perf_n), dc, prims])
+			perf_t = 0.0; perf_n = 0; perf_arr.clear(); perf_worst = 0.0; perf_phys_us = 0
 	if slow_t <= 0.0:
 		return
 	var real := delta / maxf(Engine.time_scale, 0.01)
@@ -1175,6 +1202,7 @@ func _hud() -> void:
 	post_mat = ShaderMaterial.new(); post_mat.shader = load("res://shaders/post.gdshader")
 	post_mat.set_shader_parameter("hurt", 0.0)
 	pr.material = post_mat
+	post_rect = pr
 	post.add_child(pr)
 	hud = CanvasLayer.new(); hud.layer = 2
 	add_child(hud)

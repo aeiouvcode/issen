@@ -37,3 +37,8 @@ theme/custom_font="res://art/brush.ttf"
 [physics]
 
 common/physics_interpolation=true
+
+[rendering]
+
+viewport/scaling_3d/mode=0
+viewport/scaling_3d/scale=0.85
