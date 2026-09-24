@@ -50,3 +50,4 @@ Pages serves main root. The Godot preview lives in main:/godot/ (index.html, ind
 Cycle 28: store screenshots re-captured with new foe art + perfect-parry paper-white wash. Next: distance-to-reference gap list (blade feel first). Store submission still needs Naksh (Play Console account, contact email, privacy URL).
 Cycle 29: hit shiver on struck foes (runs through hit-stop). Next gap list: longer combo chains (4th cut / directional finisher), chapter-to-chapter map flow, then enemy variety. Store submission still needs Naksh.
 Cycle 30: four-cut combo ending in the issen dash-through. Next gaps: chapter-to-chapter map flow, enemy variety, then a directional (up/down) finisher variant. Store submission still needs Naksh.
+Cycle 31: map travel animation + chapter title card, and the noto sheath sound after a boss. Next gaps: enemy variety (a new foe type per chapter), directional finisher variant, then another reference audit. Store submission still needs Naksh.
