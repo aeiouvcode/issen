@@ -432,6 +432,12 @@ func _player(delta: float) -> void:
 		"attack":
 			if combo < 3 or p.state_t > 0.3:
 				p.vel = p.vel.lerp(Vector3.ZERO, 9.0 * delta)
+			if combo == 3 and issen_t > 0.15:
+				# C32 blade feel: the issen dash leaves ink afterimages, so the one flash reads as travel
+				ghost_t -= delta
+				if ghost_t <= 0.0:
+					ghost_t = 0.033
+					fx.ghost(p.sprite, p.global_position)
 			# lunge stops at blade contact instead of carrying the figures into each other
 			var near := _nearest(p.global_position, 3.0)
 			if combo < 3 and near and (near.global_position.x - p.global_position.x) * p.facing > 0.0 and absf(near.global_position.x - p.global_position.x) < 2.7:
