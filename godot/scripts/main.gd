@@ -635,6 +635,8 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 	fx.burst(hitpos, dir, 1.3 if heavy else 0.9, 0.35)
 	fx.red_mark(e, 1.6)
 	fx.stain(e.global_position + Vector3(dir * 0.6, 0, 0), 0.008, null, Color(1, 1, 1, 0.7))
+	if heavy or riposte:
+		fx.scar(e.global_position, dir, riposte)
 	hitstop = 0.06 if not heavy else 0.1
 	shake = 0.18 if heavy else 0.1
 	if heavy or riposte:

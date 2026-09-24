@@ -165,6 +165,13 @@ func stain(pos: Vector3, size: float, tex: Texture2D = null, col := Color(1, 1, 
 func footprint(pos: Vector3) -> void:
 	stain(pos, randf_range(0.003, 0.0045), dab_tex, Color(1, 1, 1, 0.85))
 
+## C34 blade feel: a landed heavy cut scars the parchment - the slash stroke laid flat
+## along the cut line, stretched thin, drying out with the other stains.
+func scar(pos: Vector3, dir: float, strong := false) -> void:
+	var d := dir if dir != 0.0 else 1.0
+	var s := stain(pos + Vector3(d * 0.55, 0, 0.28), 0.009 if strong else 0.0065, slash_tex[randi() % 2], Color(0.38, 0.36, 0.34, 0.6), 0.0 if d > 0.0 else PI)
+	s.scale = Vector3(2.1 if strong else 1.6, 1.0, 0.35)
+
 func _process(delta: float) -> void:
 	var keep: Array = []
 	for it in items:
