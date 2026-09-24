@@ -1,6 +1,7 @@
 # Handoff
 
 ## Resume here
+Cycle 41: residual 2 done - HUD clearance polish. Foe HP bar: the chips-drop test only covered the bar rect, not the label riding 16 px above it, so the label could overlap the chips row; the test rect now includes the label. Boss bar name: dark ink text could sit on the dark boss sprite mid-swing; it now carries a paper outline (like the other labels). Verified at 1280x720 (--autoplay + --autoplay-boss, name readable over the topknot) and 390x844 (unchanged), 0 errors. Next: residual list below. Store submission still needs Naksh.
 Cycle 40: F-07 done - boss framing. The boss sheet (~4.4 m tall with the 1.08 sprite scale) nearly filled the ~4.6 m landscape frame and cropped at close range. Camera gains boss_frame (tgt meta "boss"): focus centres the pair, landscape pulls back zoom 1.15-1.4 (off scales like bow_frame), portrait band 1.1-1.4. Verified: boss fully framed at melee range at 1280x720 and 390x844 (--autoplay-boss), normal --autoplay unchanged. Next: residual list below. Store submission still needs Naksh.
 Cycle 39: fresh full distance-to-reference audit (the C34 list was all closed) - re-graded every item against the yt-dlp frames. Only real miss: landscape camera sat too low (~22 deg elevation, offset (0,3.6,6.0)) vs the reference's elevated ~35 deg view (kasa tops, wider ground spread). Raised to offset (0,4.6,5.2), look y 1.2 -> 1.0, landscape only - portrait already sits ~32 deg. Verified at 1280x720, 390x844 and --autoplay-boss (boss bar still clear, 0 errors). Next: F-07 (boss kasa dominates at close range). Store submission still needs Naksh.
 Cycle 38: gap 4 done - fx.burst: main cluster 34+30p -> 40+32p tighter (spread 0.45/0.4 -> 0.36/0.32, sizes up 0.4-1.2 -> 0.5-1.3) plus a new mid-size blot ring hugging the hit (12+10p, 0.0042 px, stddev 0.18). Verified at 1280x720 + 390x844. Next: fresh full reference audit (the C34 list is now all closed - re-grade everything against the footage), then F-07 (boss kasa dominates at close range). Store submission still needs Naksh.
@@ -71,6 +72,6 @@ Cycle 34: fresh distance-to-reference audit (yt-dlp frames vs Movie Maker captur
 
 ## C39 audit residuals (ranked)
 1. [done C40] F-07: boss sprite filled/cropped the landscape frame at close range. boss_frame camera pull-back added. Note: the boss has no kasa (bare head, topknot) - the item meant the whole sprite mass.
-2. Minor: at the raised landscape angle the foe HP bar can brush the bottom of the chips row, and the boss topknot can touch the boss-bar name text mid-swing (both cosmetic, watch them).
+2. [done C41] Foe HP label could overlap the chips row (test rect now covers the label); boss-bar name now has a paper outline so the topknot passing behind it stays readable.
 3. UI pips/brush HP stroke from the reference stay an accepted divergence (playability adaptation).
-4. Next candidates when the residuals are exhausted: another fresh reference audit, or roadmap polish (blade feel, store assets refresh).
+4. Next candidates with the C39 residuals exhausted: another fresh reference audit, or roadmap polish (blade feel, store assets refresh).
