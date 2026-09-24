@@ -1525,6 +1525,7 @@ const boss = {
   state:'vanish', stateT:0, thinkT:1.2, nextAtk:'spin', leapFrom:new THREE.Vector3(), leapTo:new THREE.Vector3(),
   alive:true, phase:1, _wspeed:1, _iaiChain:false,
 };
+player.root.scale.setScalar(1.08); // subject presence: models carry the larger read, not the camera (M90 lesson)
 scene.add(player.root); scene.add(boss.root);
 player.root.position.copy(player.pos);
 boss.pos.set(0,0,-7); boss.state='idle'; // the waiting duel: he is already there, in the mist
@@ -1545,7 +1546,7 @@ const minion = {
   hp:70, maxhp:70, posture:50, maxposture:50,
   state:'idle', stateT:0, thinkT:3.2, alive:true, _hit:false, _spawnT:Infinity, _armor:false,
 };
-minion.root.scale.setScalar(.88);
+minion.root.scale.setScalar(.95);
 minion.root.position.copy(minion.pos);
 scene.add(minion.root);
 minion._fadeMats=[];
@@ -1582,7 +1583,7 @@ const lancer = {
   hp:90, maxhp:90, posture:70, maxposture:70,
   state:'idle', stateT:0, thinkT:1.6, alive:false, _hit:false, _spawnT:Infinity,
 };
-lancer.root.scale.setScalar(.94);
+lancer.root.scale.setScalar(1.0);
 lancer.root.position.copy(lancer.pos);
 scene.add(lancer.root);
 // the spiked round shield on the left forearm: the reference's signature disc
@@ -3455,7 +3456,7 @@ function resetFight(){
   // the iron hall reads colder: ash-paper air over the same ground
   scene.background.set(G.chapter===3?0xd9d3c0:0xece1c2);
   scene.fog.color.set(G.chapter===3?0xd3cdb8:0xe7dcbd);
-  boss.root.scale.setScalar(G.chapter===3?1.08:1); // iron bulk
+  boss.root.scale.setScalar(1.1*(G.chapter===3?1.08:1)); // larger read + iron bulk
   minion.pos.set(3.4,0,-8.6); minion.hp=70; minion.posture=50; minion.alive=true; minion._hit=false;
   minion.root.visible=true; minion.state='idle'; minion.stateT=0; minion.thinkT=3.2;
   lancer.pos.set(-9.5,0,-9.5); lancer.hp=90; lancer.posture=70; lancer.alive=false; lancer._hit=false; lancer._spawnT=Infinity;
