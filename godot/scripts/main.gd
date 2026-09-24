@@ -40,6 +40,7 @@ var joy_base: Control
 var touch_atk := false
 var touch_dodge := false
 var hitstop := 0.0
+var issen_t := 0.0  # C30: while > 0 the player dashes through foes (spacing push off)
 ## Blade feel (C15): parry window, clean-streak finisher, ink-splash kills
 const PARRY_WIN := 0.22        # seconds before a foe's blade lands in which a cut deflects it
 const PERFECT_WIN := 0.08     # the last slice of the window: a perfect parry
@@ -156,6 +157,15 @@ func _ready() -> void:
 		autoplay = true; auto_steps = [[3.0, "attack"], [3.25, "attack"], [3.5, "attack"], [4.6, "attack"], [4.85, "attack"], [5.1, "attack"]]
 		enemies[0].set_meta("lane", -1)
 		enemies[0].hp = 52.0  # dies inside the second combo, so the turned death row is captured
+
+	if "--autoplay-combo" in OS.get_cmdline_user_args():
+		# QA C30: one plain foe holds back; the bot mashes cut so the full four-cut chain plays out
+		autoplay = true; auto_steps = []
+		enemies[0].set_meta("cool", 99.0)
+		enemies[0].max_hp = 200.0; enemies[0].hp = 200.0
+		enemies[0].global_position.z = player.global_position.z; enemies[0].set_meta("lane", 0)
+		for i in 14:
+			auto_steps.append([2.0 + i * 0.16, "attack"])
 
 	if "--autoplay-armor" in OS.get_cmdline_user_args():
 		# QA: every spawn is armored; the parry bot plays so plate breaks, the break stagger and kills are captured
@@ -398,22 +408,23 @@ func _player(delta: float) -> void:
 				p.state = "idle"; p.play("idle" + p.view)
 				p.vel = p.vel.lerp(Vector3.ZERO, 12.0 * delta)
 		"attack":
-			p.vel = p.vel.lerp(Vector3.ZERO, 9.0 * delta)
+			if combo < 3 or p.state_t > 0.3:
+				p.vel = p.vel.lerp(Vector3.ZERO, 9.0 * delta)
 			# lunge stops at blade contact instead of carrying the figures into each other
 			var near := _nearest(p.global_position, 3.0)
-			if near and (near.global_position.x - p.global_position.x) * p.facing > 0.0 and absf(near.global_position.x - p.global_position.x) < 2.7:
+			if combo < 3 and near and (near.global_position.x - p.global_position.x) * p.facing > 0.0 and absf(near.global_position.x - p.global_position.x) < 2.7:
 				p.vel.x = 0.0
 			if near and p.view != "" and absf(near.global_position.z - p.global_position.z) < 1.8:
 				p.vel.z = 0.0
 			if want_atk:
 				atk_buf = 0.0
 				queued = true
-			var strike := 2 if combo < 2 else 3
+			var strike := 3 if combo == 2 else 2
 			if not hit_done and p.frame >= strike:
 				hit_done = true
 				_player_strike()
-			if p.anim_done or (queued and p.frame >= p.frame_count() - 2 and combo < 2):
-				if queued and combo < 2:
+			if p.anim_done or (queued and p.frame >= p.frame_count() - 2 and combo < 3):
+				if queued and combo < 3:
 					combo += 1
 					_start_attack()
 				else:
@@ -438,10 +449,13 @@ func _player(delta: float) -> void:
 			if p.state_t > 3.0 and (want_atk or want_dodge):
 				_restart()
 	p.global_position += p.vel * delta
+	if issen_t > 0.0 and issen_t - delta <= 0.0 and autoplay and enemies.size() > 0:
+		print("QA issen end px=%.2f fx=%.2f" % [p.global_position.x, enemies[0].global_position.x])
+	issen_t = maxf(0.0, issen_t - delta)
 	p.global_position.x = clampf(p.global_position.x, -40, 40)
 	p.global_position.z = clampf(p.global_position.z, -40, 25)
 	p.posture = minf(100.0, p.posture + 12.0 * delta)
-	p.tick_anim(delta * (float(STANCES[stance].speed) if p.state == "attack" else 1.0))
+	p.tick_anim(delta * (float(STANCES[stance].speed) * (1.35 if combo == 3 else 1.0) if p.state == "attack" else 1.0))
 
 func _start_attack() -> void:
 	var p := player
@@ -455,30 +469,43 @@ func _start_attack() -> void:
 		var td: Vector3 = tgt.global_position - p.global_position
 		if absf(td.z) > absf(td.x) * 1.1:
 			p.view = "_f" if td.z > 0.0 else "_b"
-	p.play(["atk1", "atk2", "atk3"][combo] + p.view, true)
-	sfx.play("swing_heavy" if combo == 2 else "swing")
+	p.play(["atk1", "atk2", "atk3", "atk1"][combo] + p.view, true)
+	sfx.play("swing_heavy" if combo >= 2 else "swing")
 	queued = false; hit_done = false
 	var mv := _move_input()
 	p.vel = Vector3(p.facing * 3.2, 0, mv.y * 1.5) if p.view == "" else Vector3(p.facing * 1.0, 0, (3.2 if p.view == "_f" else -3.2))
+	if combo == 3 and p.view == "":
+		# C30 fourth cut, "issen": a fast draw that dashes clean through the foe's line (profile
+		# only; in the 3/4 views it stays a normal lunge so the player never runs at the camera)
+		p.vel = Vector3(p.facing * 15.0, 0, mv.y * 1.5)
+		fx.puff(p.global_position)
+		ghost_t = 0.0
+		issen_t = 0.45
 
 func _player_strike() -> void:
 	var p := player
-	var dmg: float = [12.0, 14.0, 24.0][combo] * float(STANCES[stance].dmg)
-	var yoff: float = [0.1, 0.3, -0.1][combo]
+	var dmg: float = [12.0, 14.0, 24.0, 30.0][combo] * float(STANCES[stance].dmg)
+	var yoff: float = [0.1, 0.3, -0.1, 0.25][combo]
 	var zdir := 0.0 if p.view == "" else (1.0 if p.view == "_f" else -1.0)
 	var anchor := p.global_position + (Vector3(p.facing * 1.1, yoff, 0.2) if zdir == 0.0 else Vector3(p.facing * 0.4, yoff, zdir * 1.0 + 0.2))
-	var sk: float = [1.2, 1.15, 1.45][combo] * float(STANCES[stance].sk)
-	fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.42, 0.0, combo)
+	var sk: float = [1.2, 1.15, 1.45, 1.9][combo] * float(STANCES[stance].sk)
+	fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.42 if combo < 3 else 0.55, 0.0, combo)
+	if combo == 3:
+		fx.dash_mark(p.global_position, 0.0)
+		if autoplay:
+			print("QA issen cut px=%.2f fx=%.2f" % [p.global_position.x, enemies[0].global_position.x if enemies.size() > 0 else 0.0])
 	for e in enemies:
 		if not e.alive():
 			continue
 		var d: Vector3 = e.global_position - p.global_position
-		var in_arc := absf(d.z) < 1.3 and d.x * p.facing > -0.4 and absf(d.x) < 3.4
+		var in_arc := absf(d.z) < 1.3 and d.x * p.facing > -0.4 and absf(d.x) < (3.4 if combo < 3 else 4.2)
 		if zdir != 0.0:
 			in_arc = absf(d.x) < 2.1 and d.z * zdir > -0.4 and absf(d.z) < 3.2
 		if in_arc:
 			strike_zdir = zdir; strike_dz = d.z
-			_hurt(e, dmg, p.facing, combo == 2)
+			_hurt(e, dmg, p.facing, combo >= 2)
+			if combo == 3 and e.alive():
+				e.vel.x *= 0.15  # the issen cut passes through; the foe is held in place, not shoved ahead
 
 func _start_dodge(mv: Vector2) -> void:
 	var p := player
@@ -691,7 +718,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 			var s: Vector3 = e.global_position - o.global_position
 			if s.length() < 1.4 and s.length() > 0.001:
 				e.global_position += s.normalized() * (1.4 - s.length()) * 0.5
-	if e.alive() and p.alive():
+	if e.alive() and p.alive() and issen_t <= 0.0:
 		var sp: Vector3 = e.global_position - p.global_position
 		sp.y = 0.0
 		var sl := Vector2(sp.x, sp.z * 1.6).length()
@@ -867,7 +894,7 @@ func _process(delta: float) -> void:
 		Engine.time_scale = 1.0; slow_zoom = 0.0
 
 func _restart() -> void:
-	Engine.time_scale = 1.0; slow_t = 0.0; slow_zoom = 0.0; clean_hits = 0
+	Engine.time_scale = 1.0; slow_t = 0.0; slow_zoom = 0.0; clean_hits = 0; issen_t = 0.0
 	for e in enemies:
 		e.queue_free()
 	for b in ebars:
