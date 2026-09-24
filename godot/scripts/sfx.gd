@@ -33,6 +33,7 @@ func _ready() -> void:
 	sounds["patter"] = _wav(_patter(), -19.0)
 	sounds["armor"] = _wav(_clack(0.16, 420.0), -14.0)
 	sounds["armor_break"] = _wav(_clack(0.34, 300.0), -11.0)
+	sounds["sheath"] = _wav(_sheath(), -17.0)
 	sounds["dodge"] = _wav(_sweep(0.26, 1400.0, 500.0, 0.0), -16.0)
 	# C20 music: a sparse taiko + shamisen part, synthesized like everything else
 	sounds["taiko"] = _wav(_impact(0.7, 58.0, 0.12), -13.0)
@@ -214,6 +215,21 @@ func _ring(dur: float) -> PackedFloat32Array:
 		var t := float(i) / RATE
 		var r := sin(TAU * 1180.0 * t) * 0.5 + sin(TAU * 1730.0 * t) * 0.32 + sin(TAU * 2410.0 * t) * 0.12
 		out[i] = r * exp(-t * 9.0) * 0.55 + (knock[i] * 0.8 if i < knock.size() else 0.0)
+	return out
+
+## C31 noto: the blade slides home (soft low-passed hiss rising a little), then the guard
+## meets the mouth of the scabbard - a small dull click with a faint, fast-dying ring.
+func _sheath() -> PackedFloat32Array:
+	var slide := _sweep(0.42, 500.0, 1300.0, 0.0)
+	var click := _clack(0.09, 640.0)
+	var off := int(0.44 * RATE)
+	var out := PackedFloat32Array(); out.resize(off + int(0.3 * RATE))
+	for i in slide.size():
+		out[i] = slide[i] * 0.45
+	for i in out.size() - off:
+		var t := float(i) / RATE
+		var c := click[i] if i < click.size() else 0.0
+		out[off + i] += c * 1.0 + sin(TAU * 980.0 * t) * exp(-t * 26.0) * 0.14
 	return out
 
 ## C15 finisher: a slow low cut through air, then the deep kill thump under it.

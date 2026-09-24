@@ -611,6 +611,8 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 			_flash_banner("Chapter %d cleared.  Kageyama falls" % chapters, 3.0)
 			spawn_t = 6.5
 			_chapter_cleared()
+			# C31 blade feel: after the last cut the blade goes home - noto slide and guard click
+			get_tree().create_timer(1.1, true, false, true).timeout.connect(sfx.play.bind("sheath", 0.0))
 		if finisher:
 			_finisher(e, dir)
 		kills += 1
