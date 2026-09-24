@@ -67,14 +67,23 @@ func burst(pos: Vector3, dir: float, power := 1.0, red := 0.25) -> void:
 		w.global_position = pos + Vector3(randfn(0.0, 0.25) + dir * 0.3, randfn(0.0, 0.2), 0.08)
 		w.rotation.z = randf() * TAU
 		items.append({"node": w, "kind": "bloom", "t": 0.0, "dur": randf_range(0.5, 0.75), "s0": w.pixel_size})
-	for i in int(34 + 30 * power):
-		var s := _billboard(blots[3 + randi() % 3] if randf() < 0.6 else blots[randi() % 3], 0.0026 * power * randf_range(0.4, 1.2))
+	for i in int(40 + 32 * power):
+		var s := _billboard(blots[3 + randi() % 3] if randf() < 0.6 else blots[randi() % 3], 0.0026 * power * randf_range(0.5, 1.3))
 		s.modulate = Color(0.55, 0.52, 0.5)
 		add_child(s)
-		var off := Vector2(randfn(0.0, 0.45), randfn(0.0, 0.4))
+		var off := Vector2(randfn(0.0, 0.36), randfn(0.0, 0.32))
 		s.global_position = pos + Vector3(off.x + dir * 0.2, off.y, 0.1 + randf() * 0.05)
 		s.rotation.z = randf() * TAU
 		items.append({"node": s, "kind": "bloom", "t": 0.0, "dur": randf_range(0.45, 0.8), "s0": s.pixel_size})
+	# mid-size blots hugging the hit: reference bursts sit denser around the centre
+	for i in int(12 + 10 * power):
+		var m := _billboard(blots[3 + randi() % 3], 0.0042 * power * randf_range(0.7, 1.3))
+		m.modulate = Color(0.5, 0.47, 0.45)
+		add_child(m)
+		var moff := Vector2(randfn(0.0, 0.18), randfn(0.0, 0.16))
+		m.global_position = pos + Vector3(moff.x + dir * 0.15, moff.y, 0.12 + randf() * 0.05)
+		m.rotation.z = randf() * TAU
+		items.append({"node": m, "kind": "bloom", "t": 0.0, "dur": randf_range(0.5, 0.85), "s0": m.pixel_size})
 	# flying ink: many fine specks, streaking drips aligned to their flight, a few fat drops.
 	# All land as stains, so a fight leaves a dense splattered floor like the reference.
 	for i in int(150 * power):
