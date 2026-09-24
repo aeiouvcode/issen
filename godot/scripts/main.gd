@@ -25,6 +25,8 @@ var hud: CanvasLayer
 var time_label: Label
 var php_fill: Control
 var php_label: Label
+var pstam_fill: ColorRect
+var _hud_pstam := -1
 var pst_fill: Control
 var ebars: Array = []
 var _ebars_txt: Array = []  # C53: last label string per bar; text sets only on change
@@ -57,6 +59,7 @@ var slow_t := 0.0              # real seconds of slow-mo left
 var slow_zoom := 0.0
 var auto_parry := false
 var atk_buf := 0.0
+var whiff_cd := 0.0  # C57: a whiffed cut delays the next swing
 var dodge_buf := 0.0
 # Desktop QA only: `godot -- --autoplay` drives a fixed input timeline for Movie Maker captures.
 # Web builds never receive user args, so this path is inert on Pages.
@@ -437,7 +440,7 @@ func _player(delta: float) -> void:
 	p.state_t += delta
 	dodge_cd = maxf(0.0, dodge_cd - delta)
 	var mv := _move_input()
-	atk_buf = maxf(0.0, atk_buf - delta); dodge_buf = maxf(0.0, dodge_buf - delta)
+	atk_buf = maxf(0.0, atk_buf - delta); dodge_buf = maxf(0.0, dodge_buf - delta); whiff_cd = maxf(0.0, whiff_cd - delta)
 	if touch_atk: atk_buf = 0.3
 	if touch_dodge: dodge_buf = 0.3
 	touch_atk = false; touch_dodge = false
@@ -455,7 +458,7 @@ func _player(delta: float) -> void:
 			elif want_dodge and dodge_cd <= 0.0:
 				dodge_buf = 0.0
 				_start_dodge(mv)
-			elif want_atk:
+			elif want_atk and whiff_cd <= 0.0 and p.posture >= _atk_cost(0):
 				atk_buf = 0.0
 				combo = 0
 				_start_attack()
@@ -503,7 +506,7 @@ func _player(delta: float) -> void:
 				hit_done = true
 				_player_strike()
 			if p.anim_done or (queued and p.frame >= p.frame_count() - 2 and combo < 3):
-				if queued and combo < 3:
+				if queued and combo < 3 and whiff_cd <= 0.0 and p.posture >= _atk_cost(combo + 1):
 					combo += 1
 					_start_attack()
 				else:
@@ -533,11 +536,20 @@ func _player(delta: float) -> void:
 	issen_t = maxf(0.0, issen_t - delta)
 	p.global_position.x = clampf(p.global_position.x, -40, 40)
 	p.global_position.z = clampf(p.global_position.z, -40, 25)
-	p.posture = minf(100.0, p.posture + 12.0 * delta)
+	if p.state != "attack" and p.state != "dodge":
+		p.posture = minf(100.0, p.posture + 14.0 * delta)
 	p.tick_anim(delta * (float(STANCES[stance].speed) * (1.35 if combo == 3 else 1.0) if p.state == "attack" else 1.0))
+
+## C57 soulslike counterplay: every swing spends posture. Mashing drains the bar in four
+## cuts; the chain stops when the bar can't pay. Regen pauses mid-swing and mid-dodge.
+func _atk_cost(c: int) -> float:
+	return [22.0, 22.0, 30.0, 34.0][c]
 
 func _start_attack() -> void:
 	var p := player
+	p.posture = maxf(0.0, p.posture - _atk_cost(combo))
+	if autoplay:
+		print("QA atk combo=%d posture=%.0f" % [combo, p.posture])
 	var tgt := _nearest(p.global_position, 4.5)
 	if tgt:
 		p.facing = signf(tgt.global_position.x - p.global_position.x) if absf(tgt.global_position.x - p.global_position.x) > 0.1 else p.facing
@@ -580,6 +592,7 @@ func _player_strike() -> void:
 		if autoplay:
 			print("QA issen cut px=%.2f fx=%.2f" % [p.global_position.x, enemies[0].global_position.x if enemies.size() > 0 else 0.0])
 	strike_issen = combo == 3 and zdir == 0.0
+	var hit_any := false
 	for e in enemies:
 		if not e.alive():
 			continue
@@ -588,6 +601,7 @@ func _player_strike() -> void:
 		if zdir != 0.0:
 			in_arc = absf(d.x) < 2.1 and d.z * zdir > -0.4 and absf(d.z) < 3.2
 		if in_arc:
+			hit_any = true
 			strike_zdir = zdir; strike_dz = d.z
 			_hurt(e, dmg, p.facing, combo >= 2)
 			if combo == 3 and zdir != 0.0:
@@ -597,6 +611,10 @@ func _player_strike() -> void:
 				e.vel = Vector3(0, 0, zdir * 1.5)
 			if combo == 3 and e.alive() and zdir == 0.0:
 				e.vel.x *= 0.15  # the issen cut passes through; the foe is held in place, not shoved ahead
+	# C57 whiff punish: a cut that meets nothing kills the chain and delays the next swing
+	if not hit_any:
+		combo = 0
+		whiff_cd = 0.35
 
 func _start_dodge(mv: Vector2) -> void:
 	var p := player
@@ -714,10 +732,21 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 		kills += 1
 	else:
 		var hv := _face_view(e, player)
-		if e == boss and not riposte:
+		if e.posture <= 0.0:
+			# C57 posture break: sustained deliberate pressure cracks any foe open
+			e.posture = 100.0
+			e.state = "stagger"; e.state_t = 0.0
+			e.set_meta("stag_len", 0.6); e.set_meta("riposte_k", 1.5)
+			e.play("hit" + hv, true)
+			e.vel = _knock(hv, dir, 2.5)
+		elif e == boss and not riposte:
 			return  # the boss doesn't flinch from plain cuts
-		e.state = "hit"; e.state_t = 0.0; e.play("hit" + hv, true)
-		e.vel = _knock(hv, dir, 4.0 if heavy else 2.2)
+		elif not heavy and e.state in ["windup", "swing"]:
+			# C57 poise: a light cut can't interrupt a committed swing - mash into it and you trade
+			pass
+		else:
+			e.state = "hit"; e.state_t = 0.0; e.play("hit" + hv, true)
+			e.vel = _knock(hv, dir, 4.0 if heavy else 2.2)
 
 func _enemy(e: Fighter, delta: float) -> void:
 	e.state_t += delta
@@ -1263,6 +1292,24 @@ func _hud() -> void:
 	bars.position = Vector2(0, 34)
 	pb.add_child(bars)
 	php_fill = bars.get_node("F"); php_label = bars.get_node("L")
+	# C57 stamina bar: a thin ink sliver under the hp bar so the swing cost is visible
+	var stam := Control.new()
+	stam.position = Vector2(0, 46)
+	stam.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pb.add_child(stam)
+	var stbg := TextureRect.new()
+	stbg.texture = load("res://art/bar.png")
+	stbg.stretch_mode = TextureRect.STRETCH_SCALE
+	stbg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	stbg.size = Vector2(150, 6)
+	stbg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stam.add_child(stbg)
+	pstam_fill = ColorRect.new()
+	pstam_fill.color = Color(0.16, 0.14, 0.12)
+	pstam_fill.position = Vector2(12, 2)
+	pstam_fill.size = Vector2(126, 2.5)
+	pstam_fill.set_meta("w", 126.0)
+	stam.add_child(pstam_fill)
 	banner = Label.new()
 	banner.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
 	banner.add_theme_font_size_override("font_size", 28)
@@ -1368,6 +1415,10 @@ func _hud_update() -> void:
 		var m := int(elapsed / 60.0); var s := fmod(elapsed, 60.0)
 		time_label.text = "%02d:%05.2f" % [m, s]
 	php_fill.size.x = php_fill.get_meta("w") * player.hp / player.max_hp
+	var pst := int(player.posture)
+	if pst != _hud_pstam:
+		_hud_pstam = pst
+		pstam_fill.size.x = pstam_fill.get_meta("w") * player.posture / 100.0
 	var phpv := int(ceil(player.hp))
 	if phpv != _hud_php:
 		_hud_php = phpv
