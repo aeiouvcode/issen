@@ -1349,16 +1349,20 @@ function inkStep(ent, vx, vz, dt, scale=1, interval=.62){
 /* ---------------- slash arc ribbons ---------------- */
 const arcs = [];
 function slashArc(pos, roll, radius=1.9, sweep=2.4, pale=.25, faceCam=true, red=0, life=.8){
-  const seg = 26;
+  const seg = 40;
   const g = new THREE.BufferGeometry();
   const verts = new Float32Array((seg+1)*2*3);
   const uvs = new Float32Array((seg+1)*2*2);
   const idx = [];
+  // smooth value noise along the arc: the band swells and tears like a brush edge, not a chevron
+  const hn = (x)=>{ const i0=Math.floor(x), f=x-i0;
+    const h1=Math.sin(i0*12.9898+roll*78.233)*43758.5453, h2=Math.sin((i0+1)*12.9898+roll*78.233)*43758.5453;
+    const v1=h1-Math.floor(h1), v2=h2-Math.floor(h2), u=f*f*(3-2*f);
+    return v1+(v2-v1)*u; };
   for(let i=0;i<=seg;i++){
     const a = (i/seg - .5)*sweep;
     const c=Math.cos(a), s=Math.sin(a);
-    const h = Math.sin(i*12.9898+roll*78.233)*43758.5453;
-    const wob = .74 + .5*(h-Math.floor(h));
+    const wob = .80 + .30*hn(i*.21) + .12*hn(i*.83+7.7);
     const o=i*6;
     verts[o]=c*radius*.16*wob; verts[o+1]=0; verts[o+2]=s*radius*.16*wob;
     verts[o+3]=c*radius*wob; verts[o+4]=0; verts[o+5]=s*radius*wob;
