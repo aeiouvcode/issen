@@ -1,3 +1,3 @@
-# CURRENT TASK - M86
-Cycle M85 SHIPPED (gen 46): the 6-item roadmap is COMPLETE. M86+: continue distance-to-reference cycles (blade feel leads; reference keeps growing - accelerate). Candidates: longer blade-stop follow-through, camera breathing, ch3 identity, sound regrade.
-Standing: 50-min cadence; audit vs reference (phone+desktop) each cycle; security scan each cycle; publish every passed build as Instinct File gen++.
+# CURRENT TASK - M87
+M86 SHIPPED (gen 47): blade follow-through (.72x stateT after a landed cut) + camera breathing (sin drift on h/camYaw, amp .07). Roadmap 6/6 done; cycles continue on distance-to-reference.
+M87 candidates: (1) sound regrade by construction + one small voice improvement; (2) ch3 identity; (3) further reference gap from fresh audit. Blade feel leads on regressions.
