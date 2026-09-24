@@ -20,12 +20,16 @@ def slash(path, seed, W=1024, H=512):
     dx, dy = x - cx, cy - y
     r = np.hypot(dx, dy) / (H * 0.98); th = np.arctan2(dx, dy)  # th: -pi/2..pi/2 left->right
     t = (th + 1.35) / 2.7  # 0 trailing (left) -> 1 leading (right)
-    r0, r1 = 0.52, 0.97
+    # C44: broad faint wash sweeping wider than the ink band - the reference's layered
+    # grey under-stroke beneath the bold curtain
+    w0, w1 = 0.30, 1.02
+    inw = (r > w0) & (r < w1 - 0.02 * _fbm(H, W, r_, 2, 16)) & (t > 0.02) & (t < 1)
+    wash = inw.astype(np.float32) * 0.16 * (0.45 + 0.55 * _fbm(H, W, r_, 3, 7)) * np.clip(t * 2.0, 0, 1)
+    # main ink band, widened (r0 0.52 -> 0.44) for the reference's bigger bolder read
+    r0, r1 = 0.44, 0.97
     band = np.clip((r - r0) / (r1 - r0), 0, 1)
     inb = (r > r0) & (r < r1) & (t > 0) & (t < 1)
-    # fibers: vary across radius, smooth along arc
-    # broad bristle bands (few, smooth) rather than many thin rings: reads as one wide
-    # dry-brush sweep with a grey body, like the reference curtain
+    # broad bristle bands (few, smooth): one wide dry-brush sweep with a grey body
     knots = r_.random(22).astype(np.float32)
     prof = np.interp(band, np.linspace(0, 1, 22), knots).astype(np.float32)
     fine = np.interp(band, np.linspace(0, 1, 70), r_.random(70)).astype(np.float32)
@@ -33,18 +37,28 @@ def slash(path, seed, W=1024, H=512):
     # break fibers along the arc too
     along = _fbm(H, W, r_, 3, 5)
     fib = fib * (0.65 + 0.7 * along)
-    # trailing dry-out: fibers drop out progressively toward the tail
-    dry = np.clip((t - 0.02) / 0.55, 0, 1)
-    thresh = 0.85 - dry * 0.75
-    tail = np.clip(t / 0.3, 0, 1) ** 1.5
-    dens = np.clip((fib - thresh) * 1.8, 0, 1) * 0.6 + 0.2 * (1 - dry) * inb * tail * (0.6 + 0.4 * along)
+    # C44: bold dense body over the leading two-thirds
+    body_t = np.clip((t - 0.30) / 0.25, 0, 1)
+    dens_body = np.clip((fib - 0.42) * 2.2, 0, 1) * (0.35 + 0.65 * body_t)
+    # C44: the tail frays into discrete dry-brush bristle strands that separate as t -> 0
+    nb = 6
+    sidx = np.clip((band * nb).astype(int), 0, nb - 1)
+    sgap = (band * nb) % 1.0
+    sphase = r_.random(nb).astype(np.float32)[sidx]
+    sharp = 1.0 - np.abs(sgap - 0.5) * 2.0  # 1 at strand centre, 0 at the gap
+    split = np.clip((0.45 - t) / 0.3, 0, 1)  # 0 at the body, 1 deep in the tail
+    gapmask = np.clip((sharp - (1.0 - split)) * 3.0, 0, 1)
+    tail_dry = np.clip(t / 0.28, 0, 1) ** 1.2
+    dens_tail = gapmask * (0.5 + 0.5 * sphase) * tail_dry * (0.6 + 0.4 * along) * 0.9
+    dens = np.clip(dens_body + dens_tail * (1.0 - 0.4 * body_t), 0, 1)
     # outer edge dark wet rim, inner edge soft
     rim = np.exp(-((band - 0.93) / 0.05) ** 2) * 0.9 * np.clip(t * 1.6, 0, 1)
-    inner = np.clip(band / 0.25, 0, 1)
+    inner = np.clip(band / 0.22, 0, 1)
     lead = np.clip((1 - t) / 0.06, 0, 1)
-    a = np.clip((dens * inner + rim) * lead, 0, 1) * inb
+    a_ink = np.clip((dens * inner + rim) * lead, 0, 1) * inb
     # ragged outer contour
-    a *= (r < r1 - 0.03 * _fbm(H, W, r_, 3, 24))
+    a_ink *= (r < r1 - 0.03 * _fbm(H, W, r_, 3, 24))
+    a = np.clip(a_ink + wash, 0, 1)
     img = Image.fromarray((a * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8))
     save_ink(np.asarray(img, np.float32) / 255, path)
 

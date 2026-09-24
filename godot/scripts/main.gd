@@ -539,8 +539,8 @@ func _player_strike() -> void:
 	var yoff: float = [0.1, 0.3, -0.1, 0.25][combo]
 	var zdir := 0.0 if p.view == "" else (1.0 if p.view == "_f" else -1.0)
 	var anchor := p.global_position + (Vector3(p.facing * 1.1, yoff, 0.2) if zdir == 0.0 else Vector3(p.facing * 0.4, yoff, zdir * 1.0 + 0.2))
-	var sk: float = [1.2, 1.15, 1.45, 1.9][combo] * float(STANCES[stance].sk)
-	var sl := fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.42 if combo < 3 else 0.55, 0.0, combo)
+	var sk: float = [1.55, 1.5, 1.85, 2.4][combo] * float(STANCES[stance].sk)  # C44: reference-scale strokes
+	var sl := fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.46 if combo < 3 else 0.6, 0.0, combo)
 	if combo == 3 and zdir != 0.0:
 		# C33 directional finisher: the arc stands on end, a falling cut down the depth line
 		sl.rotation.z = -p.facing * PI * 0.5
