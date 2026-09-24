@@ -386,8 +386,8 @@ void main(){
   float s3 = vnoise(vec2(p.x*4.2, p.y*13.0)+3.3);
   // dash character wanders by region: long wispy strokes here, short dark ticks there
   float tv = vnoise(p*2.3+11.1);
-  float s3t = .78 + tv*.17;
-  float dots = smoothstep(.74,.83,s1)*(.24+.14*tv) + smoothstep(.79,.87,s2)*.20 + smoothstep(s3t,s3t+.07,s3)*(.12+.18*tv);
+  float s3t = .745 + tv*.17;
+  float dots = smoothstep(.74,.83,s1)*(.24+.14*tv) + smoothstep(.79,.87,s2)*.20 + smoothstep(s3t,s3t+.07,s3)*(.16+.20*tv);
   // breathing room - low-freq pool mask leaves patches of bare paper
   float pool = fbm(p*.11+5.7);
   dots *= mix(.45, 1.0, smoothstep(.34,.60,pool));
@@ -2927,11 +2927,12 @@ const sfx = (()=>{
           if(musT<=0){
             const n=1+((Math.random()*(intense>.75?3:2))|0);
             for(let i=0;i<n;i++) musQueue.push({at:G.time+i*(.16+Math.random()*.18), f:PENTA[(Math.random()*PENTA.length)|0]});
+            if(intense>.75 && Math.random()<.55) musQueue.push({at:G.time-.001, tk:1}); // low taiko pulse opens a hot phrase
             musT=(10+Math.random()*14)*(1.15-intense*.5); // roughly 8-20s between phrases, tighter when hot
           }
         } else if(musT<3) musT=3;
         let _pl=0;
-        while(musQueue.length && musQueue[0].at<=G.time){ const q=musQueue.shift(); pluck(q.f,.04+Math.random()*.018); _pl++; }
+        while(musQueue.length && musQueue[0].at<=G.time){ const q=musQueue.shift(); if(q.tk){ taiko(.07); } else { pluck(q.f,.04+Math.random()*.018); _pl++; } }
         if(_pl) window.__plucks=(window.__plucks||0)+_pl;
         window.__windDbg = {wind:+windCur.toFixed(4), rustle:+rustleCur.toFixed(4), freq:Math.round(windF.frequency.value), ac:ac?ac.state:'none'};
       }catch(e){}
