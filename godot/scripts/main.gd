@@ -308,6 +308,7 @@ func _spawn(pos: Vector3) -> void:
 func _physics_process(delta: float) -> void:
 	if autoplay:
 		_autoplay(delta)
+	_hit_jitter(delta)
 	if hitstop > 0.0:
 		hitstop -= delta
 		return
@@ -540,6 +541,8 @@ func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
 		print("QA flesh hit hp=%d" % e.hp)
 	e.posture = maxf(0.0, e.posture - dmg * 1.6)
 	e.flash = 1.0
+	e.set_meta("jit", 0.16 if heavy else 0.1)
+	e.set_meta("jit0", 0.16 if heavy else 0.1)
 	e.facing = -dir
 	var hitpos := e.global_position + Vector3(0, 1.4, 0.3)
 	fx.burst(hitpos, dir, 1.3 if heavy else 0.9, 0.35)
@@ -831,6 +834,18 @@ func _finisher(e: Fighter, dir: float) -> void:
 	hitstop = 0.0
 	_slowmo(0.55, 0.25, 1.0)
 	clean_hits = 0
+
+## C29 blade feel: the struck body shivers along x through the hit-stop, so the cut reads as
+## biting in rather than passing through. Runs before the hit-stop early return.
+func _hit_jitter(delta: float) -> void:
+	for e in enemies:
+		var j := float(e.get_meta("jit", 0.0))
+		if j <= 0.0:
+			continue
+		j = maxf(0.0, j - delta)
+		e.set_meta("jit", j)
+		var amp := 0.07 * j / maxf(float(e.get_meta("jit0", 0.1)), 0.01)
+		e.sprite.position.x = sin(j * 150.0) * amp if j > 0.0 else 0.0
 
 ## real-time slow motion: `dur` real seconds at `scale`, easing back; zoom 0..1 pushes the camera in
 func _slowmo(dur: float, scale: float, zoom: float) -> void:
