@@ -1295,6 +1295,56 @@ function smearRibbon(from, to, y=1.15, width=1.35, life=.6){
   scene.add(m);
   ribbons.push({m, t:0, life});
 }
+/* ---- boss leap trail: curling smoke ribbon (ref-8) ---- */
+function leapTrail(from, to){
+  const N=30;
+  const dir = to.clone().sub(from); dir.y=0; const len = dir.length(); dir.normalize();
+  const side = new THREE.Vector3(-dir.z, 0, dir.x);
+  const g = new THREE.BufferGeometry();
+  const verts = new Float32Array((N+1)*2*3);
+  const uvs = new Float32Array((N+1)*2*2);
+  const idx = [];
+  for(let i=0;i<=N;i++){
+    const t=i/N;
+    const c = from.clone().lerp(to, t);
+    c.y = .5 + Math.sin(t*Math.PI)*1.15;          // arc of the jump
+    const ang = t*9.0;                            // curl - the ribbon spirals as it trails
+    const rr = .42*(1-t*.45);
+    c.addScaledVector(side, Math.cos(ang)*rr);
+    c.y += Math.sin(ang)*rr*.6;
+    const w = .20 + .34*Math.sin(t*Math.PI);      // width swells mid-leap
+    const o=i*6;
+    verts[o]=c.x; verts[o+1]=c.y-w; verts[o+2]=c.z;
+    verts[o+3]=c.x; verts[o+4]=c.y+w; verts[o+5]=c.z;
+    uvs[i*4]=t; uvs[i*4+1]=0; uvs[i*4+2]=t; uvs[i*4+3]=1;
+    if(i<N){ const b=i*2; idx.push(b,b+1,b+2, b+1,b+3,b+2); }
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(verts,3));
+  g.setAttribute('uv', new THREE.BufferAttribute(uvs,2));
+  g.setIndex(idx);
+  const mat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, side:THREE.DoubleSide,
+    uniforms:{uT:{value:0}},
+    vertexShader:`varying vec2 vUv; void main(){ vUv=uv;
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader:`
+      precision mediump float; varying vec2 vUv; uniform float uT;
+      ${noiseGLSL}
+      void main(){
+        float a = smoothstep(0.,.12,vUv.x)*smoothstep(1.,.72,vUv.x);
+        a *= smoothstep(0.,.35,vUv.y)*smoothstep(1.,.65,vUv.y);
+        a *= .45 + .8*fbm(vec2(vUv.x*6.0, vUv.y*10.0));
+        a *= .5 + .5*fbm(vec2(vUv.x*14.0+3.3, vUv.y*5.0));
+        float fade = 1.0-uT; a *= fade*(.55+.45*fade);
+        gl_FragColor = vec4(vec3(.38,.35,.30), min(a*1.15,1.0));
+      }`
+  });
+  const m = new THREE.Mesh(g, mat);
+  m.renderOrder = 5;
+  scene.add(m);
+  ribbons.push({m, t:0, life:1.3});
+}
+
 function updateRibbons(dt){
   for(let i=ribbons.length-1;i>=0;i--){
     const r=ribbons[i]; r.t+=dt/r.life;
@@ -2719,6 +2769,7 @@ function updateBoss(dt){
           clamp(player.pos.z + Math.cos(toP)*-overshoot, -ARENA_R+1.5, ARENA_R-1.5));
         bossSetState('leap');
         dashSmoke(b.pos, toP, 3);
+        leapTrail(b.leapFrom, b.leapTo);
       }
       break;
     case 'leap': {
