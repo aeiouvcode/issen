@@ -2,15 +2,18 @@ shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never;
 #include "res://shaders/common.gdshaderinc"
 uniform sampler2D tex : source_color, filter_linear_mipmap, repeat_disable;
-uniform float prog = 1.0;   // 0..1 sweep
-uniform float life = 1.0;   // 1 -> 0 dissolve
-uniform float flip = 0.0;
-uniform float tint = 0.0;   // red hit tint
+// C60: per-swing params ride INSTANCE_CUSTOM so all curtains share one MultiMesh
+varying vec4 cust;
 void vertex() {
+	cust = INSTANCE_CUSTOM;
 	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(vec4(normalize(cross(vec3(0.0, 1.0, 0.0), INV_VIEW_MATRIX[2].xyz)), 0.0), vec4(0.0, 1.0, 0.0, 0.0), vec4(normalize(cross(INV_VIEW_MATRIX[0].xyz, vec3(0.0, 1.0, 0.0))), 0.0), MODEL_MATRIX[3]);
 	MODELVIEW_MATRIX = MODELVIEW_MATRIX * mat4(vec4(length(MODEL_MATRIX[0].xyz), 0.0, 0.0, 0.0), vec4(0.0, length(MODEL_MATRIX[1].xyz), 0.0, 0.0), vec4(0.0, 0.0, length(MODEL_MATRIX[2].xyz), 0.0), vec4(0.0, 0.0, 0.0, 1.0));
 }
 void fragment() {
+	float prog = cust.x;
+	float life = cust.y;
+	float flip = cust.z;
+	float tint = cust.w;
 	vec2 uv = UV;
 	if (flip > 0.5) uv.x = 1.0 - uv.x;
 	// rotate around the arc centre so the wet leading edge travels with prog
