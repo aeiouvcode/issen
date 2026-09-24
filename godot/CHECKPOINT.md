@@ -56,3 +56,4 @@
 - 2026-09-24 C27 blade feel: fx.blade_drip - ink drops shed from the player blade tip after each kill, landing as stains.
 - 2026-09-24 C28: store screenshots re-captured with the new foe art (land-1..4 from boss/armor runs, port-1..4 from boss/spear runs), old frame-numbered files removed.
 - 2026-09-24 C28 blade feel: perfect parry fires a paper-white wash ring in post.gdshader (flash/flash_at), decaying over ~0.3s real time.
+- 2026-09-24 C29 blade feel: _hit_jitter - a struck foe's sprite shivers along x (0.07 m, decaying over 0.1 s, 0.16 s on heavy cuts) and keeps shivering through the hit-stop freeze, so cuts read as biting in.
