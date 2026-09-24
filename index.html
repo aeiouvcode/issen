@@ -387,7 +387,7 @@ void main(){
   // dash character wanders by region: long wispy strokes here, short dark ticks there
   float tv = vnoise(p*2.3+11.1);
   float s3t = .745 + tv*.17;
-  float dots = smoothstep(.74,.83,s1)*(.24+.14*tv) + smoothstep(.79,.87,s2)*.20 + smoothstep(s3t,s3t+.07,s3)*(.16+.20*tv);
+  float dots = smoothstep(.77,.85,s1)*(.16+.10*tv) + smoothstep(.815,.885,s2)*.13 + smoothstep(s3t+.035,s3t+.095,s3)*(.11+.14*tv);
   // breathing room - low-freq pool mask leaves patches of bare paper
   float pool = fbm(p*.11+5.7);
   dots *= mix(.45, 1.0, smoothstep(.34,.60,pool));
@@ -396,7 +396,7 @@ void main(){
   // blotch field
   float blotch = smoothstep(.74,.99,fbm(p*.35+9.3))*.09;
   float edge = smoothstep(13.0, 31.0, length(p));
-  float inkAmt = clamp(dots*(0.72-0.38*edge) + blotch*edge*.3 + edge*.08, 0., .8);
+  float inkAmt = clamp(dots*(0.60-0.32*edge) + blotch*edge*.3 + edge*.08, 0., .8);
   sand *= 1.0 - edge*.15;
   // soft top light wash
   float ndl = dot(normalize(vN), normalize(uLight))*.5+.5;
@@ -3569,7 +3569,7 @@ function updateCamera(dt){
     // cinematic pitch: low and close during the duel, high when separated
     if(G.running && boss.root.visible){
       const d = dist2D(player.pos, boss.pos);
-      const target = clamp(.84 + (d-3.5)*.09, .84, 1.15);
+      const target = clamp(.62 + (d-3.5)*.08, .62, .94);
       G.camPitch += (target - G.camPitch) * Math.min(1, 1.6*dt);
     }
   }
