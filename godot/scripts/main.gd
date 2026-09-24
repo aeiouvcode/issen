@@ -1442,6 +1442,10 @@ func _menu_chips() -> void:
 	var cb := _chip("credits")
 	cb.pressed.connect(_show_credits.bind(true))
 	chips.add_child(cb)
+	# C49 engine switcher: jump back to the hand-built web ISSEN (opens a new tab).
+	var wb := _chip("web")
+	wb.pressed.connect(func() -> void: OS.shell_open("https://aeiouvcode.github.io/issen/"))
+	chips.add_child(wb)
 	chips.size = chips.get_combined_minimum_size()
 
 func _chip(text: String) -> Button:
