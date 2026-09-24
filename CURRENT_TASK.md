@@ -1,14 +1,15 @@
-# CURRENT TASK — M92 (done), next M93
+# CURRENT TASK — M93 (done), next M94
 
-## M92 shipped (Sep 24, ~1:10 PM IST)
-- Audit first: reach/range verified correct after the M91 scale-up (blade arc meets the boss at
-  d=2.6 when damage lands; no change needed). Soundscape moments already covered (stagger big,
-  awaken big+drum, kill big+drum).
-- The real gap found: characters sat mid-gray vs the reference's deep ink masses. Deepened
-  character ink: clothL 1.38->1.48, dark 1.15->1.26, wrap 1.3->1.42, robe 1.30->1.42 bias.
-  Hair and kasa untouched (already deep / needs to stay pale).
-- Security delta scan PASS. File gen 53 published; preview smoke PASS.
+## M93 shipped (Sep 24, ~2:11 PM IST)
+- Audit first: ch3 robe readability watch-item PASSED (deepened ink holds in the cold hall);
+  reach/range already verified in M92. Gap found: the soundscape went fully silent in the quiet
+  standoff phase — music only breathed when the fight ran hot.
+- Fix: quiet-phase sparse soft plucks. When running and intense<.45, musT counts down and a
+  single soft pluck (vol .026-.036, softened) lands every 14-24s. Hot phrases unchanged.
+- Verified live: quiet sim 60s -> 3 plucks; hot sim -> 6 plucks + 2 taikos. File preview smoke:
+  quiet sim -> 2 plucks in 40s. Security delta scan PASS (4 lines, music logic only).
+- File gen 54 published.
 
-## M93 candidates (pick by audit)
-- Watch that deepened ink does not crush the pale robe's readability in dark scenes (ch3 cold hall).
-- Fresh reference audit may surface something higher.
+## M94 candidates (pick by audit)
+- Watch-item: quiet plucks must not crowd hot phrases (shared musT/musQueue by design; M93 values verified).
+- Fresh reference audit decides the rest.
