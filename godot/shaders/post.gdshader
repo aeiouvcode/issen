@@ -16,9 +16,13 @@ void fragment() {
 	vec2 d = min(uv, 1.0 - uv) * sz / min(sz.x, sz.y);
 	float e = min(d.x, d.y);
 	float rag = fbm(uv * vec2(7.0, 5.0)) * 0.08;
-	float v = smoothstep(0.0, 0.10 + rag, e);
-	c = mix(c * vec3(0.80, 0.66, 0.50), c, v);
+	float v = smoothstep(0.0, 0.14 + rag, e);
+	c = mix(c * vec3(0.74, 0.58, 0.40), c, v);
 	c = mix(c * 0.7, c, smoothstep(0.0, 0.008 + rag * 0.15, e));
+	// burnt umber corners (reference: corners go darker and warmer than the edges)
+	float cd = length(min(uv, 1.0 - uv) * sz / min(sz.x, sz.y));
+	float cv = smoothstep(0.0, 0.32 + rag * 1.6, cd);
+	c = mix(c * vec3(0.62, 0.46, 0.29), c, cv);
 	// large faint stains
 	float s = smoothstep(0.62, 0.9, fbm(uv * 2.3 + 11.0));
 	c *= 1.0 - s * 0.07;
