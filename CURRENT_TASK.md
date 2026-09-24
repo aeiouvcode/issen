@@ -1,17 +1,20 @@
-# CURRENT TASK — M94 (done), next M95
+# CURRENT TASK — M95 (done), next M96
 
-## M94 shipped (Sep 24, ~3:44 PM IST)
-- Audit first: biggest remaining distance to the reference was the high top-down camera
-  (reference sits low and close, fighters large) and the over-busy ground (reference leaves
-  large bare paper).
-- Fix 1 (camera): duel pitch clamp .84-1.15 -> .62-.94 (h ~5.9 close, ~7.6 far; dist unchanged
-  at 9.0/10.6). Verified no kasa occlusion at d=2.6 worst case, desktop + 390px.
-- Fix 2 (ground): speckle thresholds raised, amplitudes ~35% lower, inkAmt scale .72->.60.
-  Much more bare paper; reads far closer to the reference.
-- Security delta scan PASS (3 changed lines: shader constants + camera clamp only).
-- File gen 55 published; preview smoke PASS (camPitch converges to .63 at close range).
+## M95 shipped (Sep 24, ~4:45 PM IST)
+- Audit first: M94 camera + ground changes verified holding in real fights at desktop + 390px.
+  Arena-wall watch-item at phone width: PASS. Burned down a recurring "white-out" scare:
+  (a) one lease had a genuinely lost WebGL context, (b) screenshots right after long
+  synchronous sims catch un-presented frames. Not a code bug; gl.isContextLost() separates them.
+- Fix: HUD bars now brush strokes. `.brushbar .fill` mask gradient replaced with a tapered
+  clip-path polygon (thin at both ends, thick middle) like the reference's hand-painted bars.
+  Verified live at desktop (1440) + 390px: partial and full bars read as painted strokes.
+- Security delta scan PASS (one CSS block changed; no scripts, no outbound, no sinks).
+  File details panel confirms "External services: None".
+- File gen 56 published; preview smoke PASS (QA boots in the revision frame, fight runs,
+  tapered bars present).
 
-## M95 candidates (pick by audit)
-- HUD bars: reference uses tapered brush-stroke bars; ours are rounded rects.
-- Figure interior brushwork (dry-brush streaks inside silhouettes) - deep shader work, high risk.
-- Fresh reference audit may surface something higher.
+## M96 candidates (pick by audit)
+- Figure interior brushwork (dry-brush streaks inside silhouettes) - deep shader work;
+  assess risk first, prototype behind a uniform.
+- Arena-wall horizon line polish at phone width.
+- Fresh distance-to-reference audit may surface something higher.
