@@ -3451,6 +3451,10 @@ function resetFight(){
   player.atkLog=[]; G.cleanStreak=0; G.camPush=0; G.camNudge=0; player.regenDelay=0; player._landed=false; player._dodgeAt=-9; player.counterT=0; boss._parryCD=0; boss._counterHit=false; boss._bowed=false; boss._engaged=false; boss.phase=1; boss._wspeed=1; boss._iaiChain=false; boss.J.eyes.visible=false;
   boss.pos.set(0,0,-7); boss.maxhp = G.chapter===1?140:185; boss.hp=boss.maxhp; boss.posture=130; boss.alive=true;
   boss._wspeed = G.chapter===2?1.15:1; boss._phaseLock = G.chapter===1; // the chapters flavor him: shorter first, faster second
+  // the iron hall reads colder: ash-paper air over the same ground
+  scene.background.set(G.chapter===3?0xd9d3c0:0xece1c2);
+  scene.fog.color.set(G.chapter===3?0xd3cdb8:0xe7dcbd);
+  boss.root.scale.setScalar(G.chapter===3?1.08:1); // iron bulk
   minion.pos.set(3.4,0,-8.6); minion.hp=70; minion.posture=50; minion.alive=true; minion._hit=false;
   minion.root.visible=true; minion.state='idle'; minion.stateT=0; minion.thinkT=3.2;
   lancer.pos.set(-9.5,0,-9.5); lancer.hp=90; lancer.posture=70; lancer.alive=false; lancer._hit=false; lancer._spawnT=Infinity;
