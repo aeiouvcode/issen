@@ -216,7 +216,7 @@ def draw_hakama_leg(c, hip, knee, foot, shade):
 # ---------------------------------------------------------------- ronin
 RDIM = dict(thigh=44, shin=42, torso=58, neck=4, head=16, uarm=30, farm=28, pole=170)
 
-VARIANT = ''  # C26: '' kasa ronin, 'armor' lacquer plates, 'spear' yari, 'boss' Kageyama
+VARIANT = ''  # C26: '' kasa ronin, 'armor' lacquer plates, 'spear' yari, 'boss' Kageyama; C32 'twin' two short blades
 
 def draw_ronin(c, J, pose):
     rng = c.rng
@@ -235,6 +235,14 @@ def draw_ronin(c, J, pose):
             for k in range(5):
                 c.stroke([tuple(tip - d * 6), tuple(tip - d * (22 + k * 3) + q * (k - 2) * 3)], w=1.6, dry=0.6, ink=0.85)
             return hd
+        if VARIANT == 'twin':
+            # C32: a short uchigatana in the lead hand, a slight curve, no pole behind the grip
+            tip = hnd + pvec(J, V(pole_a, 92))
+            mid = lerp(hnd, tip, 0.55) + perp(hnd, tip) * 4
+            c.stroke([tuple(hnd - pvec(J, V(pole_a, 14))), tuple(hnd)], w=4.2, dry=0.2)
+            c.stroke([tuple(hnd), tuple(mid), tuple(tip)], w=2.6, dry=0.25, taper=(0.1, 0.9))
+            c.stroke([tuple(hnd - perp(hnd, tip) * 7), tuple(hnd + perp(hnd, tip) * 7)], w=3.0, dry=0.3)
+            return tip
         if VARIANT == 'boss':
             # odachi-long naginata blade, heavier ink
             back = hnd - pvec(J, V(pole_a, 60)); tip = hnd + pvec(J, V(pole_a, RDIM['pole'] - 70))
@@ -250,6 +258,12 @@ def draw_ronin(c, J, pose):
         c.stroke([tuple(tip), tuple(lerp(tip, bl, 0.5) + perp(hnd, tip) * 8), tuple(bl)], w=2.4, dry=0.3)
         return bl
     draw_sleeve_dark(c, J['b_sh'], J['b_el'], J['b_hand'], 0.55)
+    if VARIANT == 'twin':
+        # C32: the off hand carries a wakizashi, held low and reversed behind the body line
+        bh = J['b_hand']; wa = J.get('b_farm_a', 0) + 150 if 'b_farm_a' in J else 150
+        wt = bh + pvec(J, V(wa, 64))
+        c.stroke([tuple(bh - pvec(J, V(wa, 10))), tuple(bh)], w=3.6, dry=0.2)
+        c.stroke([tuple(bh), tuple(lerp(bh, wt, 0.5) + perp(bh, wt) * 3), tuple(wt)], w=2.2, dry=0.3, taper=(0.1, 0.9), ink=0.8)
     tipb = None
     if pose.get('pole_behind', 0) > 0.5: tipb = naginata()
     draw_leg_dark(c, J['b_hip'], J['b_knee'], J['b_foot'], 0.6)
@@ -295,6 +309,23 @@ def draw_ronin(c, J, pose):
         c.stroke([tuple(h + np.array([0, -12])), tuple(h + np.array([-4, -32])), tuple(h + np.array([-12, -40]))], w=5.5, dry=0.4, taper=(0.2, 0.6))
         c.splatter(*(lerp(J['hip'], J['f_foot'], 0.8)), 14, 10, 2.6, ink=0.9)
         draw_sleeve_dark(c, J['f_sh'], J['f_el'], J['f_hand'], 0.85)
+        tip = tipb
+        if pose.get('pole_behind', 0) <= 0.5: tip = naginata()
+        c.dab(*J['f_hand'], 4, ink=0.9)
+        return tip
+    if VARIANT == 'twin':
+        # C32: no kasa - bare head, hachimaki band with two tails flying back, short topknot
+        h = J['head']
+        c.dab(*h, 14, ink=0.92)
+        back = -1.0 if pvec(J, np.array([1.0, 0.0]))[0] >= 0 else 1.0
+        c.stroke([tuple(h + np.array([-15, -4])), tuple(h + np.array([15, -4]))], w=4.0, dry=0.3)
+        for k in range(2):
+            tail = h + np.array([back * (30 + k * 10), 2 + k * 9 + rng.normal(0, 2)])
+            c.stroke([tuple(h + np.array([back * 12, -4])), tuple(lerp(h, tail, 0.6) + np.array([0, -5])), tuple(tail)], w=2.6 - k * 0.6, dry=0.5, taper=(0.1, 0.8))
+        c.stroke([tuple(h + np.array([0, -12])), tuple(h + np.array([-back * 3, -24]))], w=5.0, dry=0.4, taper=(0.2, 0.6))
+        c.splatter(*(lerp(J['hip'], J['f_foot'], 0.8)), 14, 10, 2.6, ink=0.9)
+        c.splatter(*J['chest'], 12, 6, 2.2, ink=0.9)
+        draw_sleeve_dark(c, J['f_sh'], J['f_el'], J['f_hand'], 0.75)
         tip = tipb
         if pose.get('pole_behind', 0) <= 0.5: tip = naginata()
         c.dab(*J['f_hand'], 4, ink=0.9)

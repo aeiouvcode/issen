@@ -147,7 +147,7 @@ if __name__ == '__main__':
         s, m = bake('player', player_anims(), F.PDIM, F.draw_player, 1000, only=only)
     else:
         # C26 variants share the ronin rig, poses and seeds: 'ronin_armor', 'ronin_spear', 'boss'
-        F.VARIANT = {'ronin': '', 'ronin_armor': 'armor', 'ronin_spear': 'spear', 'boss': 'boss'}[which]
+        F.VARIANT = {'ronin': '', 'ronin_armor': 'armor', 'ronin_spear': 'spear', 'boss': 'boss', 'ronin_twin': 'twin'}[which]
         s, m = bake(which, ronin_anims(), F.RDIM, F.draw_ronin, 5000, only=only)
     # palette PNG: ink + red need few colours; keeps the repo and the Pages download small
     for k, pg in enumerate(s):

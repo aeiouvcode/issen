@@ -61,6 +61,7 @@ var banner: Label
 var spawned := 0
 var armor_test := false
 var spear_test := false
+var twin_test := false
 ## C22 boss: one per chapter (every 8 kills)
 const CHAPTER_KILLS := 8
 var boss: Fighter = null
@@ -99,6 +100,7 @@ var palette_i := 0
 var palette_test := false
 var armor_tex: Array[Texture2D] = []
 var spear_tex: Array[Texture2D] = []
+var twin_tex: Array[Texture2D] = []
 var boss_tex: Array[Texture2D] = []
 var parry_flash := 0.0
 var kick := Vector2.ZERO   # C25 blade feel: camera push along a heavy cut
@@ -121,6 +123,7 @@ func _ready() -> void:
 	ronin_tex = _pages("ronin")
 	armor_tex = _pages("ronin_armor")
 	spear_tex = _pages("ronin_spear")
+	twin_tex = _pages("ronin_twin")
 	boss_tex = _pages("boss")
 	cam = Camera3D.new()
 	cam.fov = 38.0
@@ -193,6 +196,13 @@ func _ready() -> void:
 			auto_steps = [[4.3, "down", true], [4.6, "down", false]]
 		else:
 			auto_steps = [[2.4, "attack"], [3.4, "attack"], [4.2, "down", true], [4.5, "down", false], [4.55, "attack"], [5.1, "attack"], [5.5, "attack"]]
+	if "--autoplay-twin" in OS.get_cmdline_user_args():
+		# QA C32: twin-blade foes only on the player's lane; the parry bot answers both blades
+		# first 5.5 s the player stands and takes both blades, then the parry bot answers them
+		twin_test = true; autoplay = true; auto_parry = false; auto_steps = []
+		get_tree().create_timer(5.5).timeout.connect(func(): auto_parry = true)
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		_spawn(Vector3(5.5, 0, player.global_position.z))
 	if "--autoplay-boss" in OS.get_cmdline_user_args():
 		# QA: straight to the chapter boss (150 HP so both phases fit a capture), parry bot plays
 		autoplay = true; auto_parry = true; auto_steps = []
@@ -309,6 +319,13 @@ func _spawn(pos: Vector3) -> void:
 		e.set_meta("lane", 0)
 		e.reskin(spear_tex, "res://art/ronin_spear.json")
 		e.tint = Color(0.94, 0.9, 0.86)
+	elif (spawned >= 6 and spawned % 4 == 2) or twin_test:
+		# C32 twin-blade foe: two short swords, cuts twice - a second, quicker swing follows the
+		# first, so each blade needs its own parry (or a dodge that clears both)
+		e.set_meta("twin", true)
+		e.set_meta("lane", 0)
+		e.reskin(twin_tex, "res://art/ronin_twin.json")
+		e.tint = Color(0.95, 0.92, 0.9)
 	elif spawned >= 3 and (spawned % 2 == 1 or armor_test):
 		e.set_meta("armor", 2)
 		e.reskin(armor_tex, "res://art/ronin_armor.json")
@@ -696,7 +713,15 @@ func _enemy(e: Fighter, delta: float) -> void:
 					hit_ok = absf(dd.x) < 2.1 and dd.z * zd > -0.5 and absf(dd.z) < 3.4
 				if p.alive() and p.state != "dodge" and hit_ok:
 					_player_hurt(18.0, e.facing, e)
-			if e.anim_done:
+			if e.anim_done and e.get_meta("twin", false) and not e.get_meta("second", false):
+				# C32: straight into a short second wind-up (0.28 s) for the other blade
+				e.set_meta("second", true)
+				e.state = "windup"; e.state_t = 0.34; e.play("windup" + str(e.get_meta("vw")), true)
+				e.frame = mini(2, e.frame_count() - 1); e._apply()
+				if autoplay and twin_test:
+					print("QA twin second blade")
+			elif e.anim_done:
+				e.set_meta("second", false)
 				e.state = "recover"; e.state_t = 0.0; e.play("recover" + str(e.get_meta("vw")), true)
 		"recover":
 			e.vel = e.vel.lerp(Vector3.ZERO, 8.0 * delta)
@@ -712,7 +737,7 @@ func _enemy(e: Fighter, delta: float) -> void:
 			# deflected: reeling and open, cuts land double (C15 parry)
 			e.vel = e.vel.lerp(Vector3.ZERO, 5.0 * delta)
 			if e.state_t > float(e.get_meta("stag_len", 0.95)):
-				e.state = "approach"; e.set_meta("cool", randf_range(0.6, 1.2))
+				e.state = "approach"; e.set_meta("cool", randf_range(0.6, 1.2)); e.set_meta("second", false)
 		"hit":
 			e.vel = e.vel.lerp(Vector3.ZERO, 7.0 * delta)
 			if e.state_t > 0.38:
@@ -1169,7 +1194,7 @@ func _hud_update() -> void:
 			var f: ColorRect = b.get_node("F")
 			f.size.x = f.get_meta("w") * e.hp / e.max_hp
 			var ar := int(e.get_meta("armor", 0))
-			(b.get_node("L") as Label).text = ("spear  " if e.get_meta("spear", false) else "") + ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
+			(b.get_node("L") as Label).text = ("spear  " if e.get_meta("spear", false) else "") + ("twin  " if e.get_meta("twin", false) else "") + ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
 
 # ------------------------------------------------------------------ touch
 func _ring(sz: float, glyph: String) -> TextureRect:
