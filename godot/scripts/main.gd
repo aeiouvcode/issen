@@ -1066,14 +1066,18 @@ func _camera(delta: float) -> void:
 				tgt = e
 	var zoom := 1.0
 	var bow_frame: bool = tgt != null and bool(tgt.get_meta("bow", false))
+	# C40 F-07: the boss sheet is ~4.4 m tall on a ~4.6 m landscape frame; pull back and centre the pair
+	var boss_frame: bool = tgt != null and bool(tgt.get_meta("boss", false))
 	if tgt:
 		# narrow screens: centre the pair and pull back when they spread wider than the frame
-		focus = focus.lerp(tgt.global_position, 0.5 if (portrait or bow_frame) else 0.35)
+		focus = focus.lerp(tgt.global_position, 0.5 if (portrait or bow_frame or boss_frame) else 0.35)
 		if portrait:
-			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 3.6, 1.0, 1.35)
+			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 3.6, 1.1 if boss_frame else 1.0, 1.4 if boss_frame else 1.35)
 		elif bow_frame:
 			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 5.0, 1.0, 1.3)
-	var off := Vector3(0, 4.6, 5.2) * (zoom if bow_frame else 1.0) if not portrait else Vector3(0, 5.4, 4.3) * zoom  # C39: landscape raised to the reference's ~35 deg view
+		elif boss_frame:
+			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 4.0, 1.15, 1.4)
+	var off := Vector3(0, 4.6, 5.2) * (zoom if (bow_frame or boss_frame) else 1.0) if not portrait else Vector3(0, 5.4, 4.3) * zoom  # C39: landscape raised to the reference's ~35 deg view
 	# F-22: a foe lined up in depth hides behind (or in front of) the player; swing the camera
 	# toward the foe's side so the line of sight opens a gap between the two figures
 	var side := 0.0
