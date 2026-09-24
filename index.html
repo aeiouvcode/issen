@@ -329,7 +329,9 @@ void main(){
   ink = mix(ink, pools, uBand);
   vec3 col = mix(uPaper, uInk, ink);
   // dry-brush highlights: pale streaks raked through the dark mass (two scales - broad rakes + fine splits)
-  float dry1 = smoothstep(.58,.90, fbm(vec2(vUv.x*6.0 + vW.y*1.6, vUv.y*1.7)));
+  float dryn = fbm(vec2(vUv.x*6.0 + vW.y*1.6, vUv.y*1.7));
+  float dryband = smoothstep(.68,.73,dryn) * (1.0 - smoothstep(.80,.86,dryn)); // thin contour = a single dragged bristle line
+  float dry1 = max(smoothstep(.58,.90, dryn), dryband*1.15);
   float dry2 = smoothstep(.68,.95, fbm(vec2(vUv.x*13.0 + vW.y*2.0, vUv.y*3.0)));
   float dry = max(dry1, dry2*.8);
   col = mix(col, uPaper, dry * uDry * smoothstep(.40,.82,ink));
