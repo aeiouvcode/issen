@@ -1,6 +1,7 @@
 # Handoff
 
 ## Resume here
+Cycle 39: fresh full distance-to-reference audit (the C34 list was all closed) - re-graded every item against the yt-dlp frames. Only real miss: landscape camera sat too low (~22 deg elevation, offset (0,3.6,6.0)) vs the reference's elevated ~35 deg view (kasa tops, wider ground spread). Raised to offset (0,4.6,5.2), look y 1.2 -> 1.0, landscape only - portrait already sits ~32 deg. Verified at 1280x720, 390x844 and --autoplay-boss (boss bar still clear, 0 errors). Next: F-07 (boss kasa dominates at close range). Store submission still needs Naksh.
 Cycle 38: gap 4 done - fx.burst: main cluster 34+30p -> 40+32p tighter (spread 0.45/0.4 -> 0.36/0.32, sizes up 0.4-1.2 -> 0.5-1.3) plus a new mid-size blot ring hugging the hit (12+10p, 0.0042 px, stddev 0.18). Verified at 1280x720 + 390x844. Next: fresh full reference audit (the C34 list is now all closed - re-grade everything against the footage), then F-07 (boss kasa dominates at close range). Store submission still needs Naksh.
 Cycle 37: gap 3 done - post.gdshader vignette band widened (0.10->0.14) and warmed (0.80/0.66/0.50 -> 0.74/0.58/0.40), plus a burnt umber corner term (0.62/0.46/0.29 over a 0.32 ragged radius). Verified at 1280x720 + 390x844. Next: gap 4 (splatter density around hits - more mid-size blots near the burst centre), then a fresh full reference audit. Store submission still needs Naksh.
 Cycle 36: ronin + variants ink-wash rebake (gap 2 done) - robes paler (body dens 0.7->0.3, sleeves -0.28), bold near-black hem band + collar cross + cuff accents, dry paper chest highlight; all six sheets rebaked (shared helpers, one pass). Verified at 1280x720 --autoplay. Next: gap 3 (stronger/warmer vignette corners), then gap 4 (splatter density around hits). Store submission still needs Naksh.
@@ -65,4 +66,9 @@ Cycle 34: fresh distance-to-reference audit (yt-dlp frames vs Movie Maker captur
 3. [done C37] Parchment vignette: wider/warmer tea-stain band + burnt umber corners in post.gdshader.
 4. [done C38] Splatter: burst cluster tightened and a mid-size blot ring added around the hit centre.
 5. UI: reference carries three ink pips + a brush HP stroke under each fighter and a scroll timer plaque; ours adapts this (top-left plaque, bottom bar, skill rings) - acceptable divergence for playability.
-6. Camera: reference holds a fixed side view; ours matches in landscape and adapts in portrait. OK.
+6. [done C39] Camera: C39 re-grade found the landscape view too low (~22 deg vs the reference's ~35 deg elevated read: kasa tops, wider ground spread). Raised in scripts/main.gd; portrait already matched.
+
+## C39 audit residuals (ranked)
+1. F-07: boss kasa dominates the frame at close range (carried over).
+2. Minor: at the raised landscape angle the foe HP bar can brush the bottom of the chips row (cosmetic, watch it).
+3. UI pips/brush HP stroke from the reference stay an accepted divergence (playability adaptation).
