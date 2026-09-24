@@ -1053,6 +1053,7 @@ func _process(delta: float) -> void:
 		web_toggles_done = true
 		if "nopost" in web_q and post_rect: post_rect.visible = false
 		if "noground" in web_q and ground_node: ground_node.visible = false
+		if "lowres" in web_q: get_tree().root.scaling_3d_scale = 0.6  # C54: fill-sensitivity probe (?perf&lowres A/B)
 		if "nograss" in web_q:
 			for mi in grass_nodes: mi.visible = false
 	var _pt1 := Time.get_ticks_usec()  # noqa
