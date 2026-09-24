@@ -1,6 +1,7 @@
 # Handoff
 
 ## Resume here
+Cycle 40: F-07 done - boss framing. The boss sheet (~4.4 m tall with the 1.08 sprite scale) nearly filled the ~4.6 m landscape frame and cropped at close range. Camera gains boss_frame (tgt meta "boss"): focus centres the pair, landscape pulls back zoom 1.15-1.4 (off scales like bow_frame), portrait band 1.1-1.4. Verified: boss fully framed at melee range at 1280x720 and 390x844 (--autoplay-boss), normal --autoplay unchanged. Next: residual list below. Store submission still needs Naksh.
 Cycle 39: fresh full distance-to-reference audit (the C34 list was all closed) - re-graded every item against the yt-dlp frames. Only real miss: landscape camera sat too low (~22 deg elevation, offset (0,3.6,6.0)) vs the reference's elevated ~35 deg view (kasa tops, wider ground spread). Raised to offset (0,4.6,5.2), look y 1.2 -> 1.0, landscape only - portrait already sits ~32 deg. Verified at 1280x720, 390x844 and --autoplay-boss (boss bar still clear, 0 errors). Next: F-07 (boss kasa dominates at close range). Store submission still needs Naksh.
 Cycle 38: gap 4 done - fx.burst: main cluster 34+30p -> 40+32p tighter (spread 0.45/0.4 -> 0.36/0.32, sizes up 0.4-1.2 -> 0.5-1.3) plus a new mid-size blot ring hugging the hit (12+10p, 0.0042 px, stddev 0.18). Verified at 1280x720 + 390x844. Next: fresh full reference audit (the C34 list is now all closed - re-grade everything against the footage), then F-07 (boss kasa dominates at close range). Store submission still needs Naksh.
 Cycle 37: gap 3 done - post.gdshader vignette band widened (0.10->0.14) and warmed (0.80/0.66/0.50 -> 0.74/0.58/0.40), plus a burnt umber corner term (0.62/0.46/0.29 over a 0.32 ragged radius). Verified at 1280x720 + 390x844. Next: gap 4 (splatter density around hits - more mid-size blots near the burst centre), then a fresh full reference audit. Store submission still needs Naksh.
@@ -69,6 +70,7 @@ Cycle 34: fresh distance-to-reference audit (yt-dlp frames vs Movie Maker captur
 6. [done C39] Camera: C39 re-grade found the landscape view too low (~22 deg vs the reference's ~35 deg elevated read: kasa tops, wider ground spread). Raised in scripts/main.gd; portrait already matched.
 
 ## C39 audit residuals (ranked)
-1. F-07: boss kasa dominates the frame at close range (carried over).
-2. Minor: at the raised landscape angle the foe HP bar can brush the bottom of the chips row (cosmetic, watch it).
+1. [done C40] F-07: boss sprite filled/cropped the landscape frame at close range. boss_frame camera pull-back added. Note: the boss has no kasa (bare head, topknot) - the item meant the whole sprite mass.
+2. Minor: at the raised landscape angle the foe HP bar can brush the bottom of the chips row, and the boss topknot can touch the boss-bar name text mid-swing (both cosmetic, watch them).
 3. UI pips/brush HP stroke from the reference stay an accepted divergence (playability adaptation).
+4. Next candidates when the residuals are exhausted: another fresh reference audit, or roadmap polish (blade feel, store assets refresh).
