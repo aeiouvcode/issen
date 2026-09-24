@@ -2869,7 +2869,7 @@ const sfx = (()=>{
   return {
     whoosh:()=>noise(.22, 900, 220, .14),
     whooshBig:()=>noise(.4, 500, 120, .18),
-    hit:()=>{ noise(.12, 1500, 260, .17); tone(160, 60, .14, .15, 'triangle'); },
+    hit:()=>{ noise(.13, 1100, 240, .14); tone(160, 60, .14, .13, 'triangle'); tone(72, 38, .22, .12, 'sine'); }, // body under the thock: low thump, highs softened, same total level
     slam:()=>{ noise(.3, 300, 60, .22, 'lowpass'); tone(90, 40, .3, .18, 'sine'); },
     dodge:()=>noise(.18, 1400, 500, .09),
     heal:()=>tone(600, 1200, .4, .07),
