@@ -2931,9 +2931,12 @@ const sfx = (()=>{
             if(intense>.75 && Math.random()<.55) musQueue.push({at:G.time-.001, tk:1}); // low taiko pulse opens a hot phrase
             musT=(10+Math.random()*14)*(1.15-intense*.5); // roughly 8-20s between phrases, tighter when hot
           }
+        } else if(G.running && !G.over){
+          musT-=dt; // the standoff still breathes: a rare, softer note in the quiet
+          if(musT<=0){ musQueue.push({at:G.time, f:PENTA[(Math.random()*PENTA.length)|0], soft:1}); musT=14+Math.random()*10; }
         } else if(musT<3) musT=3;
         let _pl=0;
-        while(musQueue.length && musQueue[0].at<=G.time){ const q=musQueue.shift(); if(q.tk){ taiko(.07); } else { pluck(q.f,.04+Math.random()*.018); _pl++; } }
+        while(musQueue.length && musQueue[0].at<=G.time){ const q=musQueue.shift(); if(q.tk){ taiko(.07); } else { pluck(q.f, q.soft? .026+Math.random()*.01 : .04+Math.random()*.018); _pl++; } }
         if(_pl) window.__plucks=(window.__plucks||0)+_pl;
         window.__windDbg = {wind:+windCur.toFixed(4), rustle:+rustleCur.toFixed(4), freq:Math.round(windF.frequency.value), ac:ac?ac.state:'none'};
       }catch(e){}
