@@ -328,9 +328,11 @@ void main(){
   float pools = smoothstep(.29,.37,ink+bn*.16)*.42 + smoothstep(.60,.70,ink+bn*.16)*.58;
   ink = mix(ink, pools, uBand);
   vec3 col = mix(uPaper, uInk, ink);
-  // dry-brush highlights: pale streaks raked through the dark mass
-  float dry = smoothstep(.66,.94, fbm(vec2(vUv.x*13.0 + vW.y*2.0, vUv.y*3.0)));
-  col = mix(col, uPaper, dry * uDry * smoothstep(.45,.85,ink));
+  // dry-brush highlights: pale streaks raked through the dark mass (two scales - broad rakes + fine splits)
+  float dry1 = smoothstep(.58,.90, fbm(vec2(vUv.x*6.0 + vW.y*1.6, vUv.y*1.7)));
+  float dry2 = smoothstep(.68,.95, fbm(vec2(vUv.x*13.0 + vW.y*2.0, vUv.y*3.0)));
+  float dry = max(dry1, dry2*.8);
+  col = mix(col, uPaper, dry * uDry * smoothstep(.40,.82,ink));
   col *= .93 + .07 * fbm(vW.xy*22.0 + vW.zx*23.0);
   gl_FragColor = vec4(col, uFade);
 }`;
@@ -351,11 +353,11 @@ function inkMat(paper, ink, bias, floor=0, streakV=0, streakAmp=.5, hem=0, hatch
 const M = {
   skin:  inkMat(0xf3ecdc, 0x241f16, .62),
   clothL:inkMat(0x5f5748, 0x100d07, 1.48, .36),
-  hair:  inkMat(0x6b6250, 0x0d0a06, 1.55, .58, 0, .5, 0, .8, 1, 1, .5),
+  hair:  inkMat(0x6b6250, 0x0d0a06, 1.55, .58, 0, .5, 0, .8, 1, 1, .8),
   pale:  inkMat(0xe9e2cc, 0x2a241a, 1.02, .12, .35, .55, .38, 1.05, 1.6),
-  dark:  inkMat(0x9a917c, 0x171208, 1.26, .30, 0, .5, 0, .7, 1, 1, .45),
-  wrap:  inkMat(0x7c7260, 0x14100a, 1.42, .5, 1, .5, 0, .8, 1, 1, .4),
-  robe:  inkMat(0xe8e1ca, 0x14100a, 1.42, .15, 1, 2.35, 1.0, .55, 1.2, 1, .65),
+  dark:  inkMat(0x9a917c, 0x171208, 1.26, .30, 0, .5, 0, .7, 1, 1, .7),
+  wrap:  inkMat(0x7c7260, 0x14100a, 1.42, .5, 1, .5, 0, .8, 1, 1, .62),
+  robe:  inkMat(0xe8e1ca, 0x14100a, 1.42, .15, 1, 2.35, 1.0, .55, 1.2, 1, 1.05),
   kasa:  inkMat(0xd9d2bd, 0x14100a, 1.58, .30, 1, 1.1, .5, .7),
   blade: inkMat(0xd8d0b8, 0x100c07, 1.15, .25),
   red:   new THREE.MeshBasicMaterial({color:RED}),
