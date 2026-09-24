@@ -1,5 +1,6 @@
 # Checkpoint
 
+- 2026-09-24 C53: HUD label texts written on change only (timer 10 Hz gate, player/boss HP ints, foe label string cache) - kills a guaranteed per-tick font re-raster + texture upload on web. Draws unchanged (47-49).
 - 2026-09-24 C52: fx.gd ink renderer rewritten to per-texture MultiMesh pools (all burst/drop/stain quads; figure-parented sprites stay Sprite3D). Draw calls 226-240 -> 47-49, nodes 315 -> 90 in --autoplay --perf. post_mat uniforms written on change only.
 - 2026-09-23 M1: offline brush baker (tools/brush.py): bristle strokes that run dry toward the tail, wet-edge washes, ragged blots. Deterministic per seed.
 - 2026-09-23 M1: side-view rigs (tools/figures.py) + keyframed poses (tools/bake_sprites.py). Player: idle/run/atk1-3/dodge/hit/die (47 frames). Ronin (kasa + naginata): idle/walk/windup/swing/recover/hit/die (38 frames). Every frame re-drawn with its own seed so the line boils like hand animation.
