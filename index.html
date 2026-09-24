@@ -2125,7 +2125,8 @@ function hurtPlayer(dmg, fromPos, src){ src = src||boss;
 const input = {x:0, z:0, atk:false, dodge:false, heal:false};
 function updatePlayer(dt){
   const p = player;
-  p.stateT += dt * (p.state.startsWith('atk') ? (p._atkSpd||1) : 1);
+  const _as = p.state.startsWith('atk') ? (p._atkSpd||1) : 1;
+  p.stateT += dt * (_as * ((p._landed && p.stateT>ATK[p.atkIdx].hitAt) ? .72 : 1)); // follow-through: the blade rests in the cut
   if(p.iframe>0) p.iframe -= dt;
   if(p.counterT>0){
     p.counterT -= dt;
@@ -3564,6 +3565,7 @@ function updateCamera(dt){
     }
   }
   let dist = (document.body.classList.contains('coarse')?10.6:9.0), h = 1.2 + Math.sin(G.camPitch)*8.0;
+  h += Math.sin(G.time*.55)*.07; G.camYaw += Math.sin(G.time*.31)*.00035; // the camera breathes between exchanges
   if(G.camPush>0){ G.camPush-=dt; const pk=Math.min(1,G.camPush*2.2); dist*=(1-.16*pk); h-=1.2*pk; } // finisher: the camera leans in low
   if(G.camNudge>0){ G.camNudge-=dt*3.2; const nk=Math.min(1,Math.max(0,G.camNudge*4.5)); dist*=(1-.055*nk); } // connect: the camera settles into the cut
   const cx = player.pos.x - Math.sin(G.camYaw)*dist*Math.cos(G.camPitch);
