@@ -44,7 +44,7 @@ class Canvas:
                 out.append((p[0] + self.rng.normal(0, amt), p[1] + self.rng.normal(0, amt)))
         return out
 
-    def wash(self, poly, dens=0.5, edge=0.35, rag=1.6, texture=0.45, layer='ink', streak_dir=None):
+    def wash(self, poly, dens=0.5, edge=0.35, rag=1.6, texture=0.45, layer='ink', streak_dir=None, grad=0.0):
         m = self._mask(self._jitter(poly, rag))
         if m.max() == 0: return
         blur = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(3 * self.ss)), np.float32) / 255
@@ -52,6 +52,7 @@ class Canvas:
         tex = 1 - texture + texture * (self.noise * 0.6 + self.grain * 0.4) * 1.4
         if streak_dir is not None:
             tex = tex * (0.75 + 0.5 * self.streak)
+            rim = rim * (0.55 + 0.9 * self.streak)  # dry-brush breakup along the wet edge
         d = np.clip(m * (dens * tex + edge * rim), 0, 1)
         if layer == 'ink':
             self.ink = 1 - (1 - self.ink) * (1 - d)
@@ -61,7 +62,13 @@ class Canvas:
             self.fill = np.maximum(self.fill, m)
             self.ink *= (1 - m)  # light fill covers ink below it
             self.red *= (1 - m)
-            self.fillshade = self.fillshade * (1 - m) + m * np.clip(dens * tex + edge * rim * 0.6, 0, 1)
+            shade = np.clip(dens * tex + edge * rim * 0.6, 0, 1)
+            if grad:
+                rows = np.where(m.max(axis=1) > 0.01)[0]
+                if len(rows) > 1:
+                    yy = np.clip((np.arange(self.S)[:, None] - rows[0]) / max(1, rows[-1] - rows[0]), 0, 1)
+                    shade = np.clip(shade + grad * (yy - 0.5) * m, 0, 1)
+            self.fillshade = self.fillshade * (1 - m) + m * shade
 
     def stroke(self, pts, w=6, ink=0.95, dry=0.45, taper=(0.15, 0.35), layer='ink', press=1.0):
         """Bristle stroke along polyline pts (canvas px). dry = how much the brush runs out."""
@@ -103,6 +110,12 @@ class Canvas:
             self.ink = 1 - (1 - self.ink) * (1 - d)
         elif layer == 'red':
             self.red = np.maximum(self.red, d)
+        elif layer == 'fill':
+            # paper highlight: covers ink below, resets shading to bare paper
+            self.fill = np.maximum(self.fill, d)
+            self.ink *= (1 - d)
+            self.red *= (1 - d)
+            self.fillshade *= (1 - d)
 
     def dab(self, x, y, r, ink=0.9, rag=0.35, n=None):
         """Irregular blot."""

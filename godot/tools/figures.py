@@ -107,8 +107,8 @@ def draw_player(c, J, pose):
     hipL = J['hip'] + n * 15 * tw; hipR = J['hip'] - n * 15 * tw
     shL = J['sh'] + n * 13 * tw; shR = J['sh'] - n * 13 * tw
     body = [tuple(shL), tuple(J['neck'] + n * 4), tuple(shR), tuple(hipR + (hipR - shR) * 0.1), tuple(hipL + (hipL - shL) * 0.1)]
-    c.wash(body, dens=0.2, edge=0.6, layer='fill', rag=1.2)
-    c.wash([tuple(shR), tuple(lerp(shR, hipR, 0.9)), tuple(lerp(J['hip'], hipR, 0.3)), tuple(lerp(J['sh'], shR, 0.4))], dens=0.35, edge=0.2, rag=2, texture=0.6, streak_dir=1)
+    c.wash(body, dens=0.3, edge=0.45, layer='fill', rag=1.8, texture=0.6, streak_dir=1, grad=0.25)
+    c.wash([tuple(shR), tuple(lerp(shR, hipR, 0.9)), tuple(lerp(J['hip'], hipR, 0.3)), tuple(lerp(J['sh'], shR, 0.4))], dens=0.45, edge=0.2, rag=2.2, texture=0.7, streak_dir=1)
     c.stroke([tuple(shL), tuple(lerp(shL, hipL, 0.5) + n * 1.5), tuple(hipL)], w=3.6, dry=0.6)
     c.stroke([tuple(shR), tuple(lerp(shR, hipR, 0.5) - n * 1.5), tuple(hipR)], w=3.2, dry=0.7)
     if not back:
@@ -171,9 +171,13 @@ def draw_player(c, J, pose):
         if ay > 0.3:
             c.dab(*(fc - np.array([4.5, 2]) + fwd * 1), 1.3, ink=0.9)
     # front arm sleeve
-    draw_sleeve(c, J['f_sh'], J['f_el'], J['f_hand'], 0.24)
+    draw_sleeve(c, J['f_sh'], J['f_el'], J['f_hand'], 0.3)
     # hand
     c.dab(*J['f_hand'], 3.2, ink=0.25)
+    # dry paper highlights riding the wash (reference figures keep bare-paper streaks)
+    c.stroke([tuple(J['sh'] + n * 8), tuple(lerp(J['sh'], J['chest'], 0.7) + n * 9)], w=5.0, dry=0.8, taper=(0.1, 0.7), layer='fill')
+    c.stroke([tuple(lerp(J['hip'], J['f_knee'], 0.15) + perp(J['hip'], J['f_foot']) * 6), tuple(lerp(J['hip'], J['f_knee'], 0.75) + perp(J['hip'], J['f_foot']) * 7)], w=5.0, dry=0.9, taper=(0.15, 0.7), layer='fill')
+    c.stroke([tuple(lerp(J['hip'], J['b_knee'], 0.2)), tuple(lerp(J['hip'], J['b_knee'], 0.7))], w=4.0, dry=0.85, taper=(0.15, 0.7), layer='fill', ink=0.6)
     # wet-ink spatter clinging to the silhouette (reference figures are splashed, not clean)
     c.splatter(*(lerp(J['hip'], J['b_foot'], 0.7)), 10, 7, 2.2, ink=0.9)
     c.splatter(*(lerp(J['sh'], J['b_el'], 0.6)), 8, 5, 1.8, ink=0.9)
@@ -196,7 +200,9 @@ def draw_sleeve(c, sh, el, hand, shade):
     e2 = el - perp(sh, el) * 8 + drop * 4
     h2 = lerp(el, hand, 0.35)
     poly = [tuple(s1), tuple(e1), tuple(e1 + drop * 6 + (h2 - el) * 0.4), tuple(h2), tuple(e2), tuple(s2)]
-    c.wash(poly, dens=shade, edge=0.45, layer='fill', rag=1.4)
+    c.wash(poly, dens=min(0.9, shade + 0.08), edge=0.4, layer='fill', rag=2.0, texture=0.6, streak_dir=1, grad=0.2)
+    # bold dark cuff accent (reference: near-black shapes at the cuffs)
+    c.wash([tuple(e1), tuple(e1 + drop * 6 + (h2 - el) * 0.4), tuple(h2), tuple(lerp(e1, h2, 0.45) - drop * 4)], dens=0.85, edge=0.3, rag=2.2, texture=0.5, streak_dir=1)
     c.stroke([tuple(s1), tuple(e1), tuple(e1 + drop * 6 + (h2 - el) * 0.4)], w=3.0, dry=0.65)
     c.stroke([tuple(s2), tuple(e2), tuple(h2)], w=2.4, dry=0.75)
     c.stroke([tuple(el), tuple(hand)], w=4.0, ink=0.35, dry=0.5)
@@ -205,7 +211,9 @@ def draw_hakama_leg(c, hip, knee, foot, shade):
     n = perp(hip, foot)
     a = hip; b = knee; f = foot
     poly = [tuple(a + n * 11), tuple(b + n * 12), tuple(f + n * 15 + np.array([0, -6])), tuple(f - n * 15 + np.array([0, -6])), tuple(b - n * 11), tuple(a - n * 10)]
-    c.wash(poly, dens=shade, edge=0.5, layer='fill', rag=1.5, streak_dir=1)
+    c.wash(poly, dens=shade, edge=0.45, layer='fill', rag=1.9, texture=0.6, streak_dir=1, grad=0.22)
+    # bold dark hem accent (reference: near-black dry-brush shapes at the hakama hem)
+    c.wash([tuple(lerp(b, f, 0.55) + n * 13), tuple(f + n * 15 + np.array([0, -6])), tuple(f - n * 15 + np.array([0, -6])), tuple(lerp(b, f, 0.6) - n * 6)], dens=0.85, edge=0.3, rag=2.2, texture=0.55, streak_dir=1)
     c.stroke([tuple(a + n * 11), tuple(b + n * 12), tuple(f + n * 15 + np.array([0, -6]))], w=3.4, dry=0.6)
     c.stroke([tuple(a - n * 10), tuple(b - n * 11), tuple(f - n * 15 + np.array([0, -6]))], w=2.6, dry=0.75)
     # pleat
