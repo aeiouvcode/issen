@@ -278,7 +278,7 @@ func scar(pos: Vector3, dir: float, strong := false) -> void:
 	s["sv"] = 0.35
 	_write_flat(s)
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:  # C55: was _process - physics interpolation warns on MultiMesh writes outside physics tick; sim rate matches camera tick
 	var keep: Array = []
 	for it in items:
 		it["t"] += delta
