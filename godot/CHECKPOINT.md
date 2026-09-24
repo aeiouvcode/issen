@@ -93,3 +93,5 @@
 - 2026-09-24 C50 part 1 perf: --perf QA mode (avg_fps/p99/worst每12s), ground fbm->fbm2 for broad terms (visual unchanged), physics interpolation on. llvmpipe attribution: ground ~46ms/frame, grass ~0; octave cut no local gain (llvmpipe is draw/setup bound). Real-pipeline measurement + scaling_3d next.
 
 - 2026-09-24 C50 part 2 perf: post grain hash+fbm2, scaling_3d=0.85, web ?perf beacon + instrumentation (phys/draws/prims), URL debug toggles. Fill-bound confirmed (SwiftShader 720p ~115ms fill + ~30ms fixed; 320x180 -> 29fps warm). Cold A/B masked by ~60s shader-compile warmup. Deployed with parent 6:43 approval.
+
+- 2026-09-24 C51 perf: ground shader -> tiling noise texture (art/noise.png), speckle read rebalanced and verified. Perf beacon gains tproc/tphys/nodes. Key finding: 7.5fps/~146ms is IDENTICAL on llvmpipe, SwiftShader, and GTX 1650 - CPU/interop-bound in the web runtime, not GPU. ALU->texture wins are invisible to CPU rasterizers; phone impact unproven but directionally right, visual unchanged.
