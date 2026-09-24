@@ -1073,7 +1073,7 @@ func _camera(delta: float) -> void:
 			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 3.6, 1.0, 1.35)
 		elif bow_frame:
 			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 5.0, 1.0, 1.3)
-	var off := Vector3(0, 3.6, 6.0) * (zoom if bow_frame else 1.0) if not portrait else Vector3(0, 5.4, 4.3) * zoom
+	var off := Vector3(0, 4.6, 5.2) * (zoom if bow_frame else 1.0) if not portrait else Vector3(0, 5.4, 4.3) * zoom  # C39: landscape raised to the reference's ~35 deg view
 	# F-22: a foe lined up in depth hides behind (or in front of) the player; swing the camera
 	# toward the foe's side so the line of sight opens a gap between the two figures
 	var side := 0.0
@@ -1094,7 +1094,7 @@ func _camera(delta: float) -> void:
 	else:
 		cam.global_position = want
 	# portrait: aim a little higher so the duel sits nearer the vertical middle, not above empty ground
-	cam.look_at(cam.global_position - off + Vector3(0, 2.7 if portrait else 1.2, 0), Vector3.UP)
+	cam.look_at(cam.global_position - off + Vector3(0, 2.7 if portrait else 1.0, 0), Vector3.UP)
 	kick = kick.lerp(Vector2.ZERO, 1.0 - exp(-9.0 * delta))
 	if shake > 0.0:
 		shake = maxf(0.0, shake - delta)
