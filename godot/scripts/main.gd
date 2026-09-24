@@ -169,6 +169,10 @@ func _ready() -> void:
 		enemies[0].set_meta("cool", 99.0)
 		enemies[0].max_hp = 200.0; enemies[0].hp = 200.0
 		enemies[0].global_position.z = player.global_position.z; enemies[0].set_meta("lane", 0)
+		if "--depth" in OS.get_cmdline_user_args():
+			# C33: the foe squares up in depth (lane -1, behind) so the 3/4-view falling finisher plays
+			enemies[0].set_meta("lane", -1); enemies[0].global_position.z = player.global_position.z - 2.6
+			enemies[0].global_position.x = player.global_position.x + 0.6
 		for i in 14:
 			auto_steps.append([2.0 + i * 0.16, "attack"])
 
@@ -497,7 +501,8 @@ func _start_attack() -> void:
 		var td: Vector3 = tgt.global_position - p.global_position
 		if absf(td.z) > absf(td.x) * 1.1:
 			p.view = "_f" if td.z > 0.0 else "_b"
-	p.play(["atk1", "atk2", "atk3", "atk1"][combo] + p.view, true)
+	# C33: the fourth cut in a 3/4 view is an overhead falling cut (atk3 pose) instead of the dash
+	p.play((["atk1", "atk2", "atk3", "atk1"][combo] if not (combo == 3 and p.view != "") else "atk3") + p.view, true)
 	sfx.play("swing_heavy" if combo >= 2 else "swing")
 	queued = false; hit_done = false
 	var mv := _move_input()
@@ -517,7 +522,12 @@ func _player_strike() -> void:
 	var zdir := 0.0 if p.view == "" else (1.0 if p.view == "_f" else -1.0)
 	var anchor := p.global_position + (Vector3(p.facing * 1.1, yoff, 0.2) if zdir == 0.0 else Vector3(p.facing * 0.4, yoff, zdir * 1.0 + 0.2))
 	var sk: float = [1.2, 1.15, 1.45, 1.9][combo] * float(STANCES[stance].sk)
-	fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.42 if combo < 3 else 0.55, 0.0, combo)
+	var sl := fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.42 if combo < 3 else 0.55, 0.0, combo)
+	if combo == 3 and zdir != 0.0:
+		# C33 directional finisher: the arc stands on end, a falling cut down the depth line
+		sl.rotation.z = -p.facing * PI * 0.5
+		sl.scale = Vector3(1.0, 1.25, 1.0) * sk
+		sl.global_position = p.global_position + Vector3(p.facing * 0.3, 1.2, zdir * 1.3 + 0.2)
 	if combo == 3:
 		fx.dash_mark(p.global_position, 0.0)
 		if autoplay:
@@ -532,7 +542,12 @@ func _player_strike() -> void:
 		if in_arc:
 			strike_zdir = zdir; strike_dz = d.z
 			_hurt(e, dmg, p.facing, combo >= 2)
-			if combo == 3 and e.alive():
+			if combo == 3 and zdir != 0.0:
+				# falling cut: a longer bite and the camera pressed down with the blade
+				hitstop = maxf(hitstop, 0.14)
+				kick = Vector2(0.0, -0.36)
+				e.vel = Vector3(0, 0, zdir * 1.5)
+			if combo == 3 and e.alive() and zdir == 0.0:
 				e.vel.x *= 0.15  # the issen cut passes through; the foe is held in place, not shoved ahead
 
 func _start_dodge(mv: Vector2) -> void:

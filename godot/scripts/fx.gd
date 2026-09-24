@@ -30,7 +30,7 @@ func _ready() -> void:
 	quad.size = Vector2(4.6, 2.3)
 	quad.center_offset = Vector3(0, 1.15, 0)
 
-func slash(pos: Vector3, facing: float, scale_k := 1.0, dur := 0.32, red := 0.0, variant := 0) -> void:
+func slash(pos: Vector3, facing: float, scale_k := 1.0, dur := 0.32, red := 0.0, variant := 0) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = quad
 	var m := ShaderMaterial.new()
@@ -46,6 +46,7 @@ func slash(pos: Vector3, facing: float, scale_k := 1.0, dur := 0.32, red := 0.0,
 	add_child(mi)
 	mi.global_position = pos
 	items.append({"node": mi, "kind": "slash", "t": 0.0, "dur": dur, "mat": m})
+	return mi
 
 func _billboard(tex: Texture2D, px: float) -> Sprite3D:
 	var s := Sprite3D.new()
