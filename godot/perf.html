@@ -113,9 +113,22 @@ body {
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"9-c54.pck":3750528,"index.wasm":38047590},"focusCanvas":true,"gdextensionLibs":[],"mainPack":"9-c54.pck","godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"10-c56.pck":3750544,"index.wasm":38047590},"focusCanvas":true,"gdextensionLibs":[],"mainPack":"10-c56.pck","godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
-const engine = new Engine(GODOT_CONFIG);
+
+// C56: mobile audio unlock - the engine resumes its AudioContext only at boot (pre-gesture, blocked)
+var __acs=[];(function(){var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+function Wrap(o){var c=new AC(o);__acs.push(c);return c;}
+Wrap.prototype=AC.prototype;window.AudioContext=Wrap;window.webkitAudioContext=Wrap;
+var __h=null;
+function hint(){if(__h)return;__h=document.createElement('div');__h.textContent='tap for sound';
+__h.style.cssText='position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:99;pointer-events:none;font:16px sans-serif;color:#3b2f23;background:rgba(240,230,210,.9);padding:4px 10px;border-radius:6px;display:none';document.body.appendChild(__h);}
+function tick(){hint();var any=false;for(var i=0;i<__acs.length;i++){var c=__acs[i];if(c.state!=='running'){any=true;c.resume();}}
+__h.style.display=(any&&__acs.length)?'block':'none';}
+['pointerdown','touchstart','keydown','click'].forEach(function(ev){window.addEventListener(ev,tick,{passive:true});});
+setInterval(tick,1500);})();
+
+		const engine = new Engine(GODOT_CONFIG);
 
 (function () {
 	const statusOverlay = document.getElementById('status');
