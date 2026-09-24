@@ -506,8 +506,8 @@ function bambooTexture(){
     m.position.y = y;
     scene.add(m);
   };
-  mk(ARENA_R+11, 4, .88, 9, 3.6);
-  mk(ARENA_R+20, 6, .6, 12, 4.6);
+  mk(ARENA_R+11, 4, .78, 9, 3.6);
+  mk(ARENA_R+20, 6, .42, 12, 4.6); // far ring washes out: depth you can feel
 }
 
 /* ---- foreground bamboo framing (near stalks at the rim) ---- */
@@ -1299,6 +1299,50 @@ function updateDecals(dt){
     const d=decals[i]; d.life-=dt;
     d.m.material.opacity = .8*Math.min(1, d.life/ (d.maxLife*.5));
     if(d.life<=0){ scene.remove(d.m); d.m.material.dispose(); decals.splice(i,1); }
+  }
+}
+
+/* ---------------- footstep ink: the duel writes itself on the paper ---------------- */
+function stepTexture(){
+  const c=document.createElement('canvas'); c.width=64; c.height=64;
+  const x=c.getContext('2d');
+  // a pressed foot smudge: heavier at the heel, the brush lifts and dries toward the toe
+  for(let i=0;i<14;i++){
+    const t=Math.random();
+    const px=16+t*30+(Math.random()*6-3), py=32+(Math.random()*12-6);
+    const rad=3+(1-t)*8+Math.random()*3;
+    const g=x.createRadialGradient(px,py,.5,px,py,rad);
+    g.addColorStop(0,'rgba(30,24,16,'+(0.32+Math.random()*.26)+')');
+    g.addColorStop(1,'rgba(30,24,16,0)');
+    x.fillStyle=g; x.beginPath(); x.arc(px,py,rad,0,7); x.fill();
+  }
+  return new THREE.CanvasTexture(c);
+}
+const stepTex = stepTexture();
+const stepDecals = [];
+const stepMatBase = new THREE.MeshBasicMaterial({map:stepTex, transparent:true, depthWrite:false, opacity:.42});
+function stepSplat(px,pz,yaw,side,scale=1){
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(.5*scale,.42*scale), stepMatBase.clone());
+  m.rotation.x=-Math.PI/2; m.rotation.z=(yaw-Math.PI/2)+(Math.random()-.5)*.3;
+  m.position.set(px+Math.cos(yaw)*.15*side*scale, .026+Math.random()*.012, pz-Math.sin(yaw)*.15*side*scale);
+  scene.add(m);
+  stepDecals.push({m, life:5+Math.random()*2, maxLife:7});
+  if(stepDecals.length>30){ const d=stepDecals.shift(); scene.remove(d.m); d.m.material.dispose(); }
+}
+function updateStepDecals(dt){
+  for(let i=stepDecals.length-1;i>=0;i--){
+    const d=stepDecals[i]; d.life-=dt;
+    d.m.material.opacity=.42*Math.min(1, d.life/(d.maxLife*.55));
+    if(d.life<=0){ scene.remove(d.m); d.m.material.dispose(); stepDecals.splice(i,1); }
+  }
+}
+function inkStep(ent, vx, vz, dt, scale=1, interval=.62){
+  const sp=Math.hypot(vx,vz);
+  if(sp<1.2 || ent.pos.y>.05){ ent._stepAcc=0; return; }
+  ent._stepAcc=(ent._stepAcc||0)+sp*dt;
+  if(ent._stepAcc>interval){
+    ent._stepAcc=0; ent._stepSide=-(ent._stepSide||1);
+    stepSplat(ent.pos.x, ent.pos.z, Math.atan2(vx,vz), ent._stepSide, scale);
   }
 }
 
@@ -2446,6 +2490,7 @@ function updatePlayer(dt){
   }
   // integrate + arena bounds
   p.pos.x += p.vel.x*dt; p.pos.z += p.vel.z*dt;
+  inkStep(p, p.vel.x, p.vel.z, dt, 1);
   if(!['atk1','atk2','atk3'].includes(p.state) && !canAct && p.state!=='dodge'){
     p.vel.x *= Math.pow(.001,dt); p.vel.z *= Math.pow(.001,dt);
   }
@@ -2632,7 +2677,7 @@ function updateMinion(dt){
   m.root.rotation.y = m.yaw;
   if(m.state==='idle'){ m.thinkT-=dt; if(m.thinkT<=0){ m.state='approach'; m.stateT=0; } }
   else if(m.state==='approach'){
-    if(d>2.1){ m.pos.x += Math.sin(m.yaw)*2.6*dt; m.pos.z += Math.cos(m.yaw)*2.6*dt; }
+    if(d>2.1){ m.pos.x += Math.sin(m.yaw)*2.6*dt; m.pos.z += Math.cos(m.yaw)*2.6*dt;  inkStep(m, Math.sin(m.yaw)*2.6, Math.cos(m.yaw)*2.6, dt, .9); }
     else { m.state='windup'; m.stateT=0; slashArc(m.pos.clone().setY(.2), 0, 2.4, 6.28, .42, false, 0); sfx.charge(); }
   }
   else if(m.state==='windup'){
@@ -2718,7 +2763,7 @@ function updateLancer(dt){
   m.root.rotation.y = m.yaw;
   if(m.state==='idle'){ m.thinkT-=dt; if(m.thinkT<=0){ m.state='approach'; m.stateT=0; } }
   else if(m.state==='approach'){
-    if(d>3.1){ m.pos.x += Math.sin(m.yaw)*2.2*dt; m.pos.z += Math.cos(m.yaw)*2.2*dt; }
+    if(d>3.1){ m.pos.x += Math.sin(m.yaw)*2.2*dt; m.pos.z += Math.cos(m.yaw)*2.2*dt;  inkStep(m, Math.sin(m.yaw)*2.2, Math.cos(m.yaw)*2.2, dt, 1); }
     else { m.state='windup'; m.stateT=0; slashArc(m.pos.clone().setY(.2), m.yaw, 3.6, .5, .45, false, 0); sfx.charge(); }
   }
   else if(m.state==='windup'){
@@ -2733,7 +2778,7 @@ function updateLancer(dt){
         if(dy2<.6) hurtPlayer(10, m.pos, m);
       }
     }
-    if(m.stateT<.25){ m.pos.x += Math.sin(m.yaw)*3.2*dt; m.pos.z += Math.cos(m.yaw)*3.2*dt; } // the lunge behind the point
+    if(m.stateT<.25){ m.pos.x += Math.sin(m.yaw)*3.2*dt; m.pos.z += Math.cos(m.yaw)*3.2*dt; } // the lunge behind the poin inkStep(m, Math.sin(m.yaw)*3.2, Math.cos(m.yaw)*3.2, dt, 1, .8); } // the lunge behind the point
     if(m.stateT>=.3){ m.state='recover'; m.stateT=0; }
   }
   else if(m.state==='recover'){ if(m.stateT>=.9){ m.state='approach'; m.stateT=0; } }
@@ -2799,6 +2844,7 @@ function updateBoss(dt){
       if(d > 3.6){
         b.pos.x += Math.sin(b.yaw)*2.1*dt;
         b.pos.z += Math.cos(b.yaw)*2.1*dt;
+        inkStep(b, Math.sin(b.yaw)*2.1, Math.cos(b.yaw)*2.1, dt, 1.35, .85); // the hem drags ink
         if(b.state!=='walk') bossSetState('walk');
       } else if(b.state!=='idle') bossSetState('idle');
       if(b.thinkT<=0){
@@ -3787,6 +3833,10 @@ function updateCamera(dt){
     const yaw=G.camYaw+(1-e)*1.15, pitch=.12+e*.43, dist=7.2+e*2.6;
     camera.position.set(player.pos.x-Math.sin(yaw)*dist*Math.cos(pitch), Math.max(.5,1.0+Math.sin(pitch)*8.0), player.pos.z-Math.cos(yaw)*dist*Math.cos(pitch));
     camera.lookAt(player.pos.x+Math.sin(G.camYaw)*2.2, 1.1, player.pos.z+Math.cos(G.camYaw)*2.2);
+    // anti-eclipse during the sweep: his opening charge crosses the camera arc - ghost him past, never a wall of robe
+    const bdI=Math.hypot(camera.position.x-boss.pos.x,(camera.position.y-1.2)*.7,camera.position.z-boss.pos.z);
+    const fI=Math.min(1,Math.max(.16,(bdI-1.6)/1.8));
+    for(const m of boss._fadeMats){ if(m.isShaderMaterial) m.uniforms.uFade.value=fI; else m.opacity=(m.userData.baseOp??1)*fI; }
     return;
   }
   if(G.camDrag>0) G.camDrag-=dt;
@@ -3844,7 +3894,7 @@ function loop(now){
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
     if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); updateMinion(dt); updateLancer(dt); }
-    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateStepDecals(dt); updateGhosts(dt); updatePuffs(dt);
   updateShards(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
     sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
@@ -3872,7 +3922,7 @@ requestAnimationFrame(loop);
     updateMinion(dt);
     updateLancer(dt);
   }
-  updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
+  updateParts(dt); updateArcs(dt); updateDecals(dt); updateStepDecals(dt); updateGhosts(dt); updatePuffs(dt);
   updateShards(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
   sfx.tick(dt, windIntensity());
   updateCamera(dt);
@@ -3890,7 +3940,7 @@ window.QA = {player, boss, minion, lancer, G, arcs, ribbons, ghosts, decals, par
     if(G.hitstop>0){ G.hitstop-=rawDt; dt*=.08; }
     if(G.slowmo>0){ G.slowmo-=rawDt; dt*=.22; }
     if(G.running){ G.time+=dt; pollKeys(); updatePlayer(dt); updateBoss(dt); updateMinion(dt); updateLancer(dt); }
-    updateParts(dt); updateArcs(dt); updateDecals(dt); updateGhosts(dt); updatePuffs(dt);
+    updateParts(dt); updateArcs(dt); updateDecals(dt); updateStepDecals(dt); updateGhosts(dt); updatePuffs(dt);
   updateShards(dt); updateMist(dt); updateRibbons(dt); updateLeaves(dt);
     sfx.tick(dt, windIntensity()); updateCamera(dt); updateHUD(dt); }
     if(!window.QA_norender) renderer.render(scene, camera); },
