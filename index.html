@@ -138,26 +138,26 @@ if('caches' in window){ caches.keys().then(ks=>ks.forEach(k=>caches.delete(k)));
     border:1.8px solid rgba(42,33,21,.7);filter:url(#rough);pointer-events:none;}
   #mutebtn:active, #enginebtn:active{transform:scale(.92);}
   #mutebtn.off{opacity:.42;}
-  .tbtn{position:absolute;width:64px;height:64px;border-radius:50%;pointer-events:auto;
+  .tbtn{position:absolute;width:84px;height:84px;border-radius:50%;pointer-events:auto;
     border:none;background:rgba(236,225,194,.52);
-    color:var(--ink);font-size:26px;display:flex;align-items:center;justify-content:center;
+    color:var(--ink);font-size:32px;display:flex;align-items:center;justify-content:center;
     font-family:'Hiragino Mincho ProN','Yu Mincho',serif;backdrop-filter:blur(2px);
     box-shadow:inset 0 0 10px rgba(58,45,26,.28), 0 2px 6px rgba(40,30,12,.25);
     transition:transform .08s ease-out,background .12s ease;}
   .tbtn::before{content:"";position:absolute;inset:-2px;border-radius:50%;
     border:2.5px solid rgba(46,38,26,.85);filter:url(#rough);pointer-events:none;}
   .tbtn:active{background:rgba(169,46,34,.35);transform:scale(.93);}
-  #btn-atk{right:20px;bottom:128px;width:76px;height:76px;font-size:32px;}
-  #btn-dodge{right:26px;bottom:222px;}
-  #btn-heal{right:26px;bottom:306px;}
+  #btn-atk{right:16px;bottom:118px;width:98px;height:98px;font-size:40px;}
+  #btn-dodge{right:24px;bottom:234px;}
+  #btn-heal{right:24px;bottom:336px;}
   body.coarse #playerhud{width:160px;bottom:calc(24px + env(safe-area-inset-bottom,0px));}
   body.coarse #timebox{top:12%;}
   body.coarse #timebox::before,body.coarse #timebox::after{display:none;}
   body.coarse #timebox .lbl{display:none;}
   body.coarse #timebox .val{font-size:15px;font-weight:600;opacity:.7;}
-  #joy{position:absolute;width:110px;height:110px;border-radius:50%;border:2px solid rgba(58,50,38,.5);
+  #joy{position:absolute;width:140px;height:140px;border-radius:50%;border:2px solid rgba(58,50,38,.5);
     background:rgba(236,225,194,.18);display:none;pointer-events:none;}
-  #joyknob{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;
+  #joyknob{position:absolute;left:44px;top:44px;width:52px;height:52px;border-radius:50%;
     background:rgba(58,50,38,.55);}
   #hitflash{position:fixed;inset:0;z-index:8;pointer-events:none;background:radial-gradient(ellipse at center, rgba(169,46,34,0) 40%, rgba(169,46,34,.38) 100%);opacity:0;}
   #inklens{position:fixed;inset:0;z-index:9;pointer-events:none;opacity:0;filter:blur(.4px);}
@@ -3377,7 +3377,7 @@ addEventListener('touchstart', e=>{
     if(t.clientX < innerWidth*.45 && joyId===null){
       joyId=t.identifier; joyBase={x:t.clientX,y:t.clientY};
       joy.style.display='block';
-      joy.style.left=(t.clientX-55)+'px'; joy.style.top=(t.clientY-55)+'px';
+      joy.style.left=(t.clientX-70)+'px'; joy.style.top=(t.clientY-70)+'px';
     } else if(camId===null){
       camId=t.identifier; camLast={x:t.clientX,y:t.clientY};
     }
@@ -3387,9 +3387,9 @@ addEventListener('touchmove', e=>{
   e.preventDefault();
   for(const t of e.changedTouches){
     if(t.identifier===joyId){
-      const dx=clamp(t.clientX-joyBase.x,-40,40), dy=clamp(t.clientY-joyBase.y,-40,40);
+      const dx=clamp(t.clientX-joyBase.x,-52,52), dy=clamp(t.clientY-joyBase.y,-52,52);
       knob.style.left=(35+dx)+'px'; knob.style.top=(35+dy)+'px';
-      joyIn.x=dx/40; joyIn.z=-dy/40;
+      joyIn.x=dx/52; joyIn.z=-dy/52;
     } else if(t.identifier===camId){
       G.camYaw -= (t.clientX-camLast.x)*.008;
       G.camPitch = clamp(G.camPitch + (t.clientY-camLast.y)*.006, .08, 1.0);
