@@ -1,8 +1,8 @@
 # CHECKPOINT
 
-M108 SHIPPED — Sep 25, 2026, ~4:26 AM IST.
+M109 SHIPPED — Sep 25, 2026, ~7:47 AM IST.
 
-- slashArc geometry: seg 26 -> 40; per-segment hash zigzag replaced with smooth 1D value noise hn(); wob = .80 + .30*hn(i*.21) + .12*hn(i*.83+7.7)
-- Verified: mobile 390px mid-arc frame smooth (chevron zigzag gone); desktop 1280x720 PASS (coarse=false, no touch UI); console clean
-- Live md5: eb2217fea9d95421ac327e9e5b2d2b11 (repo + live match)
-- Instinct File: gen 69, revision filerevision-01M3AT00VABH87RAYGWFSFFPN1 — https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX
+- Grass swaths rebuilt as hero bands: 3-4 ragged sub-clumps per texture, ~34-50 tall chisel strokes per clump (h 30-68px, lean +-26), darker tones, edge falloff; placement 9 swaths (5 on light) at r 8-19, size 6.5-10 x 1.7-2.4, opacity .9
+- Verified: mobile 390px shows wide brushy bands framing the field (matches reference composition); desktop 1280x720 PASS (coarse=false); console clean
+- Live md5: 75ca40bc7a089bdd7c62c78d57cf2083 (live serves new build; raw CDN was stale during check)
+- Instinct File: gen 70, revision filerevision-01M3B5HD7FP1JH559Z438B41Z6 — https://files.instinct.com/file-01M326B85G08ZT1X3M6QWB72NX
