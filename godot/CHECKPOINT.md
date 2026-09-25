@@ -1,5 +1,7 @@
 # Checkpoint
 
+- 2026-09-26 DEPLOYED: C58+C59+C60 live at https://aeiouvcode.github.io/issen/godot/ (user 'ship go' 8:54 PM). main: 609e45c9/e93ba48b/956a3aa4. FEATURE-MAP.md at repo root. Live-verified with screenshot.
+
 - 2026-09-25 C60 DONE+verified: perf phase 2 complete. Phase A HUD collapse (HudCanvas/ChipsCanvas, arrows MultiMesh), phase B slash MultiMesh pools, phase C static chrome SubViewport bake. Draws 45-67 -> 25-44, nodes 93-131 -> 57-75 (GL --autoplay-boss --perf). Full QA + Movie Maker parity PASS. Local only; push unblocked ~1:00 AM (GitHub web login in vault).
 - 2026-09-25 C59: audit gap 1 - slash rebake to 4 parallel bristle strands ((t,d)-space streak noise, top-edge fade), strike scale 1.3x ([2.0,1.95,2.4,3.1]). Movie Maker verified vs reference. Local only (GitHub auth blocker); deploy held for Main's beat.
 - 2026-09-24 C58: Kageyama mirror AI - 4 hp phases; habit model (press aggression, opener cadence, dodge side); P3 mirror cut + dodge-side shade; P4 cadence read with stillness/glint tell, clash punish, baitable whiff-stagger. QA bots --autoplay-pattern(--mash/--phase3/--phase4/--seed). Source-only; deploy held for Main's beat.
