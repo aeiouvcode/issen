@@ -30,10 +30,10 @@ void fragment() {
 	// sweep reveal: wash appears behind the travelling rim
 	inside *= smoothstep(0.0, 0.25, prog);
 	float n = vnoise(UV * vec2(40.0, 9.0));
-	float d = t.a - (1.0 - life) * (0.7 + 0.5 * n);
+	float d = t.a - (1.0 - life) * (0.85 + 0.6 * n);
 	// translucent grey wash body, dense ink only where the texture is dense (wet rim)
-	float dense = smoothstep(0.55, 0.9, t.a);
-	vec3 wash = mix(vec3(0.38, 0.36, 0.34), t.rgb, dense);
+	float dense = smoothstep(0.62, 0.92, t.a);
+	vec3 wash = mix(vec3(0.52, 0.5, 0.47), t.rgb, dense);
 	ALBEDO = mix(wash, vec3(0.62, 0.07, 0.08), tint);
-	ALPHA = clamp(d * 1.6, 0.0, 1.0) * mix(0.5, 0.95, dense) * inside;
+	ALPHA = clamp(d * 1.6, 0.0, 1.0) * mix(0.38, 0.95, dense) * inside;
 }
