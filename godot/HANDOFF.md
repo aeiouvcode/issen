@@ -102,3 +102,8 @@ Cycle 34: fresh distance-to-reference audit (yt-dlp frames vs Movie Maker captur
 - GOTCHA: stretch=true lets the container own sv.size and Godot warns on manual size sets; stretch=false + manual sv.size = vs in _layout is the clean path (1:1, no blur).
 - MEASURED (GL xvfb --autoplay-boss --perf): draws 45-62 (post-B) -> 25-44; nodes 57-75 -> 64-75. Full C60 vs pre-C60 baseline: draws 45-67 -> 25-44, nodes 93-131 -> 57-75.
 - QA: autoplay/combo/pattern-mash/phase4-seed/chips all clean (only known headless-exit RID noise). Movie Maker parity vs phase-A grid PASS.
+
+## DEPLOY (2026-09-26 12:16 AM): C58+C59+C60 live on /issen/godot/
+- main branch: 609e45c9 (pack 1-c60.pck, md5 66e1510a), e93ba48b (index.html mainPack+CSP), 956a3aa4 (perf.html). Old pack 11-11-c57.pck left in place as rollback.
+- Verified live: engine boots, gameplay runs, chips/plaque/bars render, audio-unlock hint works. Console has one non-fatal CSP EvalError (pre-existing since strict CSP landed; game unaffected).
+- FEATURE-MAP.md added at repo root (Naksh standing guidance #1).
