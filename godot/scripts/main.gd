@@ -702,7 +702,6 @@ func _player_strike() -> void:
 	var sl := fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.46 if combo < 3 else 0.6, 0.0, combo)
 	if combo == 3 and zdir != 0.0:
 		# C33 directional finisher: a taller curtain dropped down the depth line
-		# (rotation.z was always a no-op - the slash shader billboards off MODEL_MATRIX)
 		sl["svk"] = 1.25
 		sl["pos"] = p.global_position + Vector3(p.facing * 0.3, 1.2, zdir * 1.3 + 0.2)
 	if combo == 3:
