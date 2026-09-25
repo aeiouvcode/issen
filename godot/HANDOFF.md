@@ -107,3 +107,18 @@ Cycle 34: fresh distance-to-reference audit (yt-dlp frames vs Movie Maker captur
 - main branch: 609e45c9 (pack 1-c60.pck, md5 66e1510a), e93ba48b (index.html mainPack+CSP), 956a3aa4 (perf.html). Old pack 11-11-c57.pck left in place as rollback.
 - Verified live: engine boots, gameplay runs, chips/plaque/bars render, audio-unlock hint works. Console has one non-fatal CSP EvalError (pre-existing since strict CSP landed; game unaffected).
 - FEATURE-MAP.md added at repo root (Naksh standing guidance #1).
+
+## C61 fresh reference audit (2026-09-26 ~12:25 AM, post-deploy)
+Method: Movie Maker captures of current build (combo chain, finisher, boss intro) vs /tmp/refframes.
+Grids: /tmp/c61/c61_grid.png, /tmp/c61/c61_fin_grid.png.
+Ranked gaps:
+1. Slash tonal quality: current arcs are dense near-black strand clusters; reference band is more translucent with grey wash between bristle tracks and a stronger dry-brush tail taper. Closest remaining visual gap (C59 got structure; tone is next).
+2. Splatter volume: hits spray many small black flecks across the frame; reference is much cleaner (arc + minimal splatter). C38 tightened the burst cluster; the dispersed flecks still read busier than reference.
+3. Grass mid-field: horizontal grass strokes cross the dueling ground; reference ground is clean parchment with edge stipple only. Check against C34 intent (ground shader) vs grass.gdshader field - possible accepted gameplay divergence, decide before touching.
+4. Accepted divergences unchanged: HUD plaque/bar layout vs reference pips + brush HP stroke.
+
+## C62 slash tone (2026-09-26 ~1:00 AM): gap 1 from C61
+- Cause: texture alpha distribution was healthy (47% faint / 27% mid / 26% dense), but the shader's wash grey (0.38 lum) + 0.5 alpha floor let overlapping translucent strands composite to near-black.
+- Fix (shaders/slash.gdshader only): dense band smoothstep(0.55,0.9)->(0.62,0.92); wash grey vec3(0.38,0.36,0.34)->(0.52,0.5,0.47); alpha floor mix(0.5,0.95)->(0.38,0.95); life erosion (0.7+0.5n)->(0.85+0.6n) so the tail thins to hairlines sooner.
+- Verified: A/B Movie Maker at identical timestamps (/tmp/c61/c62_ab.png) - grey wash reads between bristle tracks, band structure separated, wet ink stays dark at impact. Combo QA clean.
+- Visual (non-perf) change: live deploy waits for Main's beat.
