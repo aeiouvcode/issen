@@ -3858,6 +3858,9 @@ function endGame(win){
   ek.style.backgroundImage = 'url('+strokeKanji(eCh, eCol, 1)+')';
   const eIv = setInterval(()=>{ if(++ef>eStrokes){ clearInterval(eIv); return; } ek.style.backgroundImage='url('+strokeKanji(eCh, eCol, ef)+')'; }, 150);
   el('endtitle').textContent = win ? 'VICTORY' : 'FALLEN';
+  el('endprompt').textContent = win
+    ? (G.chapter<3 ? '- tap - chapter '+['two','three'][G.chapter-1]+' waits -' : '- tap to walk it again -')
+    : '- tap to try again -';
   const t=G.time, mm=String(Math.floor(t/60)).padStart(2,'0'), ss=(t%60).toFixed(2).padStart(5,'0');
   let note='';
   if(win){
