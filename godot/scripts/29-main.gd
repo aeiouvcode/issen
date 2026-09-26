@@ -1,0 +1,2038 @@
+extends Node3D
+## ISSEN Godot take: world, duel loop, camera, HUD and touch controls.
+
+var cam: Camera3D
+## F-22: depth-lane foes stand this far off the player's axis; the camera swings sideways to open the rest
+const DEPTH_SIDE := 0.8
+var cam_side := 0.0
+var fx: InkFX
+var sfx: Sfx
+var player: Fighter
+var enemies: Array = []
+var player_tex: Array[Texture2D] = []
+var ronin_tex: Array[Texture2D] = []
+var elapsed := 0.0
+var combo := 0
+var queued := false
+var hit_done := false
+var dodge_cd := 0.0
+var foot_t := 0.0
+var ghost_t := 0.0
+var shake := 0.0
+var spawn_t := 1.2
+var kills := 0
+var hud: CanvasLayer
+var d_plaque: HudCanvas
+var d_pb: HudCanvas
+var d_boss: HudCanvas
+var s_boss: HudCanvas
+var svc: SubViewportContainer
+var sv: SubViewport
+var s_root: Control
+var php_fill_i := -1
+var php_label_i := -1
+var php_fw := 0.0
+var pstam_fill_i := -1
+var boss_fill_i := -1
+var boss_label_i := -1
+var boss_fw := 0.0
+var qa_chips := false
+var arrow_mm: MultiMesh
+var arrow_mi: MultiMeshInstance3D
+var _hud_pstam := -1
+var pst_fill: Control
+var ebars: Array = []
+var _ebars_txt: Array = []  # C53: last label string per bar; text sets only on change
+var _hud_t10 := -1  # C53: last decisecond shown on the timer
+var _hud_php := -1  # C53: last player-hp int shown
+var _hud_boss := -1  # C53: last boss hp/max key shown
+var post_mat: ShaderMaterial
+var _last_flash := -1.0
+var _hurt_v := 0.0
+var touch_ui: HudCanvas
+var chips: ChipsCanvas
+var credits: Control
+var joy_id := -1
+var joy_origin := Vector2.ZERO
+var joy_vec := Vector2.ZERO
+var atk_pos := Vector2.ZERO
+var dodge_pos := Vector2.ZERO
+var joy_pos := Vector2(40, 0)
+var knob_rel := Vector2(37, 37)
+var touch_atk := false
+var touch_dodge := false
+var hitstop := 0.0
+var issen_t := 0.0  # C30: while > 0 the player dashes through foes (spacing push off)
+## Blade feel (C15): parry window, clean-streak finisher, ink-splash kills
+const PARRY_WIN := 0.22        # seconds before a foe's blade lands in which a cut deflects it
+const PERFECT_WIN := 0.08     # the last slice of the window: a perfect parry
+const FINISH_STREAK := 5       # clean hits in a row (no damage taken) that earn a slow-mo finisher
+var atk_press_t := -9.0        # elapsed time of the last attack press
+var clean_hits := 0
+var slow_t := 0.0              # real seconds of slow-mo left
+var slow_zoom := 0.0
+var auto_parry := false
+var atk_buf := 0.0
+var whiff_cd := 0.0  # C57: a whiffed cut delays the next swing
+# C58 mirror boss: what Kageyama learns about you - opener cadence, chain appetite, dodge side
+var habit := {"open_t": [], "last_open": -1.0, "chain_n": 0, "chain2_n": 0, "dodge_l": 0, "dodge_r": 0}
+var read_cd := 0.0
+var player_atk_t := -1.0
+var pattern_test := false
+var pattern_mash := false
+var pattern_t := 0.0
+var pattern_n := 0
+var press_t := []  # C58: recent cut attempts, landed or stuffed - the aggression he reads
+var dodge_buf := 0.0
+# Desktop QA only: `godot -- --autoplay` drives a fixed input timeline for Movie Maker captures.
+# Web builds never receive user args, so this path is inert on Pages.
+var autoplay := false
+var auto_t := 0.0
+var auto_steps := [[0.3, "right", true], [0.9, "right", false], [1.0, "attack"], [1.25, "attack"], [1.5, "attack"], [2.6, "dodge"], [3.3, "attack"], [3.55, "attack"], [3.8, "attack"], [5.0, "attack"], [5.25, "attack"], [5.5, "attack"]]
+var banner: Label
+var spawned := 0
+var armor_test := false
+var spear_test := false
+var twin_test := false
+var bow_test := false
+var arrows: Array = []   # C33: {node, dir, from, e}
+## C22 boss: one per chapter (every 8 kills)
+const CHAPTER_KILLS := 8
+var boss: Fighter = null
+var boss_phase := 0
+var chapters := 0
+var boss_test_hp := 0.0
+## C23 progression: chapter map + blade stances unlocked by clearing chapters (saved)
+const SAVE_PATH := "user://issen_save.cfg"
+const CHAPTER_NAMES := ["Grass sea", "Bamboo ford", "Ash temple", "Snow pass", "Castle of blades"]
+const STANCES := [
+	{"name": "Kasumi", "sub": "mist - the balanced cut", "dmg": 1.0, "speed": 1.0, "parry": 0.0, "armor": false, "sk": 1.0},
+	{"name": "Tsubame", "sub": "swallow - quick cuts, wider parry", "dmg": 0.8, "speed": 1.3, "parry": 0.06, "armor": false, "sk": 0.88},
+	{"name": "Iwa", "sub": "stone - slow and heavy, splits plates", "dmg": 1.45, "speed": 0.8, "parry": -0.04, "armor": true, "sk": 1.22},
+]
+var best_chapter := 0     # chapters ever cleared (save data); stance i unlocks at best_chapter >= i
+var stance := 0
+var no_save := false
+var map_layer: CanvasLayer
+var map_view: Control
+var map_note := ""
+var map_anim := -1      # C31: segment being inked in on the map after a clear (-1 = none)
+var map_anim_t := 1.0
+## C25: each chapter has its own field palette (paper, flecks, grass ink, grass far tone, grass density)
+const PALETTES := [
+	{"paper": Color(0.886, 0.816, 0.69), "fleck": Color(0.30, 0.25, 0.20), "ink": Color(1, 1, 1), "far": Color(0.56, 0.53, 0.49), "dens": 1.0},
+	{"paper": Color(0.83, 0.83, 0.72), "fleck": Color(0.20, 0.26, 0.19), "ink": Color(0.82, 0.95, 0.8), "far": Color(0.49, 0.55, 0.47), "dens": 1.0},
+	{"paper": Color(0.79, 0.77, 0.74), "fleck": Color(0.16, 0.15, 0.15), "ink": Color(0.9, 0.9, 0.9), "far": Color(0.46, 0.45, 0.44), "dens": 0.7},
+	{"paper": Color(0.93, 0.93, 0.92), "fleck": Color(0.36, 0.40, 0.46), "ink": Color(0.95, 1.0, 1.1), "far": Color(0.66, 0.69, 0.74), "dens": 0.45},
+	{"paper": Color(0.87, 0.75, 0.63), "fleck": Color(0.32, 0.13, 0.09), "ink": Color(1.1, 0.9, 0.85), "far": Color(0.52, 0.41, 0.37), "dens": 0.85},
+]
+var ground_node: MeshInstance3D
+var post_rect: ColorRect
+var grass_nodes: Array[MultiMeshInstance3D] = []
+var ground_mat: ShaderMaterial
+var grass_mats: Array[ShaderMaterial] = []
+var perf_mode := false
+var perf_t := 0.0
+var perf_n := 0
+var perf_worst := 0.0
+var perf_arr: Array = []
+var perf_phys_us := 0
+var _pt0 := 0
+var web_q := ""
+var web_toggles_done := false
+var palette_i := 0
+var palette_test := false
+var armor_tex: Array[Texture2D] = []
+var spear_tex: Array[Texture2D] = []
+var twin_tex: Array[Texture2D] = []
+var bow_tex: Array[Texture2D] = []
+var boss_tex: Array[Texture2D] = []
+var parry_flash := 0.0
+var kick := Vector2.ZERO   # C25 blade feel: camera push along a heavy cut
+var strike_zdir := 0.0
+var strike_dz := 0.0
+var strike_issen := false  # C43: the striking cut was the issen dash (profile 4th cut)
+
+func _ready() -> void:
+	perf_mode = "--perf" in OS.get_cmdline_user_args()
+	qa_chips = "--autoplay-chips" in OS.get_cmdline_user_args()
+	if "--probe-nohud" in OS.get_cmdline_user_args():
+		set_meta("probe_nohud", true)
+	if OS.has_feature("web"):
+		var q: String = str(JavaScriptBridge.eval("window.location.search"))
+		if "perf" in q: perf_mode = true
+		web_q = q
+	autoplay = "--autoplay" in OS.get_cmdline_user_args() or "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args()
+	if "--autoplay-views" in OS.get_cmdline_user_args() or "--autoplay-depth" in OS.get_cmdline_user_args():
+		# locomotion views: toward camera, away, then sideways
+		auto_steps = [[0.3, "down", true], [1.4, "down", false], [1.8, "up", true], [3.0, "up", false], [3.2, "left", true], [3.8, "left", false]]
+		if "--autoplay-depth" in OS.get_cmdline_user_args():
+			auto_steps = [[0.2, "down", true], [1.0, "down", false], [1.2, "up", true], [1.45, "up", false], [1.6, "attack"], [1.85, "attack"], [2.1, "attack"]]
+	if autoplay or "--autoplay-foe" in OS.get_cmdline_user_args():
+		seed(7)
+	else:
+		randomize()
+	_input_map()
+	player_tex = _pages("player")
+	ronin_tex = _pages("ronin")
+	armor_tex = _pages("ronin_armor")
+	spear_tex = _pages("ronin_spear")
+	twin_tex = _pages("ronin_twin")
+	bow_tex = _pages("ronin_bow")
+	boss_tex = _pages("boss")
+	cam = Camera3D.new()
+	cam.fov = 38.0
+	cam.far = 120.0
+	add_child(cam)
+	var ground := MeshInstance3D.new()
+	ground_node = ground
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(160, 160)
+	ground.mesh = pm
+	var gm := ShaderMaterial.new()
+	gm.shader = load("res://shaders/ground.gdshader")
+	ground.material_override = gm
+	ground_mat = gm
+	gm.set_shader_parameter("noise_tex", load("res://art/noise.png"))
+	add_child(ground)
+	_grass()
+	sfx = Sfx.new()
+	add_child(sfx)
+	fx = InkFX.new()
+	add_child(fx)
+	fx.cam = cam
+	# C60: one MultiMesh for every arrow in flight
+	arrow_mm = MultiMesh.new()
+	arrow_mm.transform_format = MultiMesh.TRANSFORM_3D
+	var _bm := BoxMesh.new(); _bm.size = Vector3(0.95, 0.035, 0.035)
+	arrow_mm.mesh = _bm
+	arrow_mi = MultiMeshInstance3D.new()
+	var _am := StandardMaterial3D.new()
+	_am.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_am.albedo_color = Color(0.08, 0.07, 0.06)
+	arrow_mi.material_override = _am
+	arrow_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	arrow_mi.multimesh = arrow_mm
+	add_child(arrow_mi)
+	arrow_mm.instance_count = 1
+	arrow_mm.visible_instance_count = 0
+	player = Fighter.new()
+	add_child(player)
+	player.setup(player_tex, "res://art/player.json")
+	_hud()
+	_touch_ui()
+	if has_meta("probe_nohud"):
+		hud.visible = false
+	_load_save()
+	_menu_chips()
+	_map_ui()
+	get_viewport().size_changed.connect(_layout)
+	_layout()
+	_spawn(Vector3(5.5, 0, -2.0))
+	if "--autoplay-parry" in OS.get_cmdline_user_args():
+		auto_parry = true; autoplay = true; auto_steps = []
+	if "--autoplay-foe" in OS.get_cmdline_user_args():
+		# QA: first foe squares up behind the player to exercise the turned attack rows
+		# then cuts back at it so the turned hit/death rows play too
+		autoplay = true; auto_steps = [[3.0, "attack"], [3.25, "attack"], [3.5, "attack"], [4.6, "attack"], [4.85, "attack"], [5.1, "attack"]]
+		enemies[0].set_meta("lane", -1)
+		enemies[0].hp = 52.0  # dies inside the second combo, so the turned death row is captured
+
+	if "--autoplay-combo" in OS.get_cmdline_user_args():
+		# QA C30: one plain foe holds back; the bot mashes cut so the full four-cut chain plays out
+		autoplay = true; auto_steps = []
+		enemies[0].set_meta("cool", 99.0)
+		enemies[0].max_hp = 200.0; enemies[0].hp = 200.0
+		enemies[0].global_position.z = player.global_position.z; enemies[0].set_meta("lane", 0)
+		if "--depth" in OS.get_cmdline_user_args():
+			# C33: the foe squares up in depth (lane -1, behind) so the 3/4-view falling finisher plays
+			enemies[0].set_meta("lane", -1); enemies[0].global_position.z = player.global_position.z - 2.6
+			enemies[0].global_position.x = player.global_position.x + 0.6
+		for i in 14:
+			auto_steps.append([2.0 + i * 0.16, "attack"])
+
+	if "--autoplay-armor" in OS.get_cmdline_user_args():
+		# QA: every spawn is armored; the parry bot plays so plate breaks, the break stagger and kills are captured
+		armor_test = true; spawned = 2; auto_parry = true; autoplay = true; auto_steps = []
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		_spawn(Vector3(5.5, 0, -2.0))
+		if "--cuts" in OS.get_cmdline_user_args():
+			# single spaced cuts, no parries: two plain cuts must break the armor before flesh
+			auto_parry = false
+			enemies[0].set_meta("cool", 99.0)  # foe holds back so only plain cuts land
+			for i in 10:
+				auto_steps.append([2.2 + i * 0.7, "attack"])
+	if "--autoplay-spear" in OS.get_cmdline_user_args():
+		# QA: spear foes only. First two cuts go straight down its line (guarded), then the bot
+		# steps off the line in depth and cuts again (lands); the parry bot handles thrusts after.
+		spear_test = true; autoplay = true
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		_spawn(Vector3(5.5, 0, 0.0))
+		enemies[0].set_meta("cool", 99.0)
+		if "--thrust" in OS.get_cmdline_user_args():
+			# first thrust lands on a player who stands still; the second is side-stepped in depth
+			enemies[0].set_meta("cool", 0.8)
+			auto_steps = [[4.3, "down", true], [4.6, "down", false]]
+		else:
+			auto_steps = [[2.4, "attack"], [3.4, "attack"], [4.2, "down", true], [4.5, "down", false], [4.55, "attack"], [5.1, "attack"], [5.5, "attack"]]
+	if "--autoplay-twin" in OS.get_cmdline_user_args():
+		# QA C32: twin-blade foes only on the player's lane; the parry bot answers both blades
+		# first 5.5 s the player stands and takes both blades, then the parry bot answers them
+		twin_test = true; autoplay = true; auto_parry = false; auto_steps = []
+		get_tree().create_timer(5.5).timeout.connect(func(): auto_parry = true)
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		_spawn(Vector3(5.5, 0, player.global_position.z))
+	if "--autoplay-bow" in OS.get_cmdline_user_args():
+		# QA C33: archers only on the player's lane; the first arrows land, then the bot cuts them
+		bow_test = true; autoplay = true; auto_steps = []
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		_spawn(Vector3(8.0, 0, player.global_position.z))
+	if "--autoplay-boss" in OS.get_cmdline_user_args():
+		# QA: straight to the chapter boss (150 HP so both phases fit a capture), parry bot plays
+		autoplay = true; auto_parry = true; auto_steps = []
+		boss_test_hp = 150.0
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		kills = CHAPTER_KILLS; spawn_t = 0.3
+	if "--autoplay-pattern" in OS.get_cmdline_user_args():
+		# QA C58: a metronome opener rhythm with always-left dodges vs a short boss, so
+		# the habit reads (phase 3 counters, phase 4 prediction) can be seen triggering.
+		# --mash switches the bot to flat 0.16 s mashing (the spam case).
+		autoplay = true; auto_steps = []; pattern_test = true
+		pattern_mash = "--mash" in OS.get_cmdline_user_args()
+		boss_test_hp = 220.0
+		if "--phase4" in OS.get_cmdline_user_args():
+			# QA: jump the read tier straight in (he keeps 400 HP so the window stays open)
+			boss_test_hp = 400.0
+			get_tree().create_timer(1.2).timeout.connect(func(): boss_phase = 4)
+			if "--seed" in OS.get_cmdline_user_args():
+				# QA capture: habits pre-formed so a read lands inside a short Movie Maker window
+				get_tree().create_timer(1.4).timeout.connect(func():
+					habit.open_t = [0.7, 0.7, 0.7, 0.7]
+					press_t = [elapsed - 3.0, elapsed - 2.5, elapsed - 2.0, elapsed - 1.5, elapsed - 1.0, elapsed - 0.5])
+		if "--phase3" in OS.get_cmdline_user_args():
+			boss_test_hp = 400.0
+			get_tree().create_timer(1.2).timeout.connect(func(): boss_phase = 3)
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		kills = CHAPTER_KILLS; spawn_t = 0.3
+	if "--autoplay-map" in OS.get_cmdline_user_args():
+		# QA: chapter 1 already cleared in memory (no save written), Iwa stance, a short boss, then the map
+		autoplay = true; auto_parry = true; auto_steps = []; no_save = true
+		best_chapter = 2; stance = 2; _stance_label()
+		if "--fresh" in OS.get_cmdline_user_args():
+			# C31: first-ever clear, so the map shows the path inking in from an untouched map
+			best_chapter = 0; stance = 0; _stance_label()
+		boss_test_hp = 220.0
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		kills = CHAPTER_KILLS; spawn_t = 0.3
+	if "--autoplay-palettes" in OS.get_cmdline_user_args():
+		# QA: hold still and step through the five chapter palettes, 2 s each
+		autoplay = true; auto_steps = []; palette_test = true
+		enemies[0].queue_free(); enemies.clear(); ebars[0].queue_free(); ebars.clear()
+		spawn_t = 999.0
+		for i in PALETTES.size():
+			get_tree().create_timer(0.5 + 2.0 * i).timeout.connect(_set_palette.bind(i, 0.0))
+	if "--autoplay-die" in OS.get_cmdline_user_args():
+		# QA: player starts nearly spent and never acts, so the death banner and rise hint are captured
+		autoplay = true; auto_steps = []
+		player.hp = 12.0
+
+func _input_map() -> void:
+	var defs := {
+		"left": [KEY_A, KEY_LEFT], "right": [KEY_D, KEY_RIGHT], "up": [KEY_W, KEY_UP], "down": [KEY_S, KEY_DOWN],
+		"attack": [KEY_J, KEY_ENTER], "dodge": [KEY_K, KEY_SPACE, KEY_SHIFT],
+	}
+	for a in defs:
+		if not InputMap.has_action(a):
+			InputMap.add_action(a, 0.2)
+		for k in defs[a]:
+			var e := InputEventKey.new()
+			e.physical_keycode = k
+			InputMap.action_add_event(a, e)
+	var mb := InputEventMouseButton.new(); mb.button_index = MOUSE_BUTTON_LEFT
+	InputMap.action_add_event("attack", mb)
+	var mb2 := InputEventMouseButton.new(); mb2.button_index = MOUSE_BUTTON_RIGHT
+	InputMap.action_add_event("dodge", mb2)
+	for pair in [["attack", JOY_BUTTON_X], ["attack", JOY_BUTTON_Y], ["dodge", JOY_BUTTON_A], ["dodge", JOY_BUTTON_B]]:
+		var jb := InputEventJoypadButton.new(); jb.button_index = pair[1]
+		InputMap.action_add_event(pair[0], jb)
+	InputMap.add_action("gp_stance")
+	var js := InputEventJoypadButton.new(); js.button_index = JOY_BUTTON_RIGHT_SHOULDER
+	InputMap.action_add_event("gp_stance", js)
+	for pair in [["left", -1.0, JOY_AXIS_LEFT_X], ["right", 1.0, JOY_AXIS_LEFT_X], ["up", -1.0, JOY_AXIS_LEFT_Y], ["down", 1.0, JOY_AXIS_LEFT_Y]]:
+		var jm := InputEventJoypadMotion.new(); jm.axis = pair[2]; jm.axis_value = pair[1]
+		InputMap.action_add_event(pair[0], jm)
+
+func _grass() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var q := QuadMesh.new()
+	q.size = Vector2(2.6, 1.3)
+	q.center_offset = Vector3(0, 0.65, 0)
+	for v in 3:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = q
+		var xs: Array = []
+		# swaths: long bands of clumps, like the reference's drifting grass
+		# C47: reference grass reads as dense dash-field bands - more, longer swaths
+		for band in 38:
+			var c := Vector2(rng.randf_range(-45, 45), rng.randf_range(-45, 30))
+			if c.length() < 9.0:
+				continue
+			var ang := rng.randf_range(-0.35, 0.35)
+			var n := rng.randi_range(14, 30)
+			for i in n:
+				if rng.randi() % 3 != v:
+					continue
+				var along := rng.randf_range(-8.0, 8.0)
+				var p := c + Vector2(cos(ang), sin(ang)) * along + Vector2(rng.randf_range(-0.5, 0.5), rng.randf_range(-1.0, 1.0))
+				var s := rng.randf_range(0.7, 1.3) * (1.0 - absf(along) / 11.0)
+				xs.append(Transform3D(Basis().scaled(Vector3(s, s, s)), Vector3(p.x, 0, p.y)))
+		mm.instance_count = xs.size()
+		for i in xs.size():
+			mm.set_instance_transform(i, xs[i])
+		var mi := MultiMeshInstance3D.new()
+		mi.multimesh = mm
+		var m := ShaderMaterial.new()
+		m.shader = load("res://shaders/grass.gdshader")
+		m.set_shader_parameter("tex", load("res://art/grass%d.png" % v))
+		mi.material_override = m
+		grass_mats.append(m)
+		grass_nodes.append(mi)
+		add_child(mi)
+
+## Where a foe squares up: 0 beside the player (profile duel), +1 in front of the player
+## (between them and the camera), -1 behind. Depth lanes use the turned attack rows.
+func _pick_lane() -> int:
+	var r := randf()
+	return 0 if r < 0.65 else (1 if r < 0.8 else -1)
+
+func _spawn(pos: Vector3) -> void:
+	var e := Fighter.new()
+	add_child(e)
+	e.setup(ronin_tex, "res://art/ronin.json")
+	e.global_position = pos
+	e.facing = -1.0
+	e.state = "approach"
+	e.set_meta("cool", randf_range(0.6, 1.2))
+	e.set_meta("lane", _pick_lane())
+	e.set_meta("vw", "")
+	# C19 enemy variety: from the third foe on, every other one wears armor that takes two cuts
+	# (or one riposte / third-combo cut) to break before the blade reaches the body
+	spawned += 1
+	if (spawned >= 4 and spawned % 3 == 1) or spear_test:
+		# C21 spear foe: guards its front with the shaft and thrusts in a straight line
+		e.set_meta("spear", true)
+		e.set_meta("lane", 0)
+		e.reskin(spear_tex, "res://art/ronin_spear.json")
+		e.tint = Color(0.94, 0.9, 0.86)
+	elif (spawned >= 8 and spawned % 5 == 3) or bow_test:
+		# C33 archer: keeps its distance and looses arrows down the lane - cut the arrow as it
+		# arrives (face it and swing), step off the lane in depth, or dodge through it
+		e.set_meta("bow", true)
+		e.set_meta("lane", 0)
+		e.reskin(bow_tex, "res://art/ronin_bow.json")
+		e.tint = Color(0.93, 0.9, 0.87)
+	elif (spawned >= 6 and spawned % 4 == 2) or twin_test:
+		# C32 twin-blade foe: two short swords, cuts twice - a second, quicker swing follows the
+		# first, so each blade needs its own parry (or a dodge that clears both)
+		e.set_meta("twin", true)
+		e.set_meta("lane", 0)
+		e.reskin(twin_tex, "res://art/ronin_twin.json")
+		e.tint = Color(0.95, 0.92, 0.9)
+	elif spawned >= 3 and (spawned % 2 == 1 or armor_test):
+		e.set_meta("armor", 2)
+		e.reskin(armor_tex, "res://art/ronin_armor.json")
+		e.tint = Color(0.8, 0.82, 0.88)
+		e.sprite.scale = Vector3(1.06, 1.06, 1.0)
+	enemies.append(e)
+	var bar := _bar_pair(90.0)
+	hud.add_child(bar)
+	ebars.append(bar)
+
+# ------------------------------------------------------------------ loop
+func _physics_process(delta: float) -> void:
+	_pt0 = Time.get_ticks_usec()
+	if autoplay:
+		_autoplay(delta)
+	_hit_jitter(delta)
+	if hitstop > 0.0:
+		hitstop -= delta
+		return
+	if player.alive():
+		elapsed += delta
+	if qa_chips:
+		if elapsed > 1.0 and not has_meta("qac1"):
+			set_meta("qac1", true); chips.callbacks[0].call(); print("QA chips sound toggled")
+		if elapsed > 2.0 and not has_meta("qac2"):
+			set_meta("qac2", true); chips.callbacks[1].call(); print("QA chips stance -> " + str(STANCES[stance].name))
+		if elapsed > 3.0 and not has_meta("qac3"):
+			set_meta("qac3", true); chips.callbacks[0].call(); print("QA chips sound restored")
+	_player(delta)
+	for e in enemies:
+		_enemy(e, delta)
+	_arrows(delta)
+	# retire dead foes, keep the duel going
+	for i in range(enemies.size() - 1, -1, -1):
+		var e: Fighter = enemies[i]
+		if not e.alive() and e.state_t > 6.0:
+			e.queue_free(); enemies.remove_at(i)
+			ebars[i].queue_free(); ebars.remove_at(i)
+	var living: int = enemies.filter(func(x): return x.alive()).size()
+	if slow_t > 0.0:
+		spawn_t = maxf(spawn_t, 1.6)   # let a finisher breathe before the next foe walks in
+	if boss == null and kills >= CHAPTER_KILLS * (chapters + 1):
+		# chapter's end: the field clears, then the boss walks in alone
+		if living == 0:
+			spawn_t -= delta
+			if spawn_t <= 0.0:
+				_spawn_boss(player.global_position + Vector3(9.0, 0, -0.5))
+	elif boss == null and living < mini(1 + kills / 2, 3):
+		spawn_t -= delta
+		if spawn_t <= 0.0:
+			# enter from the screen sides, never straight up or down the depth line through the player
+			var side := -1.0 if randf() < 0.5 else 1.0
+			var a := randf_range(-0.6, 0.6)
+			_spawn(player.global_position + Vector3(side * cos(a) * 9.0, 0, sin(a) * 5.0 - 1.0))
+			spawn_t = 2.5
+	_camera(delta)
+	_hud_update()
+
+func _move_input() -> Vector2:
+	var v := Input.get_vector("left", "right", "up", "down")
+	if joy_vec.length() > 0.12:
+		v = joy_vec
+	return v
+
+func _player(delta: float) -> void:
+	var p := player
+	p.state_t += delta
+	dodge_cd = maxf(0.0, dodge_cd - delta)
+	var mv := _move_input()
+	atk_buf = maxf(0.0, atk_buf - delta); dodge_buf = maxf(0.0, dodge_buf - delta); whiff_cd = maxf(0.0, whiff_cd - delta)
+	if touch_atk: atk_buf = 0.3
+	if touch_dodge: dodge_buf = 0.3
+	touch_atk = false; touch_dodge = false
+	var want_atk := atk_buf > 0.0
+	# C15 parry: a cut pressed in the last PARRY_WIN seconds before a foe's blade lands deflects it
+	if want_atk and atk_press_t >= elapsed - delta * 1.5 and p.alive() and p.state in ["idle", "run", "attack"]:
+		var pe := _parry_target()
+		if pe:
+			_parry(pe, _ttc(pe) <= PERFECT_WIN)
+	var want_dodge := dodge_buf > 0.0
+	match p.state:
+		"idle", "run":
+			if not p.alive():
+				pass
+			elif want_dodge and dodge_cd <= 0.0:
+				dodge_buf = 0.0
+				_start_dodge(mv)
+			elif want_atk and whiff_cd <= 0.0 and p.posture >= _atk_cost(0):
+				atk_buf = 0.0
+				combo = 0
+				_start_attack()
+			elif want_atk and (press_t.is_empty() or elapsed - float(press_t[-1]) > 0.25):
+				# a stuffed swing still tells him you are mashing
+				press_t.append(elapsed)
+				if press_t.size() > 8:
+					press_t.pop_front()
+			elif mv.length() > 0.1:
+				p.state = "run"
+				# pick the view from travel direction (screen-down = toward camera)
+				if mv.y > 0.45 and mv.y > absf(mv.x) * 0.6:
+					p.view = "_f"
+				elif mv.y < -0.45 and -mv.y > absf(mv.x) * 0.6:
+					p.view = "_b"
+				elif absf(mv.x) > absf(mv.y):
+					p.view = ""
+				p.play("run" + p.view)
+				p.vel = Vector3(mv.x, 0, mv.y) * 5.6
+				if absf(mv.x) > 0.15:
+					p.facing = signf(mv.x)
+				foot_t -= delta
+				if foot_t <= 0.0:
+					foot_t = 0.16
+					if randf() < 0.5:
+						fx.footprint(p.global_position + Vector3(randf_range(-0.2, 0.2), 0, randf_range(-0.1, 0.1)))
+			else:
+				p.state = "idle"; p.play("idle" + p.view)
+				p.vel = p.vel.lerp(Vector3.ZERO, 12.0 * delta)
+		"attack":
+			if combo < 3 or p.state_t > 0.3:
+				p.vel = p.vel.lerp(Vector3.ZERO, 9.0 * delta)
+			if combo == 3 and issen_t > 0.15:
+				# C32 blade feel: the issen dash leaves ink afterimages, so the one flash reads as travel
+				ghost_t -= delta
+				if ghost_t <= 0.0:
+					ghost_t = 0.033
+					fx.ghost(p.sprite, p.global_position)
+			# lunge stops at blade contact instead of carrying the figures into each other
+			var near := _nearest(p.global_position, 3.0)
+			if combo < 3 and near and (near.global_position.x - p.global_position.x) * p.facing > 0.0 and absf(near.global_position.x - p.global_position.x) < 2.7:
+				p.vel.x = 0.0
+			if near and p.view != "" and absf(near.global_position.z - p.global_position.z) < 1.8:
+				p.vel.z = 0.0
+			if want_atk:
+				atk_buf = 0.0
+				queued = true
+			var strike := 3 if combo == 2 else 2
+			if not hit_done and p.frame >= strike:
+				hit_done = true
+				_player_strike()
+			if p.anim_done or (queued and p.frame >= p.frame_count() - 2 and combo < 3):
+				if queued and combo < 3 and whiff_cd <= 0.0 and p.posture >= _atk_cost(combo + 1):
+					combo += 1
+					_start_attack()
+				else:
+					p.state = "idle"; p.play("idle")
+		"dodge":
+			ghost_t -= delta
+			if ghost_t <= 0.0:
+				ghost_t = 0.05
+				fx.dash_mark(p.global_position, clampf(p.state_t / 0.34, 0.0, 1.0))
+				fx.footprint(p.global_position)
+			p.vel = p.vel.lerp(Vector3.ZERO, 3.5 * delta)
+			if p.state_t > 0.34:
+				p.state = "idle"; p.play("idle")
+		"hit":
+			p.vel = p.vel.lerp(Vector3.ZERO, 8.0 * delta)
+			if p.state_t > 0.32:
+				p.state = "idle"; p.play("idle")
+		"dead":
+			p.vel = Vector3.ZERO
+			if p.state_t > 3.0 and not banner.text.ends_with("rise"):
+				banner.text += "\n" + ("tap cut to rise" if touch_ui and touch_ui.visible else "cut to rise")
+			if p.state_t > 3.0 and (want_atk or want_dodge):
+				_restart()
+	p.global_position += p.vel * delta
+	if issen_t > 0.0 and issen_t - delta <= 0.0 and autoplay and enemies.size() > 0:
+		print("QA issen end px=%.2f fx=%.2f" % [p.global_position.x, enemies[0].global_position.x])
+	issen_t = maxf(0.0, issen_t - delta)
+	p.global_position.x = clampf(p.global_position.x, -40, 40)
+	p.global_position.z = clampf(p.global_position.z, -40, 25)
+	if p.state != "attack" and p.state != "dodge":
+		p.posture = minf(100.0, p.posture + 14.0 * delta)
+	p.tick_anim(delta * (float(STANCES[stance].speed) * (1.35 if combo == 3 else 1.0) if p.state == "attack" else 1.0))
+
+## C58 habit reads: side you always dodge to (0 when no habit), whether you chain on
+## autopilot, and your opener cadence when it is eerily regular (0 when it isn't).
+func _habit_dodge_side() -> float:
+	var n: int = habit.dodge_l + habit.dodge_r
+	if n < 5:
+		return 0.0
+	var k := float(habit.dodge_r - habit.dodge_l) / float(n)
+	return signf(k) if absf(k) >= 0.55 else 0.0
+
+func _habit_chainy() -> bool:
+	# you swing on a metronome - landed cuts and stuffed attempts both count;
+	# a deliberate pause clears his read in about four seconds
+	if press_t.size() < 6:
+		return false
+	return elapsed - float(press_t[press_t.size() - 6]) < 4.0
+
+func _habit_cadence() -> float:
+	var a: Array = habit.open_t
+	if a.size() < 4:
+		return 0.0
+	var m := 0.0
+	for t in a:
+		m += t
+	m /= a.size()
+	var v := 0.0
+	for t in a:
+		v += (t - m) * (t - m)
+	v /= a.size()
+	return m if m > 0.05 and sqrt(v) / m < 0.3 else 0.0
+
+## C57 soulslike counterplay: every swing spends posture. Mashing drains the bar in four
+## cuts; the chain stops when the bar can't pay. Regen pauses mid-swing and mid-dodge.
+func _atk_cost(c: int) -> float:
+	return [22.0, 22.0, 30.0, 34.0][c]
+
+func _start_attack() -> void:
+	var p := player
+	p.posture = maxf(0.0, p.posture - _atk_cost(combo))
+	player_atk_t = elapsed
+	press_t.append(elapsed)
+	if press_t.size() > 8:
+		press_t.pop_front()
+	if combo == 0:
+		# an opener: note the rhythm he will learn
+		if float(habit.last_open) >= 0.0:
+			habit.open_t.append(elapsed - float(habit.last_open))
+			if habit.open_t.size() > 6:
+				habit.open_t.pop_front()
+		habit.last_open = elapsed
+		habit.chain_n += 1
+	else:
+		habit.chain2_n += 1
+	if autoplay:
+		print("QA atk combo=%d posture=%.0f" % [combo, p.posture])
+	var tgt := _nearest(p.global_position, 4.5)
+	if tgt:
+		p.facing = signf(tgt.global_position.x - p.global_position.x) if absf(tgt.global_position.x - p.global_position.x) > 0.1 else p.facing
+	p.state = "attack"; p.state_t = 0.0
+	# target mostly in depth: swing in the 3/4 view facing it instead of snapping to profile
+	p.view = ""
+	if tgt:
+		var td: Vector3 = tgt.global_position - p.global_position
+		if absf(td.z) > absf(td.x) * 1.1:
+			p.view = "_f" if td.z > 0.0 else "_b"
+	# C33: the fourth cut in a 3/4 view is an overhead falling cut (atk3 pose) instead of the dash
+	p.play((["atk1", "atk2", "atk3", "atk1"][combo] if not (combo == 3 and p.view != "") else "atk3") + p.view, true)
+	sfx.play("swing_heavy" if combo >= 2 else "swing")
+	queued = false; hit_done = false
+	var mv := _move_input()
+	p.vel = Vector3(p.facing * 3.2, 0, mv.y * 1.5) if p.view == "" else Vector3(p.facing * 1.0, 0, (3.2 if p.view == "_f" else -3.2))
+	if combo == 3 and p.view == "":
+		# C30 fourth cut, "issen": a fast draw that dashes clean through the foe's line (profile
+		# only; in the 3/4 views it stays a normal lunge so the player never runs at the camera)
+		p.vel = Vector3(p.facing * 15.0, 0, mv.y * 1.5)
+		fx.puff(p.global_position)
+		ghost_t = 0.0
+		issen_t = 0.45
+
+func _player_strike() -> void:
+	var p := player
+	var dmg: float = [12.0, 14.0, 24.0, 30.0][combo] * float(STANCES[stance].dmg)
+	var yoff: float = [0.1, 0.3, -0.1, 0.25][combo]
+	var zdir := 0.0 if p.view == "" else (1.0 if p.view == "_f" else -1.0)
+	var anchor := p.global_position + (Vector3(p.facing * 1.1, yoff, 0.2) if zdir == 0.0 else Vector3(p.facing * 0.4, yoff, zdir * 1.0 + 0.2))
+	var sk: float = [2.0, 1.95, 2.4, 3.1][combo] * float(STANCES[stance].sk)  # C59 gap1: 1.3x beyond C44, full-screen sweep
+	var sl := fx.slash(anchor, p.facing, sk * (1.0 if zdir == 0.0 else 0.85), 0.46 if combo < 3 else 0.6, 0.0, combo)
+	if combo == 3 and zdir != 0.0:
+		# C33 directional finisher: a taller curtain dropped down the depth line
+		sl["svk"] = 1.25
+		sl["pos"] = p.global_position + Vector3(p.facing * 0.3, 1.2, zdir * 1.3 + 0.2)
+	if combo == 3:
+		fx.dash_mark(p.global_position, 0.0)
+		if autoplay:
+			print("QA issen cut px=%.2f fx=%.2f" % [p.global_position.x, enemies[0].global_position.x if enemies.size() > 0 else 0.0])
+	strike_issen = combo == 3 and zdir == 0.0
+	var hit_any := false
+	for e in enemies:
+		if not e.alive():
+			continue
+		var d: Vector3 = e.global_position - p.global_position
+		var in_arc := absf(d.z) < 1.3 and d.x * p.facing > -0.4 and absf(d.x) < (3.4 if combo < 3 else 4.2)
+		if zdir != 0.0:
+			in_arc = absf(d.x) < 2.1 and d.z * zdir > -0.4 and absf(d.z) < 3.2
+		if in_arc:
+			hit_any = true
+			strike_zdir = zdir; strike_dz = d.z
+			_hurt(e, dmg, p.facing, combo >= 2)
+			if combo == 3 and zdir != 0.0:
+				# falling cut: a longer bite and the camera pressed down with the blade
+				hitstop = maxf(hitstop, 0.14)
+				kick = Vector2(0.0, -0.36)
+				e.vel = Vector3(0, 0, zdir * 1.5)
+			if combo == 3 and e.alive() and zdir == 0.0:
+				e.vel.x *= 0.15  # the issen cut passes through; the foe is held in place, not shoved ahead
+	# C57 whiff punish: a cut that meets nothing kills the chain and delays the next swing
+	if not hit_any:
+		combo = 0
+		whiff_cd = 0.35
+
+func _start_dodge(mv: Vector2) -> void:
+	var p := player
+	var d := mv if mv.length() > 0.1 else Vector2(-p.facing, 0)
+	if absf(d.x) > 0.15:
+		p.facing = signf(d.x)
+	p.view = ""
+	p.state = "dodge"; p.state_t = 0.0; p.play("dodge", true)
+	sfx.play("dodge")
+	p.vel = Vector3(d.x, 0, d.y).normalized() * 11.0
+	if absf(p.vel.x) > 0.5:
+		if p.vel.x < 0.0:
+			habit.dodge_l += 1
+		else:
+			habit.dodge_r += 1
+	dodge_cd = 0.45
+	ghost_t = 0.0
+	fx.puff(p.global_position)
+
+# 3/4 view for a figure struck from mostly in front of / behind it (F-19)
+func _pages(which: String) -> Array[Texture2D]:
+	var n := int(JSON.parse_string(FileAccess.get_file_as_string("res://art/%s.json" % which))["pages"])
+	var out: Array[Texture2D] = []
+	for k in n:
+		out.append(load("res://art/%s_p%d.png" % [which, k]))
+	return out
+
+func _face_view(victim: Fighter, attacker: Fighter) -> String:
+	var d := attacker.global_position - victim.global_position
+	if absf(d.z) > absf(d.x) * 1.2:
+		return "_f" if d.z > 0.0 else "_b"
+	return ""
+
+# knockback away from the attacker, along z for turned hits
+func _knock(view: String, dir: float, amt: float) -> Vector3:
+	if view == "":
+		return Vector3(dir * amt, 0, 0)
+	return Vector3(0, 0, (-amt if view == "_f" else amt) * 0.8)
+
+func _hurt(e: Fighter, dmg: float, dir: float, heavy: bool) -> void:
+	var riposte := e.state == "stagger"
+	if int(e.get_meta("armor", 0)) > 0:
+		_armor_hit(e, dir, riposte or heavy or bool(STANCES[stance].armor))
+		return
+	if e.get_meta("spear", false) and e.state in ["approach", "hit"] and strike_zdir == 0.0 and absf(strike_dz) < 0.7:
+		# C21: a cut straight down the spear's line meets the shaft. Step off the line in depth
+		# (or turn and cut along z), or wait for the thrust to pass, to get through.
+		fx.clash(e.global_position + Vector3(-dir * 0.5, 1.5, 0.3), dir, 0.6)
+		sfx.play("armor", 0.05)
+		player.vel = Vector3(-dir * 2.5, 0, 0)
+		hitstop = 0.05; shake = 0.05
+		clean_hits = 0
+		if autoplay:
+			print("QA spear guard dz=%.2f" % strike_dz)
+		return
+	if riposte:
+		dmg *= float(e.get_meta("riposte_k", 2.0)); heavy = true
+	elif e == boss:
+		dmg *= 0.6
+	clean_hits += 1
+	e.hp = maxf(0.0, e.hp - dmg)
+	if e == boss and e.hp > 0.0:
+		# C58: four phases - he gets better and better as the fight goes on
+		var bfrac := e.hp / e.max_hp
+		if boss_phase == 1 and bfrac <= 0.7:
+			_boss_phase2(e)
+		elif boss_phase == 2 and bfrac <= 0.45:
+			_boss_phase3(e)
+		elif boss_phase == 3 and bfrac <= 0.2:
+			_boss_phase4(e)
+	if autoplay and (armor_test or spear_test):
+		print("QA flesh hit hp=%d" % e.hp)
+	e.posture = maxf(0.0, e.posture - dmg * 1.6)
+	e.flash = 1.0
+	e.set_meta("jit", 0.16 if heavy else 0.1)
+	e.set_meta("jit0", 0.16 if heavy else 0.1)
+	e.facing = -dir
+	var hitpos := e.global_position + Vector3(0, 1.4, 0.3)
+	fx.burst(hitpos, dir, 1.3 if heavy else 0.9, 0.35)
+	fx.red_mark(e, 1.6)
+	fx.stain(e.global_position + Vector3(dir * 0.6, 0, 0), 0.008, null, Color(1, 1, 1, 0.7))
+	if heavy or riposte:
+		fx.scar(e.global_position, dir, riposte)
+	hitstop = 0.06 if not heavy else 0.1
+	shake = 0.18 if heavy else 0.1
+	if heavy or riposte:
+		kick = Vector2(dir * (0.42 if riposte else 0.3), -0.12)
+	sfx.play("kill" if e.hp <= 0.0 else ("hit_heavy" if heavy else "hit"))
+	if e.hp <= 0.0:
+		var hv := _face_view(e, player)
+		e.state = "dead"; e.state_t = 0.0; e.play("die" + hv, true)
+		e.vel = _knock(hv, dir, 3.0)
+		if hv != "":
+			# drift clear of the player's line so the fall isn't hidden behind them
+			var side := signf(e.global_position.x - player.global_position.x)
+			e.vel.x = (side if side != 0.0 else 1.0) * 2.4
+		if hv == "":
+			fx.burst(hitpos, dir, 1.8, 0.5)
+		else:
+			# F-24: depth kills spray from behind the body and lighter, so the turned fall stays readable
+			fx.burst(hitpos + Vector3(0, 0.3, -0.7), dir, 1.1, 0.5)
+		fx.slash(e.global_position + Vector3(0, 0.2, 0.1), dir, 0.8, 0.4, 0.8, 1)
+		if strike_issen:
+			# C43 blade feel: layered echo cuts trail an issen kill
+			fx.echo(e.global_position + Vector3(0, 0.2, 0.1), dir)
+		elif riposte:
+			# C48 blade feel: a riposte kill trails the same layered echo cuts
+			fx.echo(e.global_position + Vector3(0, 0.2, 0.1), dir)
+		var finisher := riposte or clean_hits >= FINISH_STREAK
+		get_tree().create_timer(0.14).timeout.connect(sfx.play.bind("patter", 0.08))
+		fx.kill_splash(e.global_position, dir if hv == "" else signf(e.vel.x), 1.5 if finisher else 1.0)
+		# C45 blade feel: the slain foe breaks into flying ink
+		fx.body_break(e.global_position, dir if hv == "" else signf(e.vel.x), 1.3 if finisher else 1.0)
+		fx.blade_drip(player, 1.1 if finisher else 0.8)
+		if e == boss:
+			finisher = true
+			chapters += 1
+			boss = null; boss_phase = 0
+			_boss_bar_show(false)
+			_flash_banner("Chapter %d cleared.  Kageyama falls" % chapters, 3.0)
+			spawn_t = 6.5
+			_chapter_cleared()
+			# C31 blade feel: after the last cut the blade goes home - noto slide and guard click
+			get_tree().create_timer(1.1, true, false, true).timeout.connect(sfx.play.bind("sheath", 0.0))
+		if finisher:
+			_finisher(e, dir)
+		kills += 1
+	else:
+		var hv := _face_view(e, player)
+		if e.posture <= 0.0:
+			# C57 posture break: sustained deliberate pressure cracks any foe open
+			e.posture = 100.0
+			e.state = "stagger"; e.state_t = 0.0
+			e.set_meta("stag_len", 0.6); e.set_meta("riposte_k", 1.5)
+			e.play("hit" + hv, true)
+			e.vel = _knock(hv, dir, 2.5)
+		elif e == boss and not riposte:
+			return  # the boss doesn't flinch from plain cuts
+		elif not heavy and e.state in ["windup", "swing"]:
+			# C57 poise: a light cut can't interrupt a committed swing - mash into it and you trade
+			pass
+		else:
+			e.state = "hit"; e.state_t = 0.0; e.play("hit" + hv, true)
+			e.vel = _knock(hv, dir, 4.0 if heavy else 2.2)
+
+func _enemy(e: Fighter, delta: float) -> void:
+	e.state_t += delta
+	var p := player
+	var d: Vector3 = p.global_position - e.global_position
+	var dist := Vector2(d.x, d.z * 1.6).length()
+	if e == boss:
+		read_cd = maxf(0.0, read_cd - delta)
+		if boss_phase >= 4 and e.state == "approach" and read_cd <= 0.0 and p.alive() and dist < 5.0:
+			var cad := _habit_cadence()
+			if autoplay and int(elapsed * 2.0) != int((elapsed - delta) * 2.0):
+				print("QA read? cad=%.2f eta=%.2f dist=%.1f cd=%.1f st=%s" % [cad, float(habit.last_open) + cad - elapsed, dist, read_cd, e.state])
+			if cad > 0.0:
+				var eta: float = float(habit.last_open) + cad - elapsed
+				if eta < 0.45 and eta > -0.25:
+					# the predicted opener is due - he stills himself and waits for it
+					_boss_read(e)
+					return
+	match e.state:
+		"approach":
+			var lane: int = int(e.get_meta("lane"))
+			var cool: float = float(e.get_meta("cool")) - delta
+			e.set_meta("cool", cool)
+			if absf(d.x) > 0.2:
+				e.facing = signf(d.x)
+			if not p.alive():
+				e.play("idle"); e.vel = e.vel.lerp(Vector3.ZERO, 6.0 * delta)
+			elif e.get_meta("bow", false) and (dist > 7.0 or dist < 4.8):
+				# archer holds a 4.8-7 m standoff on the player's lane, backing off when pressed
+				var bgoal := p.global_position - Vector3(e.facing * 6.0, 0, 0)
+				var bdir := (bgoal - e.global_position); bdir.y = 0
+				e.vel = bdir.normalized() * (2.2 if dist > 7.0 else 3.0)
+				e.play("walk")
+			elif not e.get_meta("bow", false) and ((lane == 0 and dist > 3.0) or (lane != 0 and (absf(d.z) > 3.0 or absf(d.x) > DEPTH_SIDE + 0.5))):
+				var goal := p.global_position - Vector3(e.facing * 2.9, 0, 0) if lane == 0 else p.global_position + Vector3(-e.facing * DEPTH_SIDE, 0, lane * 2.6)
+				var dir := (goal - e.global_position); dir.y = 0
+				e.vel = dir.normalized() * 2.6
+				# closing mostly in depth: show the kasa from the front or the back
+				var vw := ""
+				if absf(dir.z) > absf(dir.x) * 1.2:
+					vw = "_f" if dir.z > 0.0 else "_b"
+				e.play("walk" + vw)
+			else:
+				e.play("idle")
+				e.vel = e.vel.lerp(Vector3.ZERO, 8.0 * delta)
+				if cool <= 0.0:
+					# depth lane: in front of the player the foe is seen from behind, and vice versa
+					var vw := "" if lane == 0 else ("_b" if d.z < 0.0 else "_f")
+					e.set_meta("vw", vw)
+					e.state = "windup"; e.state_t = 0.0; e.play("windup" + vw, true)
+		"read":
+			e.vel = e.vel.lerp(Vector3.ZERO, 10.0 * delta)
+			if p.alive() and player_atk_t >= float(e.get_meta("read_t0")) and dist < 4.6:
+				# predicted: the cut he waited for meets his own - your opener, turned on you
+				var mid := (e.global_position + p.global_position) * 0.5 + Vector3(0, 1.5, 0.3)
+				fx.clash(mid, -e.facing, 1.0)
+				sfx.play("parry")
+				hitstop = 0.1; shake = 0.2
+				read_cd = 7.0
+				if autoplay:
+					print("QA read PUNISH")
+				_player_hurt(8.0, e.facing, e)
+				e.set_meta("vw", _face_view(e, p))
+				e.state = "windup"; e.state_t = 0.34; e.play("windup" + str(e.get_meta("vw")), true)
+			elif e.state_t > 0.55:
+				# baited: the read whiffs and he is wide open
+				read_cd = 5.0
+				e.state = "stagger"; e.state_t = 0.0
+				e.set_meta("stag_len", 0.85); e.set_meta("riposte_k", 1.5)
+				e.play("hit" + _face_view(e, p), true)
+				if autoplay:
+					print("QA read whiffed")
+		"windup":
+			e.vel = e.vel.lerp(Vector3.ZERO, 10.0 * delta)
+			if e == boss and boss_phase >= 3 and p.state == "dodge":
+				var hs := _habit_dodge_side()
+				if hs != 0.0:
+					# C58 phase 3: he shades toward the side you always dodge to
+					e.vel.x = hs * 1.6
+			# parry tell: glint as the window opens (a hair early to cover reaction time)
+			var open_t := 0.62 + 2.0 / 18.0 - _pwin() - 0.06
+			if e.state_t >= open_t and e.state_t - delta < open_t:
+				fx.glint(e, e.global_position + Vector3(e.facing * 0.7, 2.1, 0.35))
+			if e.state_t > 0.62:
+				e.state = "swing"; e.state_t = 0.0; e.play("swing" + str(e.get_meta("vw")), true)
+				sfx.play("foe_swing")
+				e.set_meta("struck", false)
+		"swing":
+			var ew: String = e.get_meta("vw")
+			var zd := 0.0 if ew == "" else signf(d.z)
+			var spear: bool = e.get_meta("spear", false)
+			if e.get_meta("bow", false):
+				e.vel = e.vel.lerp(Vector3.ZERO, 10.0 * delta)
+				if not e.get_meta("struck") and e.frame >= 2:
+					e.set_meta("struck", true)
+					_loose_arrow(e)
+			elif spear:
+				# C21 thrust: a fast straight lunge along its facing, stopping just short of the player
+				e.vel = Vector3(e.facing * (7.5 if e.frame <= 3 else 0.5), 0, 0)
+				if absf(d.x) < 1.2 or (absf(d.x) < 1.8 and absf(d.z) < 1.4):
+					e.vel.x = 0.0
+			elif zd == 0.0:
+				e.vel = e.vel.lerp(Vector3(e.facing * 1.5, 0, 0), 6.0 * delta)
+				if absf(d.x) < 2.7:
+					e.vel.x = 0.0
+			else:
+				e.vel = e.vel.lerp(Vector3(0, 0, zd * 1.2), 6.0 * delta)
+				if absf(d.z) < 1.7:
+					e.vel.z = 0.0
+			if not e.get_meta("struck") and e.frame >= 2 and not e.get_meta("bow", false):
+				e.set_meta("struck", true)
+				var dd: Vector3 = p.global_position - e.global_position
+				var hit_ok := absf(dd.z) < 1.3 and dd.x * e.facing > -0.5 and absf(dd.x) < 3.7
+				if spear:
+					# narrow and long: only a step sideways (in depth) or a dodge gets out of the line
+					hit_ok = absf(dd.z) < 0.7 and dd.x * e.facing > -0.3 and absf(dd.x) < 4.4
+					fx.thrust(e.global_position + Vector3(0, 1.45, 0.12), e.facing)
+				elif zd == 0.0:
+					fx.slash(e.global_position + Vector3(e.facing * 1.1, 0.1, 0.12), e.facing, 1.25, 0.34, 0.0, 1)
+				else:
+					fx.slash(e.global_position + Vector3(e.facing * 0.4, 0.1, zd * 1.0 + 0.12), e.facing, 1.05, 0.34, 0.0, 1)
+					hit_ok = absf(dd.x) < 2.1 and dd.z * zd > -0.5 and absf(dd.z) < 3.4
+				if p.alive() and p.state != "dodge" and hit_ok:
+					_player_hurt(18.0, e.facing, e)
+			if e.anim_done and e.get_meta("twin", false) and not e.get_meta("second", false):
+				# C32: straight into a short second wind-up (0.28 s) for the other blade
+				e.set_meta("second", true)
+				e.state = "windup"; e.state_t = 0.34; e.play("windup" + str(e.get_meta("vw")), true)
+				e.frame = mini(2, e.frame_count() - 1); e._apply()
+				if autoplay and twin_test:
+					print("QA twin second blade")
+			elif e.anim_done:
+				e.set_meta("second", false)
+				e.state = "recover"; e.state_t = 0.0; e.play("recover" + str(e.get_meta("vw")), true)
+		"recover":
+			e.vel = e.vel.lerp(Vector3.ZERO, 8.0 * delta)
+			if e.anim_done and e.state_t > 0.5:
+				e.state = "approach"; e.set_meta("cool", randf_range(0.8, 1.8))
+				if e == boss:
+					e.set_meta("cool", randf_range(0.35, 0.8) if boss_phase >= 2 else randf_range(0.5, 1.1))
+					if boss_phase >= 2:
+						e.set_meta("spear", randf() < 0.5)
+				if randf() < 0.5 and not e.get_meta("spear", false):
+					e.set_meta("lane", _pick_lane())
+		"stagger":
+			# deflected: reeling and open, cuts land double (C15 parry)
+			e.vel = e.vel.lerp(Vector3.ZERO, 5.0 * delta)
+			if e.state_t > float(e.get_meta("stag_len", 0.95)):
+				if autoplay and e == boss:
+					print("QA stagger exit phase=%d dist=%.1f chainy=%s openers=%d cont=%d" % [boss_phase, dist, _habit_chainy(), habit.chain_n, habit.chain2_n])
+				if e == boss and boss_phase >= 3 and p.alive() and dist < 3.8 and _habit_chainy():
+					# C58 mirror cut: your autopilot chain answered at your own tempo
+					e.set_meta("vw", _face_view(e, p))
+					e.state = "windup"; e.state_t = 0.34; e.play("windup" + str(e.get_meta("vw")), true)
+					if autoplay:
+						print("QA mirror counter")
+				else:
+					e.state = "approach"; e.set_meta("cool", randf_range(0.6, 1.2)); e.set_meta("second", false)
+		"hit":
+			e.vel = e.vel.lerp(Vector3.ZERO, 7.0 * delta)
+			if e.state_t > 0.38:
+				e.state = "approach"; e.set_meta("cool", randf_range(0.3, 0.9))
+		"dead":
+			e.vel = e.vel.lerp(Vector3.ZERO, 5.0 * delta)
+	# keep foes from stacking on each other
+	for o in enemies:
+		if o != e and o.alive():
+			var s: Vector3 = e.global_position - o.global_position
+			if s.length() < 1.4 and s.length() > 0.001:
+				e.global_position += s.normalized() * (1.4 - s.length()) * 0.5
+	if e.alive() and p.alive() and issen_t <= 0.0:
+		var sp: Vector3 = e.global_position - p.global_position
+		sp.y = 0.0
+		var sl := Vector2(sp.x, sp.z * 1.6).length()
+		if sl < 2.5 and sl > 0.001:
+			e.global_position += sp.normalized() * (2.5 - sl)
+	e.global_position += e.vel * delta
+	e.posture = minf(100.0, e.posture + 8.0 * delta)
+	e.tick_anim(delta)
+
+## C33 arrows: a thin ink shaft flying down the lane at 15 m/s.
+func _loose_arrow(e: Fighter) -> void:
+	# C60: arrows live in ONE MultiMesh (was a MeshInstance3D + own material per arrow)
+	var pos := e.global_position + Vector3(e.facing * 0.9, 1.45, 0.12)
+	arrows.append({"pos": pos, "dir": e.facing, "from": pos.x, "e": e})
+	sfx.play("dodge", 0.1)
+
+func _arrows(delta: float) -> void:
+	var p := player
+	for i in range(arrows.size() - 1, -1, -1):
+		var a: Dictionary = arrows[i]
+		var dir: float = a["dir"]
+		var pos: Vector3 = a["pos"]
+		pos.x += dir * 15.0 * delta
+		a["pos"] = pos
+		var dx := p.global_position.x - pos.x
+		var dz := absf(p.global_position.z - (pos.z - 0.12))
+		var gone := absf(pos.x - float(a["from"])) > 16.0
+		if not gone and p.alive() and dz < 0.6 and dx * dir < 1.1 and dx * dir > -0.4:
+			if p.state == "attack" and p.facing == -dir and dx * dir > 0.2:
+				# cut out of the air
+				fx.clash(pos, -dir, 0.7)
+				sfx.play("parry")
+				hitstop = 0.05; shake = 0.06
+				fx.slash(pos + Vector3(0, -0.2, 0), p.facing, 0.8, 0.3, 0.0, 1)
+				if autoplay and bow_test:
+					print("QA arrow cut")
+				gone = true
+			elif p.state != "dodge" and dx * dir < 0.4 and is_instance_valid(a["e"]):
+				_player_hurt(14.0, dir, a["e"])
+				if autoplay and bow_test:
+					print("QA arrow hit")
+				gone = true
+		if gone:
+			arrows.remove_at(i)
+	# C60: sync the shared MultiMesh once per tick
+	arrow_mm.instance_count = maxi(arrows.size(), 1)
+	arrow_mm.visible_instance_count = arrows.size()
+	for i in arrows.size():
+		arrow_mm.set_instance_transform(i, Transform3D(Basis.IDENTITY, arrows[i]["pos"]))
+
+func _player_hurt(dmg: float, dir: float, by: Fighter) -> void:
+	var p := player
+	clean_hits = 0
+	p.hp = maxf(0.0, p.hp - dmg)
+	p.flash = 1.0
+	p.facing = -dir
+	fx.burst(p.global_position + Vector3(0, 1.1, 0.2), dir, 1.0, 0.6)
+	fx.red_mark(p, 1.4)
+	shake = 0.2; hitstop = 0.08
+	sfx.play("hurt")
+	_hurt_v = 1.0
+	post_mat.set_shader_parameter("hurt", 1.0)
+	if p.hp <= 0.0:
+		p.state = "dead"; p.state_t = 0.0; p.play("die" + _face_view(p, by), true)
+		banner.text = "Fallen.  %d cut down" % kills
+		banner.visible = true
+	else:
+		var hv := _face_view(p, by)
+		p.state = "hit"; p.state_t = 0.0; p.play("hit" + hv, true)
+		p.vel = _knock(hv, dir, 3.0)
+
+## seconds until a foe's blade lands (9 when it isn't swinging at us)
+func _ttc(e: Fighter) -> float:
+	if e.state == "windup":
+		return (0.62 - e.state_t) + 2.0 / 18.0
+	if e.state == "swing" and not e.get_meta("struck"):
+		return maxf(0.0, 2.0 / 18.0 - e.state_t)
+	return 9.0
+
+func _parry_target() -> Fighter:
+	var p := player
+	for e in enemies:
+		if not e.alive():
+			continue
+		var ttc := _ttc(e)
+		if ttc > _pwin():
+			continue
+		var d: Vector3 = e.global_position - p.global_position
+		if absf(d.x) < 3.9 and absf(d.z) < 3.6:
+			return e
+	return null
+
+## perfect (last PERFECT_WIN s): long stagger, 2.5x riposte, deeper slow. Late: short stagger, 1.5x.
+## C19: a cut on armor chips a plate instead of flesh: grey lacquer shards, a dull clack, a short
+## rock back. A riposte or the heavy third cut splits both plates at once. Bare foes after that.
+func _armor_hit(e: Fighter, dir: float, strong: bool) -> void:
+	var left := 0 if strong else int(e.get_meta("armor")) - 1
+	if autoplay:
+		print("QA armor hit hp=%d " % e.hp, " strong=%s left=%d" % [strong, left])
+	e.set_meta("armor", left)
+	e.flash = 0.5
+	e.facing = -dir
+	var at := e.global_position + Vector3(0, 1.5, 0.3)
+	fx.shards(at, dir, 1.6 if left == 0 else 1.0)
+	sfx.play("armor_break" if left == 0 else "armor", 0.04)
+	hitstop = 0.09 if left == 0 else 0.05
+	shake = 0.12 if left == 0 else 0.06
+	clean_hits += 1
+	if left == 0:
+		e.tint = Color(1, 1, 1)
+		e.sprite.scale = Vector3.ONE
+		e.reskin(ronin_tex, "res://art/ronin.json")  # plates gone: back to the bare robe
+		# the break leaves the foe open, like a late parry
+		e.state = "stagger"; e.state_t = 0.0
+		e.set_meta("stag_len", 0.6); e.set_meta("riposte_k", 1.5)
+		e.play("hit" + _face_view(e, player), true)
+		e.vel = _knock(_face_view(e, player), dir, 2.5)
+	elif e.state != "stagger":
+		e.vel = _knock(_face_view(e, player), dir, 1.2)
+
+## C22: the chapter boss - a big dark ronin with a long bar at the top of the screen. Phase 1:
+## naginata sweeps with short gaps and no flinch from plain cuts (riposte is the way in).
+## Phase 2 at half health: a burst of ink and slow motion, then it mixes spear thrusts (with the
+## frontal guard) into its sweeps and recovers faster.
+func _spawn_boss(pos: Vector3) -> void:
+	_spawn(pos)
+	var e: Fighter = enemies.back()
+	e.remove_meta("armor"); e.set_meta("spear", false)
+	e.set_meta("boss", true); e.set_meta("lane", 0)
+	e.max_hp = boss_test_hp if boss_test_hp > 0.0 else 300.0
+	e.hp = e.max_hp
+	e.reskin(boss_tex, "res://art/boss.json")
+	e.tint = Color(0.8, 0.78, 0.8)
+	e.sprite.scale = Vector3(1.08, 1.08, 1.0)
+	e.set_meta("cool", 1.4)
+	boss = e; boss_phase = 1
+	_boss_bar_show(true)
+	s_boss.set_text(s_boss.get_meta("name_i"), "Kageyama, chapter %d" % (chapters + 1))
+	s_boss.commit()
+	_sv_update()
+	_flash_banner("Kageyama steps out of the grass", 2.2)
+	sfx.target = 1.0
+
+func _boss_phase2(e: Fighter) -> void:
+	boss_phase = 2
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), 1.0, 2.2, 0.2)
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), -1.0, 2.2, 0.2)
+	_slowmo(0.8, 0.3, 0.7)
+	shake = 0.3
+	sfx.play("finisher", 0.0)
+	e.set_meta("stag_len", 0.4)
+	_flash_banner("Kageyama draws a second breath", 2.0)
+
+## C58 phase 3: he starts reading - counters your autopilot chains and shades toward
+## the side you always dodge to.
+func _boss_phase3(e: Fighter) -> void:
+	boss_phase = 3
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), 1.0, 1.6, 0.2)
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), -1.0, 1.6, 0.2)
+	_slowmo(0.6, 0.3, 0.5)
+	shake = 0.25
+	sfx.play("finisher", 0.0)
+	e.set_meta("stag_len", 0.35)
+	_flash_banner("Kageyama watches your hands", 2.2)
+	if autoplay:
+		print("QA boss phase 3")
+
+## C58 phase 4: he knows your rhythm - a stillness tell, then he punishes the opener
+## he predicted. Bait the read and he is the one left open.
+func _boss_phase4(e: Fighter) -> void:
+	boss_phase = 4
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), 1.0, 1.8, 0.2)
+	fx.burst(e.global_position + Vector3(0, 1.6, 0.2), -1.0, 1.8, 0.2)
+	_slowmo(0.7, 0.3, 0.6)
+	shake = 0.3
+	sfx.play("finisher", 0.0)
+	e.set_meta("stag_len", 0.3)
+	_flash_banner("Kageyama knows your rhythm", 2.2)
+	if autoplay:
+		print("QA boss phase 4")
+
+func _boss_read(e: Fighter) -> void:
+	e.state = "read"; e.state_t = 0.0
+	e.set_meta("read_t0", elapsed)
+	e.vel = Vector3.ZERO
+	e.play("idle" + _face_view(e, player))
+	# the tell: stillness, a glint over the kasa, ink settling at his feet
+	fx.glint(e, e.global_position + Vector3(0, 2.4, 0.3))
+	fx.puff(e.global_position)
+	if autoplay:
+		print("QA read start cad=%.2f" % _habit_cadence())
+
+func _flash_banner(text: String, secs: float) -> void:
+	banner.text = text
+	banner.visible = true
+	get_tree().create_timer(secs, true, false, true).timeout.connect(func():
+		if player.alive() and banner.text == text:
+			banner.visible = false)
+
+func _parry(e: Fighter, perfect := false) -> void:
+	var p := player
+	var mid := (e.global_position + p.global_position) * 0.5 + Vector3(0, 1.5, 0.3)
+	e.state = "stagger"; e.state_t = 0.0
+	e.set_meta("stag_len", (1.3 if perfect else 0.75) * (0.7 if e == boss and boss_phase == 2 else 1.0))
+	e.set_meta("riposte_k", 2.5 if perfect else 1.5)
+	e.play("hit" + _face_view(e, p), true)
+	e.posture = 0.0
+	e.vel = _knock(_face_view(e, p), p.facing, 3.0)
+	fx.clash(mid, p.facing, 1.6 if perfect else 1.0)
+	fx.riposte_cue(e, perfect, Vector3(e.facing * 0.7, 2.1, 0.35))
+	sfx.play("parry_perfect" if perfect else "parry", 0.02)
+	hitstop = 0.16 if perfect else 0.1; shake = 0.14 if perfect else 0.08
+	clean_hits += 1
+	_slowmo(0.32 if perfect else 0.2, 0.3 if perfect else 0.5, 0.0)
+	if perfect:
+		var vs := get_viewport().get_visible_rect().size
+		post_mat.set_shader_parameter("flash_at", cam.unproject_position(mid) / vs)
+		parry_flash = 1.0
+
+func _finisher(e: Fighter, dir: float) -> void:
+	sfx.play("finisher", 0.0)
+	fx.slash(e.global_position + Vector3(0, 0.6, 0.15), dir, 2.2, 0.7, 0.0, 2)
+	hitstop = 0.0
+	_slowmo(0.55, 0.25, 1.0)
+	clean_hits = 0
+
+## C29 blade feel: the struck body shivers along x through the hit-stop, so the cut reads as
+## biting in rather than passing through. Runs before the hit-stop early return.
+func _hit_jitter(delta: float) -> void:
+	for e in enemies:
+		var j := float(e.get_meta("jit", 0.0))
+		if j <= 0.0:
+			continue
+		j = maxf(0.0, j - delta)
+		e.set_meta("jit", j)
+		var amp := 0.07 * j / maxf(float(e.get_meta("jit0", 0.1)), 0.01)
+		e.sprite.position.x = sin(j * 150.0) * amp if j > 0.0 else 0.0
+
+## real-time slow motion: `dur` real seconds at `scale`, easing back; zoom 0..1 pushes the camera in
+func _slowmo(dur: float, scale: float, zoom: float) -> void:
+	slow_t = maxf(slow_t, dur)
+	slow_zoom = maxf(slow_zoom, zoom)
+	Engine.time_scale = minf(Engine.time_scale, scale)
+	set_meta("slow_scale", Engine.time_scale)
+	set_meta("slow_dur", slow_t)
+
+func _process(delta: float) -> void:
+	if not web_toggles_done and web_q != "":
+		web_toggles_done = true
+		if "nopost" in web_q and post_rect: post_rect.visible = false
+		if "noground" in web_q and ground_node: ground_node.visible = false
+		if "lowres" in web_q: get_tree().root.scaling_3d_scale = 0.6  # C54: fill-sensitivity probe (?perf&lowres A/B)
+		if "nograss" in web_q:
+			for mi in grass_nodes: mi.visible = false
+	var _pt1 := Time.get_ticks_usec()  # noqa
+	perf_phys_us += _pt1 - _pt0
+	if perf_mode:
+		perf_t += delta; perf_n += 1
+		if delta > perf_worst: perf_worst = delta
+		perf_arr.push_back(delta)
+		if perf_t >= (6.0 if OS.has_feature("web") else 12.0):
+			perf_arr.sort()
+			var p99: float = perf_arr[int(perf_arr.size() * 0.99)]
+			var dc := RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+			var tproc := Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+			var tphys := Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+			var nodes := Performance.get_monitor(Performance.OBJECT_NODE_COUNT)
+			var prims := RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
+			print("PERF avg_fps=%.1f p99_ms=%.1f worst_ms=%.1f frames=%d phys_ms=%.2f draws=%d prims=%d tproc=%.1f tphys=%.1f nodes=%d" % [perf_n / perf_t, p99 * 1000.0, perf_worst * 1000.0, perf_n, perf_phys_us / 1000.0 / maxf(1.0, perf_n), dc, prims, tproc, tphys, nodes])
+			if OS.has_feature("web"):
+				JavaScriptBridge.eval("document.title = 'PERF fps=%.1f p99=%.1f'" % [perf_n / perf_t, p99 * 1000.0])
+				JavaScriptBridge.eval("fetch('/perf?fps=%.1f&p99=%.1f&phys=%.2f&draws=%d&prims=%d&tproc=%.1f&tphys=%.1f&nodes=%d').catch(function(){})" % [perf_n / perf_t, p99 * 1000.0, perf_phys_us / 1000.0 / maxf(1.0, perf_n), dc, prims, tproc, tphys, nodes])
+			perf_t = 0.0; perf_n = 0; perf_arr.clear(); perf_worst = 0.0; perf_phys_us = 0
+	if slow_t <= 0.0:
+		return
+	var real := delta / maxf(Engine.time_scale, 0.01)
+	slow_t -= real
+	var k := clampf(slow_t / float(get_meta("slow_dur", 0.5)), 0.0, 1.0)
+	# hold the slow for the first half, then ease back to full speed
+	Engine.time_scale = lerpf(1.0, float(get_meta("slow_scale", 0.3)), clampf(k * 2.0, 0.0, 1.0))
+	if slow_t <= 0.0:
+		Engine.time_scale = 1.0; slow_zoom = 0.0
+
+func _restart() -> void:
+	Engine.time_scale = 1.0; slow_t = 0.0; slow_zoom = 0.0; clean_hits = 0
+	arrows.clear()
+	if arrow_mm:
+		arrow_mm.visible_instance_count = 0
+	issen_t = 0.0
+	for e in enemies:
+		e.queue_free()
+	for b in ebars:
+		b.queue_free()
+	enemies.clear(); ebars.clear()
+	player.hp = 100.0; player.state = "idle"; player.play("idle", true)
+	player.global_position = Vector3.ZERO
+	elapsed = 0.0; kills = 0; spawn_t = 1.0; spawned = 0
+	boss = null; boss_phase = 0; chapters = 0; _boss_bar_show(false)
+	_set_palette(0, 1.0)
+	banner.visible = false
+
+func _nearest(pos: Vector3, r: float) -> Fighter:
+	var best: Fighter = null
+	var bd := r
+	for e in enemies:
+		if e.alive():
+			var dd: float = (e.global_position - pos).length()
+			if dd < bd:
+				bd = dd; best = e
+	return best
+
+func _camera(delta: float) -> void:
+	delta = delta / maxf(Engine.time_scale, 0.01)  # camera follows in real time, not dilated time
+	var vs := get_viewport().get_visible_rect().size
+	var portrait := vs.y > vs.x
+	var focus := player.global_position
+	# lead the player's travel so running toward the camera doesn't outrun the follow
+	var lead := Vector3(player.vel.x * 0.12, 0.0, player.vel.z * 0.3)
+	focus += lead.limit_length(1.8)
+	var tgt := _nearest(player.global_position, 7.0)
+	if tgt == null:
+		# F-26: keep a fresh kill in frame for its fall instead of snapping back to the player
+		for e in enemies:
+			if not e.alive() and e.state_t < 1.6 and (e.global_position - player.global_position).length() < 8.0:
+				tgt = e
+	if tgt == null:
+		# C33: an archer at its standoff sits past the melee radius; keep it framed
+		for e in enemies:
+			if e.alive() and e.get_meta("bow", false) and (e.global_position - player.global_position).length() < 10.0:
+				tgt = e
+	var zoom := 1.0
+	var bow_frame: bool = tgt != null and bool(tgt.get_meta("bow", false))
+	# C40 F-07: the boss sheet is ~4.4 m tall on a ~4.6 m landscape frame; pull back and centre the pair
+	var boss_frame: bool = tgt != null and bool(tgt.get_meta("boss", false))
+	if tgt:
+		# narrow screens: centre the pair and pull back when they spread wider than the frame
+		focus = focus.lerp(tgt.global_position, 0.5 if (portrait or bow_frame or boss_frame) else 0.35)
+		if portrait:
+			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 3.6, 1.1 if boss_frame else 1.0, 1.4 if boss_frame else 1.35)
+		elif bow_frame:
+			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 5.0, 1.0, 1.3)
+		elif boss_frame:
+			zoom = clampf(absf(tgt.global_position.x - player.global_position.x) / 4.0, 1.15, 1.4)
+	var off := Vector3(0, 4.6, 5.2) * (zoom if (bow_frame or boss_frame) else 1.0) if not portrait else Vector3(0, 4.9, 3.9) * zoom  # C39: landscape raised to the reference's ~35 deg view
+	# F-22: a foe lined up in depth hides behind (or in front of) the player; swing the camera
+	# toward the foe's side so the line of sight opens a gap between the two figures
+	var side := 0.0
+	if tgt and tgt.alive():
+		var dd: Vector3 = tgt.global_position - player.global_position
+		var along := clampf((absf(dd.z) - absf(dd.x) * 0.6) / 1.5, 0.0, 1.0)
+		if absf(dd.z) > 1.0:
+			side = (signf(dd.x) if absf(dd.x) > 0.05 else 1.0) * signf(dd.z) * -1.6 * along
+	cam_side = lerpf(cam_side, side, 1.0 - exp(-2.5 * delta))
+	off.x += cam_side
+	cam.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
+	cam.fov = (46.0 if portrait else 40.0) - slow_zoom * clampf(slow_t * 4.0, 0.0, 1.0) * 7.0
+	var want := focus + off
+	if cam.global_position.length() > 0.1:
+		var cp := cam.global_position.lerp(want, 1.0 - exp(-5.0 * delta))
+		cp.z = lerpf(cam.global_position.z, want.z, 1.0 - exp(-9.0 * delta))
+		cam.global_position = cp
+	else:
+		cam.global_position = want
+	# portrait: aim a little higher so the duel sits nearer the vertical middle, not above empty ground
+	cam.look_at(cam.global_position - off + Vector3(0, 2.7 if portrait else 1.0, 0), Vector3.UP)
+	kick = kick.lerp(Vector2.ZERO, 1.0 - exp(-9.0 * delta))
+	if shake > 0.0:
+		shake = maxf(0.0, shake - delta)
+		cam.h_offset = randf_range(-1, 1) * shake * 0.5 + kick.x
+		cam.v_offset = randf_range(-1, 1) * shake * 0.5 + kick.y
+	else:
+		cam.h_offset = kick.x; cam.v_offset = kick.y
+	parry_flash = maxf(0.0, parry_flash - get_process_delta_time() / maxf(Engine.time_scale, 0.05) * 3.2)
+	if parry_flash != _last_flash:
+		post_mat.set_shader_parameter("flash", parry_flash)
+		_last_flash = parry_flash
+	var h2: float = maxf(0.0, _hurt_v - delta * 2.0)
+	if h2 != _hurt_v:
+		_hurt_v = h2
+		post_mat.set_shader_parameter("hurt", h2)
+
+# ------------------------------------------------------------------ HUD
+func _sv_update() -> void:
+	if sv:
+		sv.render_target_update_mode = SubViewport.UPDATE_ONCE  # re-render the static bake once, then it sleeps again
+
+func _boss_bar_show(v: bool) -> void:
+	s_boss.visible = v
+	d_boss.visible = v
+	_sv_update()
+
+func _bar_pair_into(c: HudCanvas, w: float, off: Vector2) -> Array:
+	var lab_i := c.text(off + Vector2(w * 0.5 - 20, -16), "", 14, Color(0.93, 0.9, 0.84), 4, Color(0.12, 0.1, 0.08))
+	c.quad(load("res://art/bar.png"), Rect2(off.x, off.y, w, 9))
+	var fw := w * 0.84
+	var fill_i := c.fill_rect(Rect2(off.x + w * 0.08, off.y + 2.5, fw, 4), Color(0.78, 0.07, 0.08))
+	c.quad(load("res://art/bar.png"), Rect2(off.x + w * 0.1, off.y + 11, w * 0.8, 5))
+	return [fill_i, lab_i, fw]
+
+## C60: standalone foe hp bar as ONE canvas item (was 4: Label + 2 TextureRects + ColorRect)
+func _bar_pair(w: float) -> HudCanvas:
+	var root := HudCanvas.new()
+	var ids := _bar_pair_into(root, w, Vector2.ZERO)
+	root.set_meta("fill_i", ids[0]); root.set_meta("label_i", ids[1]); root.set_meta("fw", ids[2])
+	root.size = Vector2(w, 16)
+	root.commit()
+	return root
+
+func _bar_fill(b: HudCanvas, fill_i: int, fw: float, frac: float) -> void:
+	b.set_fill_x(fill_i, fw * frac)
+
+func _hud() -> void:
+	var post := CanvasLayer.new(); post.layer = 1
+	add_child(post)
+	var pr := ColorRect.new()
+	pr.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	post_mat = ShaderMaterial.new(); post_mat.shader = load("res://shaders/post.gdshader")
+	post_mat.set_shader_parameter("hurt", 0.0)
+	pr.material = post_mat
+	post_rect = pr
+	post.add_child(pr)
+	hud = CanvasLayer.new(); hud.layer = 2
+	add_child(hud)
+	# C60 phase C: static chrome lives in an offscreen SubViewport that renders ONCE
+	# per layout/state change (1 draw per frame on screen); only fills, labels and the
+	# timer redraw per frame. Compatibility canvas has no batching - every draw command
+	# is a GL call, and GL calls are the web frame-time cost (C51).
+	svc = SubViewportContainer.new()
+	svc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	svc.mouse_filter = Control.MOUSE_FILTER_PASS
+	svc.focus_mode = Control.FOCUS_NONE
+	hud.add_child(svc)
+	sv = SubViewport.new()
+	sv.transparent_bg = true
+	sv.disable_3d = true
+	sv.render_target_update_mode = SubViewport.UPDATE_ONCE
+	sv.size = Vector2i(1152, 648)  # _layout sets the real size
+	svc.add_child(sv)
+	s_root = Control.new()
+	s_root.mouse_filter = Control.MOUSE_FILTER_PASS
+	s_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sv.add_child(s_root)
+	# static plaque (texture + "Time:"); the timer digits stay dynamic
+	var plaque := HudCanvas.new()
+	plaque.name = "Plaque"
+	plaque.quad(load("res://art/plaque.png"), Rect2(0, 0, 150, 53))
+	plaque.text(Vector2(12, 4), "Time:", 17, Color(0.12, 0.1, 0.08))
+	plaque.size = Vector2(150, 53)
+	plaque.position = Vector2(0, 70)
+	plaque.commit()
+	s_root.add_child(plaque)
+	d_plaque = HudCanvas.new()
+	d_plaque.name = "PlaqueD"
+	d_plaque.set_meta("time_i", d_plaque.text(Vector2(10, 19), "", 23, Color(0.12, 0.1, 0.08)))
+	d_plaque.size = Vector2(150, 53)
+	d_plaque.commit()
+	hud.add_child(d_plaque)
+	# static player chrome (rings + icons + bar frames + stamina frame)
+	var pb := HudCanvas.new()
+	pb.name = "PlayerBarsS"
+	s_root.add_child(pb)
+	for i in 3:
+		pb.quad(load("res://art/ring.png"), Rect2(34 + i * 28, -8, 24, 24))
+		pb.quad(load("res://art/icon_%s.png" % ["cut", "evade", "burst"][i]), Rect2(34 + i * 28 + 4, -8 + 4, 16, 16))
+	pb.quad(load("res://art/bar.png"), Rect2(0, 34, 150, 9))
+	pb.quad(load("res://art/bar.png"), Rect2(15, 45, 120, 5))
+	pb.quad(load("res://art/bar.png"), Rect2(0, 46, 150, 6))
+	pb.size = Vector2(150, 60)
+	pb.commit()
+	# dynamic player bits: hp fill + label + stamina sliver
+	d_pb = HudCanvas.new()
+	d_pb.name = "PlayerBarsD"
+	php_fill_i = d_pb.fill_rect(Rect2(12, 36.5, 126, 4), Color(0.78, 0.07, 0.08))
+	php_label_i = d_pb.text(Vector2(55, 18), "", 14, Color(0.93, 0.9, 0.84), 4, Color(0.12, 0.1, 0.08))
+	pstam_fill_i = d_pb.fill_rect(Rect2(12, 48, 126, 2.5), Color(0.16, 0.14, 0.12))
+	php_fw = 126.0
+	d_pb.set_meta("pstam_fw", 126.0)
+	d_pb.size = Vector2(150, 60)
+	d_pb.commit()
+	hud.add_child(d_pb)
+	banner = Label.new()
+	banner.add_theme_color_override("font_color", Color(0.12, 0.1, 0.08))
+	banner.add_theme_font_size_override("font_size", 28)
+	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	banner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# C18: the death line sits on its own parchment slip so it stays legible over ink figures
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.93, 0.89, 0.8, 0.9)
+	sb.border_color = Color(0.15, 0.12, 0.1, 0.85)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(6)
+	sb.set_content_margin_all(8)
+	banner.add_theme_stylebox_override("normal", sb)
+	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	banner.visible = false
+	hud.add_child(banner)
+	# C60 phase C: boss chrome static (name + bar frames), fill + label dynamic
+	s_boss = HudCanvas.new()
+	s_boss.name = "BossS"
+	s_boss.visible = false
+	# C41: paper outline keeps the name readable when the boss sprite passes behind it
+	s_boss.set_meta("name_i", s_boss.text(Vector2(0, -56), "", 22, Color(0.12, 0.1, 0.08), 6, Color(0.93, 0.9, 0.84), 360.0))
+	s_boss.quad(load("res://art/bar.png"), Rect2(0, 0, 360, 9))
+	s_boss.quad(load("res://art/bar.png"), Rect2(36, 11, 288, 5))
+	s_boss.size = Vector2(360, 16)
+	s_boss.commit()
+	s_root.add_child(s_boss)
+	d_boss = HudCanvas.new()
+	d_boss.name = "BossD"
+	d_boss.visible = false
+	boss_fill_i = d_boss.fill_rect(Rect2(28.8, 2.5, 302.4, 4), Color(0.78, 0.07, 0.08))
+	boss_label_i = d_boss.text(Vector2(160, -16), "", 14, Color(0.93, 0.9, 0.84), 4, Color(0.12, 0.1, 0.08))
+	boss_fw = 302.4
+	d_boss.size = Vector2(360, 16)
+	d_boss.commit()
+	hud.add_child(d_boss)
+
+func pb_scale() -> Vector2:
+	var vs := get_viewport().get_visible_rect().size
+	return Vector2.ONE * (1.45 if vs.y > vs.x else 1.0)
+
+func _layout() -> void:
+	var vs := get_viewport().get_visible_rect().size
+	# narrow screens: HUD scales up so bars, rings and timer stay readable on a phone
+	var k := pb_scale().x
+	for pb in [s_root.get_node("PlayerBarsS"), d_pb]:
+		pb.scale = Vector2(k, k)
+		pb.position = Vector2(vs.x * 0.5 - 75 * k, vs.y - 60 * k)
+	for plaque in [s_root.get_node("Plaque"), d_plaque]:
+		plaque.scale = Vector2(k, k)
+		plaque.position = Vector2(0, clampf(vs.y * 0.2, 50, 110))
+
+	if s_boss:
+		var bk := minf(k, (vs.x - 20.0) / 360.0)
+		for bb in [s_boss, d_boss]:
+			bb.scale = Vector2(bk, bk)
+			bb.position = Vector2(vs.x * 0.5 - 180.0 * bk, 40.0 * k + 44.0)
+	banner.size = Vector2(minf(400.0, vs.x / k - 20.0), 96)
+	banner.scale = Vector2(k, k)
+	banner.position = Vector2(vs.x * 0.5 - banner.size.x * k * 0.5, vs.y * (0.24 if vs.y > vs.x else 0.3))
+	var ck := k
+	if chips:
+		ck = minf(k, (vs.x - 20.0) / chips.size.x)
+		chips.scale = Vector2(ck, ck)
+		chips.position = Vector2(vs.x - chips.size.x * ck - 10, 10)
+	if s_boss and chips:
+		var bk2 := s_boss.scale.x
+		var bby := maxf(s_boss.position.y, 10.0 + 30.0 * ck + 6.0 + 56.0 * bk2)
+		s_boss.position.y = bby
+		d_boss.position.y = bby
+		if vs.y > vs.x:
+			for plaque in [s_root.get_node("Plaque"), d_plaque]:
+				plaque.position.y = maxf(plaque.position.y, bby + 24.0 * bk2)
+	if credits:
+		credits.size = vs
+	if touch_ui:
+		touch_ui.size = vs
+		atk_pos = Vector2(vs.x - 110, vs.y - 150)
+		dodge_pos = Vector2(vs.x - 170, vs.y - 90)
+		joy_pos = Vector2(40, vs.y - 170)
+		_touch_redraw()
+	if sv:
+		sv.size = Vector2i(maxi(2, int(vs.x)), maxi(2, int(vs.y)))
+	_sv_update()
+
+## C20: how heated the field is, for the music
+func _music_target() -> float:
+	var t := 0.0
+	for e in enemies:
+		if not e.alive():
+			continue
+		var d: float = e.global_position.distance_to(player.global_position)
+		if d < 12.0:
+			t = maxf(t, 0.45)
+		if d < 7.0 and e.state in ["windup", "swing", "stagger"]:
+			t = 1.0
+	if not player.alive():
+		t = 0.0
+	return t
+
+func _hud_update() -> void:
+	sfx.target = _music_target()
+	if boss and d_boss.visible:
+		_bar_fill(d_boss, boss_fill_i, boss_fw, boss.hp / boss.max_hp)
+		var bkey := int(ceil(boss.hp)) * 100000 + int(boss.max_hp)  # C53: text set only on change
+		if bkey != _hud_boss:
+			_hud_boss = bkey
+			d_boss.set_text(boss_label_i, "%d/%d" % [int(ceil(boss.hp)), int(boss.max_hp)])
+		d_boss.commit()
+	var t10 := int(elapsed * 10.0)  # C53: 10 Hz is plenty for the centisecond read; kills a per-tick text re-raster
+	if t10 != _hud_t10:
+		_hud_t10 = t10
+		var m := int(elapsed / 60.0); var s := fmod(elapsed, 60.0)
+		d_plaque.set_text(d_plaque.get_meta("time_i"), "%02d:%05.2f" % [m, s])
+		d_plaque.commit()
+	_bar_fill(d_pb, php_fill_i, php_fw, player.hp / player.max_hp)
+	var pst := int(player.posture)
+	if pst != _hud_pstam:
+		_hud_pstam = pst
+		d_pb.set_fill_x(pstam_fill_i, d_pb.get_meta("pstam_fw") * player.posture / 100.0)
+	var phpv := int(ceil(player.hp))
+	if phpv != _hud_php:
+		_hud_php = phpv
+		d_pb.set_text(php_label_i, "%d/100" % phpv)
+		d_pb.commit()
+	for i in enemies.size():
+		var e: Fighter = enemies[i]
+		var b: Control = ebars[i]
+		var wp: Vector3 = e.global_position + Vector3(0, 3.1, 0)
+		b.visible = e.alive() and e != boss and not cam.is_position_behind(wp)
+		if b.visible:
+			var sp := cam.unproject_position(wp)
+			b.scale = pb_scale()
+			b.position = Vector2(sp.x - 45.0 * b.scale.x, maxf(sp.y - 16.0 * (b.scale.y - 1.0), 24.0))
+			# C41: the label rides 16 px above the bar; include it in the chips-clearance test
+			if chips and chips.visible and chips.get_global_rect().grow(6.0).intersects(Rect2(b.position + Vector2(0, -18) * b.scale, Vector2(90, 38) * b.scale)):
+				b.position.y = chips.get_global_rect().end.y + 8.0
+			_bar_fill(b, b.get_meta("fill_i"), b.get_meta("fw"), e.hp / e.max_hp)
+			var ar := int(e.get_meta("armor", 0))
+			var lt: String = ("spear  " if e.get_meta("spear", false) else "") + ("twin  " if e.get_meta("twin", false) else "") + ("bow  " if e.get_meta("bow", false) else "") + ("armor " + "I".repeat(ar) + "  " if ar > 0 else "") + "%d/100" % int(ceil(e.hp))
+			if _ebars_txt.size() != ebars.size():
+				_ebars_txt.resize(ebars.size())  # C53: realign after spawns/removals; null slots are dirty
+			if _ebars_txt[i] != lt:
+				_ebars_txt[i] = lt
+				b.set_text(b.get_meta("label_i"), lt)
+			b.commit()
+
+# ------------------------------------------------------------------ touch
+## C60: touch controls as ONE canvas item (rings + joystick were 6 canvas items)
+func _touch_ui() -> void:
+	touch_ui = HudCanvas.new()
+	touch_ui.visible = DisplayServer.is_touchscreen_available()
+	hud.add_child(touch_ui)
+
+func _touch_redraw() -> void:
+	if not touch_ui:
+		return
+	touch_ui.reset()
+	var ring: Texture2D = load("res://art/ring.png")
+	touch_ui.quad(ring, Rect2(atk_pos, Vector2(84, 84)), Color(1, 1, 1, 0.8))
+	touch_ui.quad(load("res://art/icon_cut.png"), Rect2(atk_pos + Vector2(84 * 0.2, 84 * 0.2), Vector2(84 * 0.6, 84 * 0.6)))
+	touch_ui.quad(ring, Rect2(dodge_pos, Vector2(60, 60)), Color(1, 1, 1, 0.8))
+	touch_ui.quad(load("res://art/icon_evade.png"), Rect2(dodge_pos + Vector2(60 * 0.2, 60 * 0.2), Vector2(60 * 0.6, 60 * 0.6)))
+	touch_ui.quad(ring, Rect2(joy_pos, Vector2(120, 120)), Color(1, 1, 1, 0.35))
+	touch_ui.quad(load("res://art/blot0.png"), Rect2(joy_pos + knob_rel, Vector2(46, 46)), Color(1, 1, 1, 0.6))
+	touch_ui.commit()
+
+func _input(ev: InputEvent) -> void:
+	if not (ev is InputEventScreenTouch or ev is InputEventScreenDrag):
+		if ev.is_action_pressed("attack", false):
+			atk_buf = 0.3
+			atk_press_t = elapsed
+		elif ev.is_action_pressed("dodge", false):
+			dodge_buf = 0.3
+		if ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_M:
+			_toggle_mute()
+		if ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_Q:
+			_cycle_stance()
+		if ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_TAB:
+			if map_layer.visible:
+				map_layer.visible = false
+			else:
+				_show_map(0.0)
+		if ev.is_action_pressed("gp_stance", false):
+			_cycle_stance()
+	if ev is InputEventScreenTouch:
+		touch_ui.visible = true
+		var vs := get_viewport().get_visible_rect().size
+		if ev.pressed and chips and chips.visible and chips.get_global_rect().has_point(ev.position):
+			return
+		if ev.pressed:
+			if ev.position.x < vs.x * 0.45 and joy_id == -1:
+				joy_id = ev.index; joy_origin = ev.position
+				joy_pos = ev.position - Vector2(60, 60)
+				_touch_redraw()
+			else:
+				if ev.position.distance_to(dodge_pos + Vector2(30, 30)) < 46.0:
+					touch_dodge = true
+				else:
+					touch_atk = true
+					atk_press_t = elapsed
+		elif ev.index == joy_id:
+			joy_id = -1; joy_vec = Vector2.ZERO
+			knob_rel = Vector2(37, 37)
+			_touch_redraw()
+	elif ev is InputEventScreenDrag and ev.index == joy_id:
+		var v: Vector2 = (ev.position - joy_origin) / 50.0
+		if v.length() > 1.0:
+			v = v.normalized()
+		joy_vec = v
+		knob_rel = Vector2(37, 37) + v * 36.0
+		_touch_redraw()
+
+func _autoplay(delta: float) -> void:
+	auto_t += delta
+	if auto_parry:
+		# QA bot: cut 0.1 s before every foe blade lands, then keep cutting the staggered foe
+		for e in enemies:
+			if e.alive() and ((int(elapsed / 4.0) % 2 == 1 and e.state == "windup" and absf(e.state_t - 0.56) < delta * 0.6) or (int(elapsed / 4.0) % 2 == 0 and e.state == "swing" and not e.get_meta("struck") and absf(e.state_t - 0.04) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.12) < delta * 0.6) or (e.state == "stagger" and absf(e.state_t - 0.4) < delta * 0.6)):
+				atk_buf = 0.3; atk_press_t = elapsed
+	if pattern_test:
+		pattern_t -= delta
+		if pattern_t <= 0.0:
+			pattern_t = 0.16 if pattern_mash else 0.7
+			pattern_n += 1
+			if pattern_n % 4 == 0 and not pattern_mash:
+				dodge_buf = 0.3  # always the same side - a habit he can read
+			else:
+				atk_buf = 0.3; atk_press_t = elapsed
+	if bow_test and auto_t > 6.0:
+		for a in arrows:
+			var ax: float = (a["pos"] as Vector3).x
+			if (player.global_position.x - ax) * float(a["dir"]) > 0.0 and absf(player.global_position.x - ax) < 1.9 and player.state != "attack":
+				atk_buf = 0.3; atk_press_t = elapsed
+	while auto_steps.size() > 0 and auto_t >= float(auto_steps[0][0]):
+		var st: Array = auto_steps.pop_front()
+		if st[1] == "attack":
+			atk_buf = 0.3
+			atk_press_t = elapsed
+		elif st[1] == "dodge":
+			dodge_buf = 0.3
+		elif st[2]:
+			Input.action_press(st[1])
+		else:
+			Input.action_release(st[1])
+
+## F-27 + mute: two small ink chips top-right. "sound" mutes the master bus (also the M key),
+## "credits" opens the licenses the export has to carry (engine, font, Android libraries).
+func _chip(text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, 30)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.93, 0.88, 0.78, 0.82)
+	sb.border_color = Color(0.12, 0.1, 0.08, 0.85)
+	sb.set_border_width_all(2); sb.set_corner_radius_all(4)
+	sb.content_margin_left = 10; sb.content_margin_right = 10
+	for st in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(st, sb)
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		b.add_theme_color_override(c, Color(0.12, 0.1, 0.08))
+	b.add_theme_font_size_override("font_size", 16)
+	return b
+
+func _menu_chips() -> void:
+	chips = ChipsCanvas.new()
+	s_root.add_child(chips)
+	# C49 engine switcher: jump back to the hand-built web ISSEN (opens a new tab).
+	chips.setup(["sound: on", "stance: Kasumi", "map", "credits", "web"],
+		[_toggle_mute, _cycle_stance, _show_map.bind(0.0), _show_credits.bind(true),
+		 func() -> void: OS.shell_open("https://aeiouvcode.github.io/issen/")])
+
+
+func _toggle_mute() -> void:
+	var m := not AudioServer.is_bus_mute(0)
+	AudioServer.set_bus_mute(0, m)
+	chips.set_label(0, "sound: off" if m else "sound: on")
+	_sv_update()
+
+func _show_credits(on: bool) -> void:
+	if credits == null:
+		credits = Control.new()
+		credits.process_mode = Node.PROCESS_MODE_ALWAYS
+		var bg := ColorRect.new(); bg.color = Color(0.93, 0.89, 0.8, 0.97)
+		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		credits.add_child(bg)
+		var box := VBoxContainer.new()
+		box.set_anchors_preset(Control.PRESET_FULL_RECT)
+		box.offset_left = 16; box.offset_right = -16; box.offset_top = 16; box.offset_bottom = -16
+		credits.add_child(box)
+		var close := _chip("close")
+		close.size_flags_horizontal = Control.SIZE_SHRINK_END
+		close.pressed.connect(_show_credits.bind(false))
+		box.add_child(close)
+		var txt := RichTextLabel.new()
+		txt.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		txt.scroll_active = true
+		txt.selection_enabled = false
+		txt.add_theme_font_override("normal_font", ThemeDB.fallback_font)
+		txt.add_theme_font_size_override("normal_font_size", 13)
+		txt.add_theme_color_override("default_color", Color(0.12, 0.1, 0.08))
+		txt.text = _credits_text()
+		box.add_child(txt)
+		get_node("Top").add_child(credits)
+		credits.size = get_viewport().get_visible_rect().size
+	credits.visible = on
+	chips.visible = not on
+	get_tree().paused = on
+
+func _credits_text() -> String:
+	var t := "ISSEN - Godot take. Sound is synthesized in code; art is original.\n\n"
+	t += "== Godot Engine ==\n" + Engine.get_license_text() + "\n"
+	for part in Engine.get_copyright_info():
+		t += "- " + str(part["name"]) + "\n"
+	t += "\n== Caveat Brush font (SIL Open Font License 1.1) ==\n"
+	var f := FileAccess.open("res://licenses/CaveatBrush-OFL.txt", FileAccess.READ)
+	if f:
+		t += f.get_as_text()
+	t += "\n== Third-party components bundled by the engine ==\n"
+	var lic := Engine.get_license_info()
+	for k in lic:
+		t += "\n-- " + str(k) + " --\n" + str(lic[k]) + "\n"
+	if OS.get_name() == "Android":
+		t += "\n== Android ==\nAndroidX core, startup and profileinstaller (Apache License 2.0), LLVM libc++ (Apache License 2.0 with LLVM exceptions). Full text: https://www.apache.org/licenses/LICENSE-2.0\n"
+	return t
+
+## ---- C23 progression ----
+func _pwin() -> float:
+	return PARRY_WIN + float(STANCES[stance].parry)
+
+func _load_save() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(SAVE_PATH) == OK:
+		best_chapter = int(cf.get_value("progress", "best_chapter", 0))
+		stance = clampi(int(cf.get_value("progress", "stance", 0)), 0, mini(best_chapter, STANCES.size() - 1))
+
+func _write_save() -> void:
+	if no_save or autoplay:
+		return
+	var cf := ConfigFile.new()
+	cf.set_value("progress", "best_chapter", best_chapter)
+	cf.set_value("progress", "stance", stance)
+	cf.save(SAVE_PATH)
+
+func _stance_label() -> void:
+	if chips:
+		chips.set_label(1, "stance: " + str(STANCES[stance].name))
+		_sv_update()
+		_layout()
+
+func _cycle_stance() -> void:
+	var open := mini(best_chapter, STANCES.size() - 1)
+	if open == 0:
+		_flash_banner("Clear chapter 1 to learn a second stance", 1.6)
+		return
+	stance = (stance + 1) % (open + 1)
+	_stance_label()
+	sfx.play("swing", 0.0)
+	_flash_banner("%s stance\n%s" % [STANCES[stance].name, STANCES[stance].sub], 1.6)
+	_write_save()
+
+func _chapter_cleared() -> void:
+	map_note = ""
+	if chapters > best_chapter:
+		best_chapter = chapters
+		if best_chapter < STANCES.size():
+			var st: Dictionary = STANCES[best_chapter]
+			map_note = "New stance: %s  (%s)" % [st.name, st.sub]
+	_write_save()
+	get_tree().create_timer(2.2, true, false, true).timeout.connect(_show_map_travel.bind(chapters - 1))
+	get_tree().create_timer(5.9, true, false, true).timeout.connect(_set_palette.bind(chapters % PALETTES.size(), 2.5))
+	# C31: the next chapter opens with a title card as its palette blends in
+	var nxt := chapters % CHAPTER_NAMES.size()
+	get_tree().create_timer(6.3, true, false, true).timeout.connect(_flash_banner.bind("Chapter %d\n%s" % [nxt + 1, CHAPTER_NAMES[nxt]], 2.4))
+
+## C31 map flow: after a clear the map opens and the path from the cleared stop to the next one
+## inks in with a red brush tip travelling along it, then the next stop's ring closes.
+func _show_map_travel(seg: int) -> void:
+	map_anim = seg if seg >= 0 and seg < CHAPTER_NAMES.size() - 1 else -1
+	map_anim_t = 0.0
+	_show_map(3.6)
+	var tw := map_view.create_tween()
+	tw.tween_interval(0.5)
+	tw.tween_method(func(v: float):
+		map_anim_t = v
+		map_view.queue_redraw(), 0.0, 1.0, 1.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_callback(func(): map_anim = -1)
+
+func _show_map(secs: float) -> void:
+	map_layer.visible = true
+	map_view.queue_redraw()
+	if secs > 0.0:
+		get_tree().create_timer(secs, true, false, true).timeout.connect(func(): map_layer.visible = false)
+
+func _map_ui() -> void:
+	map_layer = CanvasLayer.new(); map_layer.layer = 4; map_layer.visible = false
+	map_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(map_layer)
+	map_view = Control.new()
+	map_view.set_anchors_preset(Control.PRESET_FULL_RECT)
+	map_view.mouse_filter = Control.MOUSE_FILTER_STOP
+	map_view.gui_input.connect(func(ev):
+		if (ev is InputEventMouseButton or ev is InputEventScreenTouch) and ev.pressed:
+			map_layer.visible = false)
+	map_view.draw.connect(_draw_map)
+	map_layer.add_child(map_view)
+
+func _draw_map() -> void:
+	var c := map_view
+	var vs := c.get_viewport_rect().size
+	var ink := Color(0.1, 0.08, 0.07)
+	var font := c.get_theme_default_font()
+	c.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.1, 0.08, 0.06, 0.45))
+	var portrait := vs.y > vs.x
+	var pw := minf(vs.x - 24.0, 760.0)
+	var ph := minf(vs.y - 40.0, 640.0 if portrait else 400.0)
+	var r := Rect2((vs - Vector2(pw, ph)) * 0.5, Vector2(pw, ph))
+	c.draw_rect(r, Color(0.93, 0.88, 0.77))
+	c.draw_rect(r.grow(-6.0), Color(0.86, 0.79, 0.66, 0.35), false, 2.0)
+	c.draw_rect(r, ink, false, 3.0)
+	c.draw_string(font, r.position + Vector2(0, 44), "Chapter map", HORIZONTAL_ALIGNMENT_CENTER, pw, 34, ink)
+	# path of five stops, winding like a brush trail
+	var pts: Array[Vector2] = []
+	var n := CHAPTER_NAMES.size()
+	for i in n:
+		var t := float(i) / float(n - 1)
+		var p: Vector2
+		if portrait:
+			p = r.position + Vector2(pw * (0.3 if i % 2 == 0 else 0.7), 100.0 + t * (ph - 300.0))
+		else:
+			p = r.position + Vector2(70.0 + t * (pw - 140.0), ph * (0.52 if i % 2 == 0 else 0.36))
+		pts.append(p)
+	var rng := RandomNumberGenerator.new(); rng.seed = 11
+	for i in n - 1:
+		var a := pts[i]; var b := pts[i + 1]
+		var done := i < best_chapter
+		var anim := i == map_anim
+		var steps := 18
+		for k in steps:
+			var t0 := float(k) / steps; var t1 := float(k + 1) / steps
+			var mid := (a + b) * 0.5 + (b - a).orthogonal().normalized() * 18.0
+			var q0 := a.lerp(mid, t0).lerp(mid.lerp(b, t0), t0)
+			var q1 := a.lerp(mid, t1).lerp(mid.lerp(b, t1), t1)
+			var inked := done and (not anim or t1 <= map_anim_t)
+			var jit := rng.randf_range(-0.6, 0.6)
+			if not inked and k % 2 == 1:
+				continue
+			var w := (5.0 if inked else 2.5) * (1.0 - 0.5 * t0) + jit
+			c.draw_line(q0, q1, Color(ink, 0.9 if inked else 0.45), w, true)
+		if anim and map_anim_t < 1.0:
+			var mid2 := (a + b) * 0.5 + (b - a).orthogonal().normalized() * 18.0
+			var tt := map_anim_t
+			var tip := a.lerp(mid2, tt).lerp(mid2.lerp(b, tt), tt)
+			c.draw_circle(tip, 7.0, ink)
+			c.draw_circle(tip, 4.0, Color(0.72, 0.1, 0.08))
+	for i in n:
+		var p := pts[i]
+		var cleared := i < best_chapter
+		var current := i == mini(chapters, n - 1)
+		if current and map_anim == i - 1 and map_anim_t < 1.0:
+			# the ring closes as the brush tip arrives
+			var k2 := clampf((map_anim_t - 0.6) / 0.4, 0.0, 1.0)
+			c.draw_arc(p, 14.0, 0.0, TAU, 28, Color(ink, 0.35), 2.0, true)
+			if k2 > 0.0:
+				c.draw_arc(p, 18.0, 0.3, 0.3 + (TAU - 0.5) * k2, 32, ink, 4.0, true)
+		elif cleared:
+			c.draw_circle(p, 17.0, ink)
+			c.draw_circle(p + Vector2(4, -3), 6.0, Color(0.72, 0.1, 0.08))
+		elif current:
+			c.draw_arc(p, 18.0, 0.3, TAU - 0.2, 32, ink, 4.0, true)
+		else:
+			c.draw_arc(p, 14.0, 0.0, TAU, 28, Color(ink, 0.35), 2.0, true)
+		var label := "%d  %s" % [i + 1, CHAPTER_NAMES[i]]
+		var ly := 44.0 if (portrait or i % 2 == 0) else -30.0
+		var lx := -80.0
+		c.draw_string(font, p + Vector2(lx, ly), label, HORIZONTAL_ALIGNMENT_CENTER, 160.0, 17, Color(ink, 1.0 if (cleared or current) else 0.5))
+	# stances
+	var sy := r.position.y + ph - 92.0
+	var line := "Stances:  "
+	for i in STANCES.size():
+		var st: Dictionary = STANCES[i]
+		line += ("[%s]" if i == stance else "%s") % st.name if i <= best_chapter else "locked"
+		if i < STANCES.size() - 1:
+			line += "   "
+	c.draw_string(font, Vector2(r.position.x, sy), line, HORIZONTAL_ALIGNMENT_CENTER, pw, 20, ink)
+	if map_note != "":
+		c.draw_string(font, Vector2(r.position.x, sy + 30), map_note, HORIZONTAL_ALIGNMENT_CENTER, pw, 19, Color(0.62, 0.09, 0.07))
+	c.draw_string(font, Vector2(r.position.x, sy + 60), "Q or the stance chip switches stance.  Tap to close", HORIZONTAL_ALIGNMENT_CENTER, pw, 15, Color(ink, 0.6))
+
+## ---- C25 chapter palettes ----
+func _set_palette(i: int, secs: float) -> void:
+	palette_i = i
+	var pal: Dictionary = PALETTES[i]
+	var pairs := [[ground_mat, "paper", pal.paper], [ground_mat, "fleck", pal.fleck]]
+	for m in grass_mats:
+		pairs.append([m, "ink_tint", pal.ink]); pairs.append([m, "far_col", pal.far]); pairs.append([m, "density", pal.dens])
+	if secs <= 0.0:
+		for pr in pairs:
+			pr[0].set_shader_parameter(pr[1], pr[2])
+		return
+	var tw := create_tween().set_parallel(true).set_ignore_time_scale(true)
+	for pr in pairs:
+		var from = pr[0].get_shader_parameter(pr[1])
+		if from == null:
+			from = pr[2]
+		tw.tween_method(func(v): pr[0].set_shader_parameter(pr[1], v), from, pr[2], secs)
