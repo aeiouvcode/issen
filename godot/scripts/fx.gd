@@ -76,7 +76,9 @@ func _pool(tex: Texture2D) -> Dictionary:
 	return p
 
 func _alloc(tex: Texture2D) -> Dictionary:
-	var p: Dictionary = _pool(tex)
+	return _alloc_p(_pool(tex))
+
+func _alloc_p(p: Dictionary) -> Dictionary:
 	if p["n"] >= p["cap"]:
 		var ncap: int = p["cap"] * 2
 		p["mm"].instance_count = ncap   # grows the buffer, existing instances keep their data
@@ -94,7 +96,10 @@ func _free_slot(it: Dictionary) -> void:
 	if slot != n:
 		var moved: Dictionary = p["owners"][n]
 		p["mm"].set_instance_transform(slot, moved["xf"])
-		p["mm"].set_instance_color(slot, moved["col"])
+		if moved.has("cust"):
+			p["mm"].set_instance_custom_data(slot, moved["cust"])
+		else:
+			p["mm"].set_instance_color(slot, moved["col"])
 		p["owners"][slot] = moved
 		moved["slot"] = slot
 	p["owners"].resize(n)
@@ -133,6 +138,43 @@ func _write_flat(st: Dictionary) -> void:
 	st["p"]["mm"].set_instance_transform(st["slot"], st["xf"])
 	st["p"]["mm"].set_instance_color(st["slot"], st["col"])
 
+## C60 phase B: slash curtains pooled per texture (was one MeshInstance3D + own
+## ShaderMaterial per swing - the biggest live 3D draw mass in combat). prog/life/
+## flip/tint ride INSTANCE_CUSTOM; the slash shader billboards off MODEL_MATRIX,
+## which is per-instance in a MultiMesh.
+var slash_pools := {}
+
+func _slash_pool(variant: int) -> Dictionary:
+	var key := "slash%d" % variant
+	var p: Dictionary = slash_pools.get(key, {})
+	if not p.is_empty():
+		return p
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = true
+	mm.mesh = quad
+	mm.instance_count = POOL_CAP0
+	mm.visible_instance_count = 0
+	var mi := MultiMeshInstance3D.new()
+	mi.multimesh = mm
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.extra_cull_margin = 128.0
+	var m := ShaderMaterial.new()
+	m.shader = slash_shader
+	m.set_shader_parameter("tex", slash_tex[variant])
+	mi.material_override = m
+	add_child(mi)
+	p = {"mm": mm, "n": 0, "cap": POOL_CAP0, "owners": []}
+	slash_pools[key] = p
+	return p
+
+func _write_slash(it: Dictionary, prog: float, life: float) -> void:
+	var b := Basis.from_scale(Vector3(it["sk"] * it["sxk"], it["sk"] * it["svk"], it["sk"]))
+	it["xf"] = Transform3D(b, it["pos"])
+	it["cust"] = Color(prog, life, 1.0 if it["flip"] else 0.0, it["tint"])
+	it["p"]["mm"].set_instance_transform(it["slot"], it["xf"])
+	it["p"]["mm"].set_instance_custom_data(it["slot"], it["cust"])
+
 ## Spawn one pooled ink quad. bb: 0 = face camera, 1 = fixed-Y upright.
 func _blot(tex: Texture2D, px: float, pos: Vector3, col := Color(1, 1, 1, 1), bb := 0, rot := 0.0, sx := 1.0, sv := 1.0) -> Dictionary:
 	var a := _alloc(tex)
@@ -141,23 +183,16 @@ func _blot(tex: Texture2D, px: float, pos: Vector3, col := Color(1, 1, 1, 1), bb
 	_write_bill(it)
 	return it
 
-func slash(pos: Vector3, facing: float, scale_k := 1.0, dur := 0.32, red := 0.0, variant := 0) -> MeshInstance3D:
-	var mi := MeshInstance3D.new()
-	mi.mesh = quad
-	var m := ShaderMaterial.new()
-	m.shader = slash_shader
-	m.set_shader_parameter("tex", slash_tex[variant % 2])
-	m.set_shader_parameter("flip", 1.0 if facing < 0.0 else 0.0)
-	m.set_shader_parameter("prog", 0.0)
-	m.set_shader_parameter("life", 1.0)
-	m.set_shader_parameter("tint", red)
-	mi.material_override = m
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.scale = Vector3.ONE * scale_k
-	add_child(mi)
-	mi.global_position = pos
-	items.append({"node": mi, "kind": "slash", "t": 0.0, "dur": dur, "mat": m})
-	return mi
+func slash(pos: Vector3, facing: float, scale_k := 1.0, dur := 0.32, red := 0.0, variant := 0) -> Dictionary:
+	var p: Dictionary = _slash_pool(variant % 2)
+	var a := _alloc_p(p)
+	var it := {"p": p, "slot": a["slot"], "kind": "slash", "t": 0.0, "dur": dur,
+		"pos": pos, "flip": facing < 0.0, "tint": red, "sk": scale_k, "sxk": 1.0, "svk": 1.0,
+		"col": Color(1, 1, 1, 1)}
+	p["owners"].append(it)
+	_write_slash(it, 0.0, 1.0)
+	items.append(it)
+	return it
 
 func _billboard(tex: Texture2D, px: float) -> Sprite3D:
 	var s := Sprite3D.new()
@@ -189,7 +224,7 @@ func burst(pos: Vector3, dir: float, power := 1.0, red := 0.25) -> void:
 		items.append(it)
 	# flying ink: many fine specks, streaking drips aligned to their flight, a few fat drops.
 	# All land as stains, so a fight leaves a dense splattered floor like the reference.
-	for i in int(150 * power):
+	for i in int(90 * power):
 		var r := randf()
 		var tex: Texture2D
 		var px: float
@@ -206,8 +241,8 @@ func burst(pos: Vector3, dir: float, power := 1.0, red := 0.25) -> void:
 		var it := _blot(tex, px * (1.0 + power * 0.25), pos + Vector3(randf_range(-0.35, 0.35), randf_range(-0.4, 0.5), 0), col)
 		# radial spray biased along the cut, so the burst reads as a splash, not speed lines
 		var a2 := randf() * TAU
-		var sp := randf_range(1.0, 6.5)
-		it["vel"] = Vector3(cos(a2) * sp + dir * randf_range(0.5, 3.5), sin(a2) * sp * 0.8 + 2.0, randf_range(-2.5, 2.5))
+		var sp := randf_range(0.8, 5.0)
+		it["vel"] = Vector3(cos(a2) * sp + dir * randf_range(0.5, 3.5), sin(a2) * sp * 0.8 + 2.0, randf_range(-1.6, 1.6))
 		it["kind"] = kind; it["t"] = 0.0
 		items.append(it)
 
@@ -285,16 +320,13 @@ func _physics_process(delta: float) -> void:  # C55: was _process - physics inte
 		match it["kind"]:
 			"slash":
 				# C43: echoes hold at prog 0 until their delay passes
-				var n: Node3D = it["node"]
 				var td: float = it["t"] - float(it.get("delay", 0.0))
 				if td < 0.0:
 					keep.append(it); continue
 				var k: float = td / it["dur"]
-				var m: ShaderMaterial = it["mat"]
-				m.set_shader_parameter("prog", clampf(k * 1.8, 0.0, 1.0))
-				m.set_shader_parameter("life", clampf(1.0 - maxf(0.0, k - 0.45) / 0.9, 0.0, 1.0))
+				_write_slash(it, clampf(k * 1.8, 0.0, 1.0), clampf(1.0 - maxf(0.0, k - 0.45) / 0.9, 0.0, 1.0))
 				if k > 1.4:
-					n.queue_free(); continue
+					_free_slot(it); continue
 			"bloom":
 				var k2: float = it["t"] / it["dur"]
 				it["px"] = it["s0"] * (1.0 + k2 * 0.45)
@@ -373,7 +405,7 @@ func _physics_process(delta: float) -> void:  # C55: was _process - physics inte
 				(n4 as Sprite3D).modulate.a = 0.55 * (1.0 - k3)
 				if k3 >= 1.0:
 					n4.queue_free(); continue
-		if it.has("slot"):
+		if it.has("slot") and it["kind"] != "slash":
 			_write_bill(it)
 		keep.append(it)
 	items = keep
